@@ -34,7 +34,23 @@ class SearchTest(unittest.TestCase):
         search = Search.CdbSearch(udb.getConnection())
         result = search.run('hostname=mothra&&arch=sun')
         self.assertEquals(1, len(result))
-        self.assertEquals([108], result)        
+        self.assertEquals([108], result)
+
+    def testActiveId(self):
+        search = Search.EdbSearch(udb.getConnection())
+        result = search.run('serial=724f154c')
+        self.assertEquals(1, len(result))
+        self.assertEquals([108], result)
+        result = search.run('serial=wf84105048')
+        self.assertEquals(0, len(result))
+        
+    def testSurplusId(self):
+        search = Search.SurplusSearch(udb.getConnection())
+        result = search.run('serial=wf84105048')
+        self.assertEquals(1, len(result))
+        self.assertEquals([6630], result)
+        result = search.run('serial=724f154c')
+        self.assertEquals(0, len(result))
 
 def suite():
     return unittest.makeSuite(SearchTest,'test')

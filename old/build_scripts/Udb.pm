@@ -1,5 +1,7 @@
 #!/usr/local/bin/perl -w
 
+# $Id$
+
 package Udb;
 
 use strict;
@@ -113,6 +115,7 @@ sub quote {
 	return 'NULL';
     }
     $r->{dbh}->quote($st);
+
 }
 
 sub has_entry {

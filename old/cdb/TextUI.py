@@ -520,6 +520,8 @@ class TextUI:
             return None
         if len(result) == 1:
             return self.getRec(result[0])
+        if len(result) == 0:
+            return None
         self.warn("Multiple records for %s" % target)
         return None
 

@@ -59,6 +59,21 @@ CREATE TABLE equipment (
 );
 
 /*
+ * There are two views into the equipment database -- active stuff which we
+ * still own and track, and stuff that's been surplused.
+ */
+DROP VIEW eq;
+CREATE VIEW eq AS
+  SELECT id, descr, lid, serial_num, inventory_num, usage, owner, comment
+  FROM equipment
+  WHERE active = 't';
+DROP VIEW surplus;
+CREATE VIEW surplus AS
+  SELECT id, descr, lid, serial_num, inventory_num, usage, owner, comment
+  FROM equipment
+  WHERE active = 'f';
+
+/*
  * Sometimes we have to track the components that make up a machine.  This
  * usually happens when we get a new disk drive and the Univ. wants to track
  * it.  Might also be useful for tracking the flat panels. This table show
@@ -474,6 +489,7 @@ CREATE TABLE dispose (
 	surplus_date	DATE,
 	sold_date	DATE,
 	price		DECIMAL(9,2),
+	buyer		TEXT	CHECK (buyer <> ''),
 	comment		TEXT	CHECK (comment <> ''),
 	FOREIGN KEY (id) REFERENCES equipment (id) ON DELETE CASCADE
 );
@@ -513,9 +529,6 @@ CREATE TABLE config (
        comment	    TEXT	CHECK ( comment <> ''),
        FOREIGN KEY (id) REFERENCES equipment (id) ON DELETE CASCADE
 );
-
-DROP VIEW eq;
-CREATE VIEW eq AS SELECT network.hostname, equipment.* FROM equipment LEFT OUTER JOIN network ON equipment.id = network.id;
 
 /*
  * A table of ethernet manufacturer's.  Download the list from:

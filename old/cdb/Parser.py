@@ -201,9 +201,9 @@ class NidSql(SqlGenerator):
             'status': self.makeSqlString('status', 'status'),
             'os': "SELECT nid FROM network, os_type WHERE os_type.os ~* '%s' AND os_type.id = network.id",
             'arch': "SELECT nid FROM network, architecture WHERE architecture.arch ~* '%s' AND architecture.id = network.id",
-            'lid': "SELECT nid FROM network, equipment WHERE lid ~* '%s' AND network.id = equipment.id",
-            'floor': "SELECT n.nid FROM network n, equipment e, location l WHERE l.floor = '%s' AND e.lid = l.lid AND e.id = n.id",
-            'building': "SELECT n.nid FROM network n, equipment e, location l WHERE l.building ~* '%s' AND e.lid = l.lid AND e.id = n.id",
+            'lid': "SELECT nid FROM network, eq WHERE lid ~* '%s' AND network.id = eq.id",
+            'floor': "SELECT n.nid FROM network n, eq e, location l WHERE l.floor = '%s' AND e.lid = l.lid AND e.id = n.id",
+            'building': "SELECT n.nid FROM network n, eq e, location l WHERE l.building ~* '%s' AND e.lid = l.lid AND e.id = n.id",
             'alias': "SELECT DISTINCT network.nid FROM network, aliases WHERE aliases.alias ~* '%s' AND network.nid = aliases.nid",
             'netgroup': "SELECT nid FROM netgroups WHERE netgroup ~* '%s'",
             'subnet': "SELECT nid FROM network WHERE bcast = '128.148.%s.255/24'"
@@ -237,15 +237,19 @@ class NidSql(SqlGenerator):
             raise ParseError, "Unrecognized search field: %s" % field
             
 class IdSql(SqlGenerator):
+    def __init__(self, parseTree, eqTable = 'equipment'):
+        self.eqTable = eqTable;
+        SqlGenerator.__init__(self, parseTree)
+        
     def initSearchStrings(self):
         self.field2sql = {
             'hostname': self.makeSqlString('network', 'hostname'),
-            'descr': self.makeSqlString('equipment', 'descr'),
-            'serial_num': self.makeSqlString('equipment', 'serial_num'),
-            'inventory_num': self.makeSqlString('equipment', 'inventory_num'),
-            'comment': self.makeSqlString('equipment', 'comment'),
-            'lid': self.makeSqlString('equipment', 'lid'),
-            'id': self.makeSqlStringNum('equipment', 'id'),
+            'descr': self.makeSqlString(self.eqTable, 'descr'),
+            'serial_num': self.makeSqlString(self.eqTable, 'serial_num'),
+            'inventory_num': self.makeSqlString(self.eqTable, 'inventory_num'),
+            'comment': self.makeSqlString(self.eqTable, 'comment'),
+            'lid': self.makeSqlString(self.eqTable, 'lid'),
+            'id': self.makeSqlStringNum(self.eqTable, 'id'),
             'type': self.makeSqlString('usage', 'usage'),
             'po_num': self.makeSqlString('purchase', 'po_num'),
             'po_date': self.makeSqlString('purchase', 'date'),
@@ -260,8 +264,8 @@ class IdSql(SqlGenerator):
             'disk': self.makeSqlString('config', 'disk'),
             'graphics': self.makeSqlString('config', 'graphics'),
             'conf_comment': self.makeSqlString('config', 'comment'),
-            'floor': "SELECT e.id FROM equipment e, location l WHERE l.floor = '%s' AND e.lid = l.lid",
-            'building': "SELECT e.id FROM equipment e, location l WHERE l.building ~* '%s' AND e.lid = l.lid",
+            'floor': "SELECT e.id FROM %s e, location l WHERE l.floor = '%%s' AND e.lid = l.lid" % self.eqTable,
+            'building': "SELECT e.id FROM %s e, location l WHERE l.building ~* '%%s' AND e.lid = l.lid" % self.eqTable,
             }
         self.field2sql['desc'] = self.field2sql['descr']
         self.field2sql['serial'] = self.field2sql['serial_num']
@@ -298,3 +302,16 @@ class IdSql(SqlGenerator):
             node.st = self.field2sql[field] % ( data )
         else:
             raise ParseError, "Unrecognized search field: %s" % field
+
+class ActiveIdSql(IdSql):
+    def __init__(self, parseTree):
+        IdSql.__init__(self, parseTree, 'eq')
+    
+class SurplusIdSql(IdSql):
+    def __init__(self, parseTree):
+        IdSql.__init__(self, parseTree, 'surplus')
+
+
+class FullIdSql(IdSql):
+    def __init__(self, parseTree):
+        IdSql.__init__(self, parseTree, 'equipment')
