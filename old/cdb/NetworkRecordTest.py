@@ -5,6 +5,8 @@
 import unittest
 import NetworkRecord
 
+mothraNid = 109
+
 class NetworkRecordTest(unittest.TestCase):
     def testCreate(self):
         netrec = NetworkRecord.NetworkRecord()
@@ -15,9 +17,10 @@ class NetworkRecordTest(unittest.TestCase):
         self.assertEquals('mothra', netrec.getHostname())
 
     def testFetchByNid(self):
-        netrec = NetworkRecord.fetchNetByNid(108)
+        netrec = NetworkRecord.fetchNetByNid(mothraNid)
         self.assertEquals('mothra', netrec.getHostname())
-        netrec = NetworkRecord.fetchNetByNid('108')
+        n = "%s" % mothraNid
+        netrec = NetworkRecord.fetchNetByNid(n)
         self.assertEquals('mothra', netrec.getHostname())
 
     def testHostname(self):

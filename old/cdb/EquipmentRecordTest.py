@@ -4,6 +4,8 @@ import unittest
 import udb
 import EquipmentRecord
 
+clclapNid = 395
+
 class EquipmentRecordTest(unittest.TestCase):
     def testCreate(self):
         rec = EquipmentRecord.EquipmentRecord('new host')
@@ -14,14 +16,14 @@ class EquipmentRecordTest(unittest.TestCase):
         self.assert_(rec.getId() > 0 )
 
     def testFetch(self):
-        rec = EquipmentRecord.fetchEqById(393)
+        rec = EquipmentRecord.fetchEqById(clclapNid)
         self.assert_(rec is not None)
         self.assertEquals('(clclap)', rec.getDescr())
 
     def testFetchByHostname(self):
         rec = EquipmentRecord.fetchEqByHostname('clclap');
         self.assert_(rec is not None)
-        self.assertEquals(393, rec.getId())
+        self.assertEquals(clclapNid, rec.getId())
 
         # hostname doesn't exists
         rec = EquipmentRecord.fetchEqByHostname('aadfijhadkfb');
@@ -75,13 +77,13 @@ class EquipmentRecordTest(unittest.TestCase):
         self.assertEquals('foobar', inst['comment'])
 
     def test_surplus(self):
-        rec = EquipmentRecord.fetchEqById(393)
+        rec = EquipmentRecord.fetchEqById(clclapNid)
         self.assert_(rec.record['active'])
         rec.setSurplus()
-        rec = EquipmentRecord.fetchEqById(393)
+        rec = EquipmentRecord.fetchEqById(clclapNid)
         self.assert_(not rec.record['active'])
         rec.unsetSurplus()
-        rec = EquipmentRecord.fetchEqById(393)
+        rec = EquipmentRecord.fetchEqById(clclapNid)
         self.assert_(rec.record['active'])
         
 def suite():

@@ -3,7 +3,7 @@
 import unittest
 import TextUI
 
-availableIP = '128.148.38.193'
+availableIP = '128.148.38.238'
 
 class TextUITest(unittest.TestCase):
     def testVirtual(self):
