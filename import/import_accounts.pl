@@ -8,7 +8,7 @@ my $group_file = "/maytag/sys0/NIS/src/group";
 my $usage_file = "/maytag/sys0/NIS/src/usage.byID";
 my $identity_file = "/maytag/sys0/NIS/src/identity";
 
-my $dbh = DBI->connect("dbi:Pg:dbname=udb;host=db", 'clc', 'pr0bl3m')
+my $dbh = DBI->connect("dbi:Pg:dbname=udb;host=db", 'tstaff', 'pr0bl3m')
 	or die "Couldn't connect to database: " . DBI->errstr;
 
 open(INPUT, "<$group_file") or die("Couldn't open file: $group_file");
@@ -46,8 +46,8 @@ while(<INPUT>) {
 	my $person_id = $row->{nextval};
 	$sth->finish;
 
-	$sth = $dbh->prepare("INSERT INTO people (person_id, full_name, office, phone) VALUES (?,?,?,?)");
-	$sth->execute($person_id, $info[0], $info[1], $info[2]);
+	$sth = $dbh->prepare("INSERT INTO people (person_id, full_name, office, office_phone, home_phone) VALUES (?,?,?,?,?)");
+	$sth->execute($person_id, $info[0], $info[1], $info[2], $info[3]);
 	$sth->finish;
 
 	$sth = $dbh->prepare("INSERT INTO accounts (uid, person_id, login, gid, shell, home_dir, dirty) VALUES (?, ?, ?, ?, ?, ?, 'changed')");
@@ -84,8 +84,8 @@ while(<INPUT>) {
         my @list = split /:/,   $_;
         if (!defined($list[1])) {next;}
 
-        print "adding identity $list[0]:$list[1]";
-        my $sth = $dbh->prepare("INSERT INTO identities (identity, space) VALUES ($,$)");
+        print "adding identity $list[0]:$list[1]\n";
+        my $sth = $dbh->prepare("INSERT INTO identities (identity, space) VALUES (?,?)");
         $sth->execute($list[0], $list[1]);
         $sth->finish;
 }
@@ -104,12 +104,13 @@ while(<INPUT>) {
         foreach (@identities) {
 
                 print "adding identity $_ to login $list[0]\n";
-                my $sth = $dbh->prepare("INSERT INTO identity_list (identity, login) VA$
+                my $sth = $dbh->prepare("INSERT INTO identity_list (identity, login) VALUES(?,?)");
                 $sth->execute(trimwhitespace($_),trimwhitespace($list[0]));
                 $sth->finish;
         }
 }
 close(INPUT);
+
 $dbh->disconnect || die "Can't disconnect from database: $DBI::errstr\n";
 
 
