@@ -169,8 +169,11 @@ class SqlGenerator:
             node.st = "SELECT n.nid FROM network n, equipment e, location l WHERE l.floor = '%s' AND e.lid = l.lid AND e.id = n.id" % (data)
         elif field == 'building':
             node.st = "SELECT n.nid FROM network n, equipment e, location l WHERE l.building ~* '%s' AND e.lid = l.lid AND e.id = n.id" % (data)
-        elif field == 'alias':
+        elif field == 'alias' or field == 'aliases':
             node.st = "SELECT network.nid FROM network, aliases WHERE aliases.alias ~* '%s' AND network.nid = aliases.nid" % (data)
+        elif field in [ 'group', 'netgroup', 'netgroups', 'supp_grps',
+                        'prim_grp' ]:
+            node.st = "SELECT nid FROM network WHERE netgroup ~* %s UNION SELECT nid FROM netgroups WHERE netgroup ~* %s" % (data, data)
         else:
             pass
 
