@@ -2,8 +2,7 @@
 
 # $Id$
 
-import string
-from udb import *
+import udb
 import DBRecord
 import EquipmentRecord
 
@@ -23,24 +22,24 @@ def isNameAvailable(name, nid = None):
     if not name:
         return 1
     if nid:
-        rec = Network.getSQLWhere("hostname = '%s' and nid != %d"
+        rec = udb.Network.getSQLWhere("hostname = '%s' and nid != %d"
                                   % (name, nid))
         if len(rec) != 0:
             return 0
     else:
-        rec = Network.getUnique(hostname = name)
+        rec = udb.Network.getUnique(hostname = name)
         if rec:
             return 0
 
     if nid:
-        rec = Aliases.getSQLWhere("alias = '%s' and nid != %d"
+        rec = udb.Aliases.getSQLWhere("alias = '%s' and nid != %d"
                                   % (name, nid))
         if len(rec) != 0:
             return 0
         else:
             return 1
     else:
-        rec = Aliases.getUnique(alias = name)
+        rec = udb.Aliases.getUnique(alias = name)
         if rec:
             return 0
         else:
@@ -69,7 +68,7 @@ def checkSubnetEthernet(ip, ether, nid = None):
     if not ether:
         return None
     broadcast = bcast(ip) + '/24'
-    rec = Network.getSome(bcast = DBRecord.quote(broadcast),
+    rec = udb.Network.getSome(bcast = DBRecord.quote(broadcast),
                           ethernet = ether)
     if len(rec) == 0:
         return None
@@ -83,7 +82,7 @@ def checkSubnetEthernet(ip, ether, nid = None):
 def bcast(ip):
     bytes = ip.split('.')
     bytes[3] = '255'
-    return string.join(bytes, '.')
+    return '.'.join(bytes)
 
 def isValidIp(ip):
     if not ip:
@@ -103,7 +102,7 @@ def isValidIp(ip):
 
 def isIpAvailable(ip, nid = None):
     ip += '/24'
-    rec = Network.getUnique(ipaddr = "'%s'" % ip)
+    rec = udb.Network.getUnique(ipaddr = "'%s'" % ip)
     if rec is None:
         return 1
     if nid:
@@ -119,23 +118,23 @@ def checkStatuses(l):
 
 def isStatusValid(stat):
     # get list of statuses, ignoring case
-    rec = StatusList.getSQLWhere("status ~* '^%s$'" % stat)
+    rec = udb.StatusList.getSQLWhere("status ~* '^%s$'" % stat)
     return len(rec)
 
 def fixStatus(stat):
-    rec = StatusList.getSQLWhere("status ~* '^%s$'" % stat)
+    rec = udb.StatusList.getSQLWhere("status ~* '^%s$'" % stat)
     if not rec:
         return None
     return rec[0]['status']
 
 def fetchNetByHostname(host):
-    netrec = Network.getUnique(hostname = host)
+    netrec = udb.Network.getUnique(hostname = host)
     if netrec is None:
         return None
     return NetworkRecord(netrec)
         
 def fetchNetByNid(nid):
-    netrec = Network.getUnique(nid = nid)
+    netrec = udb.Network.getUnique(nid = nid)
     if netrec is None:
         return None
     return NetworkRecord(netrec)
@@ -146,7 +145,7 @@ class NetworkRecord(DBRecord.DBRecord):
 
     def __init__(self, netrec = None):
         if netrec is None:
-            self.record = Network.new()
+            self.record = udb.Network.new()
             self.eqRec = EquipmentRecord.EquipmentRecord( 'None')
             self.setId(self.eqRec.getId())
         else:
@@ -224,7 +223,7 @@ class NetworkRecord(DBRecord.DBRecord):
                 return problem
 
         for a in aliases:
-            Aliases.new(nid = self.record['nid'], alias = a)
+            udb.Aliases.new(nid = self.record['nid'], alias = a)
         return None
 
     def getOtherNetgroups(self):
@@ -248,7 +247,8 @@ class NetworkRecord(DBRecord.DBRecord):
             for group in self.record.getNetgroups():
                 group.delete()
         for g in groups:
-            Netgroups.new(nid = self.record['nid'], netgroup = g)            
+            udb.Netgroups.new(nid = self.record['nid'], netgroup = g)
+            
 
     def getComment(self):
         return self.record['comment']
@@ -315,7 +315,7 @@ class NetworkRecord(DBRecord.DBRecord):
             s.delete()
             
         for stat in statusList:
-            Status.new(nid = self.getNid(), status = fixStatus(stat))
+            udb.Status.new(nid = self.getNid(), status = fixStatus(stat))
         return None
 
     def getOses(self):

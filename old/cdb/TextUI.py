@@ -117,7 +117,7 @@ class TextUI:
         l = [ s.strip() for s in l ]
         return [ s for s in l if s ]
 
-    def setLid(self, eqrec, hasDefault = 0):
+    def setLid(self, eqrec, notUsed = 0):
         while 1:
             default = eqrec.getLid()
             resp = self.prompt("Enter location ID:", default)
@@ -452,7 +452,6 @@ class TextUI:
         resp = self.prompt("Insert new record (y/n)?", 'y')
         if self.isYes(resp):
             udb.commit()
-            print "Network record %d added to database." % netrec.getNid()
         else:
             print "Insert cancelled."
             

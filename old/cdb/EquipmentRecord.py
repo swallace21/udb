@@ -2,14 +2,14 @@
 
 # $Id$
 
-from udb import *
+import udb
 import DBRecord
 import NetworkRecord
 
 def isValidLid(lid):
     if not lid:
         return 0
-    locRec = Location.getUnique(lid = lid)
+    locRec = udb.Location.getUnique(lid = lid)
     if locRec:
         return 1
     return 0
@@ -17,7 +17,7 @@ def isValidLid(lid):
 def isArchValid(arch):
     if not arch:
         return 1
-    rec = ArchList.getUnique(arch = arch)
+    rec = udb.ArchList.getUnique(arch = arch)
     if rec is None:
         return 0
     return 1
@@ -29,17 +29,17 @@ def checkOses(l):
     return None
 
 def isValidUsage(usage):
-    rec = Usage.getUnique(usage = usage)
+    rec = udb.Usage.getUnique(usage = usage)
     if rec:
         return 1
     return 0
 
 def isOSValid(os):
-    rec = OsList.getSQLWhere("os ~* '^%s$'" % os)
+    rec = udb.OsList.getSQLWhere("os ~* '^%s$'" % os)
     return len(rec)
 
 def fixOs(os):
-    rec = OsList.getSQLWhere("os ~* '^%s$'" % os)
+    rec = udb.OsList.getSQLWhere("os ~* '^%s$'" % os)
     if not rec:
         return None
     return rec[0]['os']
@@ -48,7 +48,7 @@ def fetchEqById(id):
     if not type(id) is int:
         if not id.isdigit():
             return None
-    rec = Equipment.getUnique(id = id)
+    rec = udb.Equipment.getUnique(id = id)
     if rec is None:
         return None
     return EquipmentRecord(None, rec)
@@ -62,16 +62,16 @@ def fetchEqByHostname(hostname):
 class EquipmentRecord(DBRecord.DBRecord):
     def __init__(self, desc, eqrec = None, lid = 'unknown'):
         if eqrec is None:
-            self.record = Equipment.new(lid = lid, descr = desc)
+            self.record = udb.Equipment.new(lid = lid, descr = desc)
         else:
             self.record = eqrec
 
     def getHostnames(self):
-        rec = Network.getSome(id = self.getId())
+        rec = udb.Network.getSome(id = self.getId())
         return [ h['hostname'] for h in rec ]
 
     def getNids(self):
-        rec = Network.getSome(id = self.getId())
+        rec = udb.Network.getSome(id = self.getId())
         return [ r['nid'] for r in rec ]
 
     def getId(self):
@@ -109,7 +109,7 @@ class EquipmentRecord(DBRecord.DBRecord):
         for u in old:
             u.delete()
         for u in userList:
-            Users.new(id = self.getId(), users = u)
+            udb.Users.new(id = self.getId(), users = u)
 
     def getSerialNumber(self):
         return self.record['serial_num']
@@ -143,7 +143,7 @@ class EquipmentRecord(DBRecord.DBRecord):
         if a:
             a.delete()
         if arch:
-            Architecture.new(id = self.getId(), arch = arch)
+            udb.Architecture.new(id = self.getId(), arch = arch)
 
     def getOses(self):
         os = self.record.getOsTypes()
@@ -160,68 +160,75 @@ class EquipmentRecord(DBRecord.DBRecord):
             os.delete()
             
         for os in osList:
-            OsType.new(id = self.getId(), os = fixOs(os))
+            udb.OsType.new(id = self.getId(), os = fixOs(os))
         return None
 
+    def formatDate(self, d):
+        return '%d/%d/%d' % (d.month, d.day, d.year)
+    
     def getPO(self):
-        po = self.record.getPurchase()
+        po = self.getPORec()
         if not po:
             return (None, None, None, None)
-        return ( po['po_num'], po['date'], po['price'], po['comment'] )
+        return ( po['po_num'], self.formatDate(po['date']), po['price'],
+                 po['comment'] )
 
+    def fetchOrCreatePO(self):
+        po = self.getPORec()
+        if not po:
+            po = udb.Purchase.new(id = self.getId())
+        return po
+        
     def getPORec(self):
         return self.record.getPurchase()
 
     def setPONumber(self, num):
         if not num:
             num = None
-        po = self.record.getPurchase()
-        if not po:
-            po = udb.Purchase()
+        po = self.fetchOrCreatePO()
         po['po_num'] = num
 
     def setPODate(self, date):
         if not date:
             date = None
-        po = self.record.getPurchase()
-        if not po:
-            po = udb.Purchase()
+        po = self.fetchOrCreatePO()
         po['date'] = date
 
     def setPOPrice(self, price):
         if not price:
             price = None
-        po = self.record.getPurchase()
-        if not po:
-            po = udb.Purchase()
+        po = self.fetchOrCreatePO()
         po['price'] = price
 
     def setPOComment(self, comment):
         if not comment:
             comment = None
-        po = self.record.getPurchase()
-        if not po:
-            po = udb.Purchase()
+        po = self.fetchOrCreatePO()
         po['comment'] = comment
 
+    def getInstallRec(self):
+        return self.record.getInstallation()
+    
+    def fetchOrCreateInstall(self):
+        inst = self.getInstallRec()
+        if not inst:
+            inst = udb.Installation.new(id = self.getId())
+        return inst
+    
     def getInstallation(self):
-        inst = self.record.getInstallation()
+        inst = self.getInstallRec()
         if not inst:
             return ( None, None )
-        return ( inst['date'], inst['comment'] )
+        return ( self.formatDate(inst['date']), inst['comment'] )
 
     def setInstallDate(self, date):
         if not date:
             date = None
-        inst = self.record.getInstallation()
-        if not inst:
-            inst = udb.Installation()
+        inst = self.fetchOrCreateInstall()
         inst['date'] = date
 
     def setInstallComment(self, comment):
         if not comment:
             comment = None
-        inst = self.record.getInstallation()
-        if not inst:
-            inst = udb.Purchase()
+        inst = self.fetchOrCreateInstall()
         inst['comment'] = comment

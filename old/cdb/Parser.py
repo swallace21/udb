@@ -197,43 +197,46 @@ class NidSql(SqlGenerator):
             print "Warning: Unrecognized search field: %s" % field
 
 class IdSql(SqlGenerator):
+    def makeSt(self, table, field, data):
+        return "SELECT id FROM %s WHERE %s ~* '%s'" % (table, field, data)
+
+    def makeNum(self, table, field, data):
+        return "SELECT id FROM %s WHERE %s = %s" % (table, field, data)
+    
     def do_and(self, node):
         node.st = node.right.st + ' AND id IN ( ' + node.left.st + ' )'
 
     def do_equal(self, node):
         field = node.left.data.value
         data = node.right.data.value
-        if field in ('id', 'descr', 'lid', 'serial_num', 'inventory_num',
+        if field in ('descr', 'lid', 'serial_num', 'inventory_num',
                      'comment'):
-            node.st = "SELECT id FROM equipment WHERE %s ~* '%s'"\
-                      % (field, data)
+            node.st = self.makeSt('equipment', field, data)
+        elif field == 'id':
+            node.st = self.makeNum('equipment', 'id', data)
         elif field == 'desc':
-            node.st = "SELECT id FROM equipment WHERE descr ~* '%s'" % (data)
+            node.st = self.makeSt('equipment', 'descr', data)
         elif field == 'serial':
-            node.st = "SELECT id FROM equipment WHERE serial_num ~* '%s'" % (data)
-        elif field == 'inv_num':
-            node.st = "SELECT id FROM equipment WHERE inventory_num ~* '%s'" % (data)
+            node.st = self.makeSt('equipment', 'serial_num', data)
+        elif field == 'inv_num' or field == 'inv':
+            node.st = self.makeSt('equipment', 'inventory_num', data)
         elif field == 'type':
-            node.st = "SELECT id FROM usage WHERE usage ~* '%s'" % (data)
+            node.st = self.makeSt('usage', 'usage', data)
         elif field == 'ponum' or field == 'po_num':
-            node.st = "SELECT id FROM purchase WHERE po_num ~* '%s'" % (data)
-        elif field == 'poprice' or field == 'po_price':
-            node.st = "SELECT id FROM purchase WHERE price = %s" % (data)
+            node.st = self.makeSt('purchase', 'po_num', data)
+        elif field == 'podate' or field == 'po_date':
+            node.st = self.makeSt('purchase', 'date', data.replace('/', '-'))
+        elif field == 'poprice' or field == 'po_price' or field == 'price':
+            node.st = self.makeNum('purchase', 'price', data)
         elif field == 'pocomment' or field == 'po_comment':
-            node.st = "SELECT id FROM purchase WHERE comment ~* '%s'" % (data)
+            node.st = self.makeSt('purchase', 'comment', data)
+        elif field == 'arch' or field == 'hw_arch':
+            node.st = self.makeSt('architecture', 'arch', data)
+        elif field == 'users' or field == 'user':
+            node.st = self.makeSt('users', 'users', data)
+        elif field == 'install_date' or field == 'inst_date' or field == 'instdate':
+            node.st = self.makeSt('installation', 'date', data.replace('/', '-'))
+        elif field == 'install_comment' or field == 'inst_comment' or field == 'commentdate':
+            node.st = self.makeSt('installation', 'comment', data)
         else:
             print "Warning: Unrecognized search field: %s" % field
-            
-if __name__ == '__main__':
-    import sys
-    #lex = Lexer('hostname=mothra')
-    #lex = Lexer('hostname=mothra||hostname=foo')
-    #lex = Lexer('(hostname=mothra||hostname=foo)')
-    #lex = Lexer(' ethernet = 123 || ( hostname = mothra && hostname = foo ) ')
-    #lex = Lexer('hostname=discordia||(room=123&&hostname=mothra)')
-    #lex = Lexer('hostname=cslab&&ip_addr=128.148.33')
-    #lex = Lexer('(hostname=cslab)&&hostname=10')
-    lex = Lexer(sys.argv[1])
-    tree = lex.getExpression()
-    sql = SqlGenerator(tree)
-    print sql.getSQL()
