@@ -28,6 +28,12 @@ def checkOses(l):
             return os
     return None
 
+def isValidUsage(usage):
+    rec = Usage.getUnique(usage = usage)
+    if rec:
+        return 1
+    return 0
+
 def isOSValid(os):
     rec = OsList.getSQLWhere("os ~* '^%s$'" % os)
     return len(rec)
@@ -54,8 +60,6 @@ def fetchEqByHostname(hostname):
     return netrec.getEquipmentRec()
 
 class EquipmentRecord(DBRecord.DBRecord):
-    record = None
-
     def __init__(self, desc, eqrec = None, lid = 'unknown'):
         if eqrec is None:
             self.record = Equipment.new(lid = lid, descr = desc)
@@ -99,20 +103,40 @@ class EquipmentRecord(DBRecord.DBRecord):
 
     def getUsers(self):
         urec = self.record.getUsers()
-        if urec is None:
+        if not urec:
             return None
-        if len(urec) < 1:
-            return None
-        return urec[0]['users']
+        return [ u['users'] for u in urec ]
+
+    def setUsers(self, userList):
+        old = self.record.getUsers()
+        for u in old:
+            u.delete()
+        for u in userList:
+            Users.new(id = self.getId(), users = u)
 
     def getSerialNumber(self):
         return self.record['serial_num']
 
+    def setSerialNumber(self, serial):
+        if not serial:
+            self.record['serial_num'] = None
+        else:
+            self.record['serial_num'] = serial
+
     def getInventoryNumber(self):
         return self.record['inventory_num']
 
+    def setInventoryNumber(self, num):
+        if not num:
+            self.record['inventory_num'] = None
+        else:
+            self.record['inventory_num'] = num
+
     def getUsage(self):
         return self.record['usage']
+
+    def setUsage(self, usage):
+        self.record['usage'] = usage
 
     def getComment(self):
         return self.record['comment']
@@ -126,7 +150,6 @@ class EquipmentRecord(DBRecord.DBRecord):
 
     def getOses(self):
         os = self.record.getOsTypes()
-        #list = map(lambda o: o['os'], os)
         list = [ o['os'] for o in os ]
         list.sort()
         return list
@@ -149,8 +172,59 @@ class EquipmentRecord(DBRecord.DBRecord):
             return (None, None, None, None)
         return ( po['po_num'], po['date'], po['price'], po['comment'] )
 
+    def getPORec(self):
+        return self.record.getPurchase()
+
+    def setPONumber(self, num):
+        if not num:
+            num = None
+        po = self.record.getPurchase()
+        if not po:
+            po = udb.Purchase()
+        po['po_num'] = num
+
+    def setPODate(self, date):
+        if not date:
+            date = None
+        po = self.record.getPurchase()
+        if not po:
+            po = udb.Purchase()
+        po['date'] = date
+
+    def setPOPrice(self, price):
+        if not price:
+            price = None
+        po = self.record.getPurchase()
+        if not po:
+            po = udb.Purchase()
+        po['price'] = price
+
+    def setPOComment(self, comment):
+        if not comment:
+            comment = None
+        po = self.record.getPurchase()
+        if not po:
+            po = udb.Purchase()
+        po['comment'] = comment
+
     def getInstallation(self):
         inst = self.record.getInstallation()
         if not inst:
             return ( None, None )
         return ( inst['date'], inst['comment'] )
+
+    def setInstallDate(self, date):
+        if not date:
+            date = None
+        inst = self.record.getInstallation()
+        if not inst:
+            inst = udb.Installation()
+        inst['date'] = date
+
+    def setInstallComment(self, comment):
+        if not comment:
+            comment = None
+        inst = self.record.getInstallation()
+        if not inst:
+            inst = udb.Purchase()
+        inst['comment'] = comment

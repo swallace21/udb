@@ -1,6 +1,7 @@
 # $Id$
 
 import sys
+import mx.DateTime
 import udb
 import EquipmentRecord
 import NetworkRecord
@@ -193,18 +194,6 @@ class TextUI:
         if new != groups:
             netrec.setOtherNetgroups(new)
 
-    def setComment(self, netrec, hasDefault = 0):
-        if hasDefault:
-            default = netrec.getComment()
-        else:
-            default = ''
-        resp = self.prompt("Enter comment:", default)
-        if default != resp:
-            if resp:
-                netrec.setComment(resp)
-            else:
-                netrec.setComment(None)
-
     def setEthernet(self, netrec, hasDefault = 0):
         if hasDefault:
             default = netrec.getEthernet()
@@ -237,6 +226,18 @@ class TextUI:
             if not error:
                 break
             print error
+
+    def setComment(self, rec, hasDefault = 0):
+        if hasDefault:
+            default = rec.getComment()
+        else:
+            default = ''
+        resp = self.prompt("Enter comment:", default)
+        if default != resp:
+            if resp:
+                rec.setComment(resp)
+            else:
+                rec.setComment(None)
 
     def setArch(self, eqrec, hasDefault = 0):
         if hasDefault:
@@ -292,6 +293,169 @@ class TextUI:
                 break
             print "ERROR: Unrecognized status: %s\n" % problem
 
+    def setDescription(self, eqrec, hasDefault = 0):
+        if hasDefault:
+            default = eqrec.getDescr()
+        else:
+            default = ''
+        while 1:
+            resp = self.prompt("Enter description:", default)
+            if not resp:
+                print "ERROR: Description can't be empty"
+                continue
+            if default == resp:
+                break
+            eqrec.setDescr(resp)
+            break
+
+    def setSerialNumber(self, eqrec, hasDefault):
+        if hasDefault:
+            default = eqrec.getSerialNumber()
+        else:
+            default = ''
+        resp = self.prompt("Enter serial number:", default)
+        if resp != default:
+            eqrec.setSerialNumber(resp)
+
+    def setInventoryNumber(self, eqrec, hasDefault):
+        if hasDefault:
+            default = eqrec.getInventoryNumber()
+        else:
+            default = ''
+        resp = self.prompt("Enter inventory number:", default)
+        if resp != default:
+            eqrec.setInventoryNumber(resp)
+
+    def setUsage(self, eqrec, hasDefault):
+        if hasDefault:
+            default = eqrec.getUsage()
+        else:
+            default = ''
+        while 1:
+            resp = self.prompt("Enter type:", default)
+            if resp == default:
+                break
+            if EquipmentRecord.isValidUsage(resp):
+                eqrec.setUsage(resp)
+                break
+            print "ERROR: Not a valid type"
+
+    def setPONumber(self, eqrec, hasDefault):
+        if hasDefault:
+            default = eqrec.getPO()[0]
+        else:
+            default = ''
+        resp = self.prompt("Enter PO number:", default)
+        if resp != default:
+            eqrec.setPONumber(resp)
+
+    def setPODate(self, eqrec, hasDefault):
+        if hasDefault:
+            default = eqrec.getPO()[1]
+        else:
+            default = ''
+        while 1:
+            resp = self.prompt("Enter PO date:", default)
+            if resp == default:
+                break
+            if not resp:
+                eqrec.setPODate(None)
+                break
+            dateTime = self.makeDate(resp)
+            if dateTime:
+                eqrec.setPODate(dateTime)
+                break
+            print "ERROR: Can't parse date"
+            
+    def setPOPrice(self, eqrec, hasDefault):
+        if hasDefault:
+            default = eqrec.getPO()[2]
+            if not default:
+                default = ''
+        else:
+            default = ''
+        while 1:
+            resp = self.prompt("Enter PO price:", default)
+            if resp == default:
+                break
+            if not resp:
+                eqrec.setPOPrice(None)
+                break
+            try:
+                f = float(resp)
+                eqrec.setPOPrice(f)
+                break
+            except ValueError:
+                print "ERROR: Not a valid price" 
+        
+    def setPOComment(self, eqrec, hasDefault):
+        if hasDefault:
+            default = eqrec.getPO()[3]
+        else:
+            default = ''
+        resp = self.prompt("Enter PO comment:", default)
+        if resp != default:
+            eqrec.setPOComment(resp)
+
+    def setInstallDate(self, eqrec, hasDefault):
+        if hasDefault:
+            default = eqrec.getInstallation()[0]
+        else:
+            default = ''
+        while 1:
+            resp = self.prompt("Enter installation date:", default)
+            if resp == default:
+                break
+            if not resp:
+                eqrec.setInstallDate(None)
+                break
+            dateTime = self.makeDate(resp)
+            if dateTime:
+                eqrec.setInstallDate(dateTime)
+                break
+            print "ERROR: Can't parse date"
+
+    def setInstallComment(self, eqrec, hasDefault):
+        if hasDefault:
+            default = eqrec.getInstallation()[1]
+        else:
+            default = ''
+        resp = self.prompt("Enter installation comment:", default)
+        if resp != default:
+            eqrec.setInstallComment(resp)
+
+    def setUsers(self, eqrec, hasDefault):
+        if hasDefault:
+            default = self.joinList(eqrec.getUsers())
+        else:
+            default = ''
+        resp = self.prompt("Enter users:", default)
+        if resp != default:
+            new = self.makeList(resp)
+            eqrec.setUsers(new)
+
+    def makeDate(self, st):
+        return mx.DateTime.Parser.DateFromString(st, ('us', 'altus',
+                                                      'iso', 'altiso',
+                                                      'lit', 'altlit'))
+
+    def confirmUpdate(self):
+        resp = self.prompt("\nSave changed record (y/n)[y]? ")
+        if not resp:
+            resp = 'y'
+        if self.isYes(resp):
+            udb.commit()
+        else:
+            print "No modifications saved."
+
+    def confirmInsert(self):
+        resp = self.prompt("Insert new record (y/n)?", 'y')
+        if self.isYes(resp):
+            udb.commit()
+            print "Network record %d added to database." % netrec.getNid()
+        else:
+            print "Insert cancelled."
+            
 class edb ( TextUI ):
     def profile(self, target):
         eqrec = self.getRec(target)
@@ -315,7 +479,7 @@ class edb ( TextUI ):
         (inst_date, inst_comment) = eqrec.getInstallation()
         self.display("install date", inst_date)
         self.display("install comment", inst_comment)
-        self.display("User(s)", eqrec.getUsers())
+        self.display("User(s)", self.joinList(eqrec.getUsers()))
 
     def delete(self, target):
         #
@@ -340,6 +504,44 @@ class edb ( TextUI ):
         eqrec.delete()
         udb.commit()
 
+    def insert(self, notUsed):
+        eqrec = EquipmentRecord.EquipmentRecord('Unknown')
+        self.setDescription(eqrec)
+        self.setLid(eqrec)
+        self.setSerialNumber(eqrec)
+        self.setInventoryNumber(eqrec)
+        self.setUsage(eqrec)
+        self.setComment(eqrec)
+        self.setPONumber(eqrec)
+        self.setPODate(eqrec)
+        self.setPOPrice(eqrec)
+        self.setPOComment(eqrec)
+        self.setInstallDate(eqrec)
+        self.setInstallComment(eqrec)
+        self.setUsers(eqrec)
+
+        self.confirmInsert()
+
+    def modify(self, target):
+        eqrec = self.getRec(target)
+        if not eqrec:
+            return
+        self.setDescription(eqrec, 1)
+        self.setLid(eqrec, 1)
+        self.setSerialNumber(eqrec, 1)
+        self.setInventoryNumber(eqrec, 1)
+        self.setUsage(eqrec, 1)
+        self.setComment(eqrec, 1)
+        self.setPONumber(eqrec, 1)
+        self.setPODate(eqrec, 1)
+        self.setPOPrice(eqrec, 1)
+        self.setPOComment(eqrec, 1)
+        self.setInstallDate(eqrec, 1)
+        self.setInstallComment(eqrec, 1)
+        self.setUsers(eqrec, 1)
+
+        self.confirmUpdate()
+    
     def getRec(self, target):
         if type(target) is int or target.isdigit():
             eqrec = EquipmentRecord.fetchEqById(target)
@@ -493,15 +695,8 @@ class cdb ( TextUI ):
         self.setOs(netrec)
         self.setMx(netrec)
         self.setStatus(netrec)
-        #
-        # Confirm Insert
-        #
-        resp = self.prompt("Insert new record (y/n)?", 'y')
-        if self.isYes(resp):
-            netrec.commit()
-            print "Network record %d added to database." % netrec.getNid()
-        else:
-            print "Insert cancelled."
+
+        self.confirmInsert()
 
     def modify(self, target):
         netrec = self.getRec(target)
@@ -533,16 +728,8 @@ class cdb ( TextUI ):
         self.setOs(netrec, 1)
         self.setMx(netrec, 1)
         self.setStatus(netrec, 1)
-        #
-        # Confirm update
-        #
-        resp = self.prompt("\nSave changed record (y/n)[y]? ")
-        if not resp:
-            resp = 'y'
-        if self.isYes(resp):
-            netrec.commit()
-        else:
-            print "No modifications saved."
+
+        self.confirmUpdate()
 
     def getRec(self, target):
         if type(target) is int or target.isdigit():
