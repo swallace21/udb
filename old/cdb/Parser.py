@@ -151,6 +151,27 @@ class SqlGenerator:
             self.do_op(tree)
 
     def do_equal(self, node):
+        raise NotImplementedError
+
+    def do_and(self, node):
+        raise NotImplementedError
+        
+    def do_op(self, node):
+        if node.data.value == '&&':
+            self.do_and(node)
+        elif node.data.value == '||':
+            self.do_or(node)
+        else:
+            assert 0, 'NOT REACHED'
+
+    def do_or(self, node):
+        node.st = node.right.st + ' UNION ' + node.left.st
+
+class NidSql(SqlGenerator):
+    def do_and(self, node):
+        node.st = node.right.st + ' AND nid IN ( ' + node.left.st + ' )'
+    
+    def do_equal(self, node):
         field = node.left.data.value
         data = node.right.data.value
         if field in ('hostname', 'ipaddr', 'id', 'ethernet',
@@ -175,21 +196,34 @@ class SqlGenerator:
         else:
             print "Warning: Unrecognized search field: %s" % field
 
-    def do_op(self, node):
-        if node.data.value == '&&':
-            self.do_and(node)
-        elif node.data.value == '||':
-            self.do_or(node)
-        else:
-            assert 0, 'NOT REACHED'
-
-    def do_or(self, node):
-        node.st = node.right.st + ' UNION ' + node.left.st
-
+class IdSql(SqlGenerator):
     def do_and(self, node):
-        node.st = node.right.st + ' AND nid IN ( ' + node.left.st + ' )'
+        node.st = node.right.st + ' AND id IN ( ' + node.left.st + ' )'
 
-
+    def do_equal(self, node):
+        field = node.left.data.value
+        data = node.right.data.value
+        if field in ('id', 'descr', 'lid', 'serial_num', 'inventory_num',
+                     'comment'):
+            node.st = "SELECT id FROM equipment WHERE %s ~* '%s'"\
+                      % (field, data)
+        elif field == 'desc':
+            node.st = "SELECT id FROM equipment WHERE descr ~* '%s'" % (data)
+        elif field == 'serial':
+            node.st = "SELECT id FROM equipment WHERE serial_num ~* '%s'" % (data)
+        elif field == 'inv_num':
+            node.st = "SELECT id FROM equipment WHERE inventory_num ~* '%s'" % (data)
+        elif field == 'type':
+            node.st = "SELECT id FROM usage WHERE usage ~* '%s'" % (data)
+        elif field == 'ponum' or field == 'po_num':
+            node.st = "SELECT id FROM purchase WHERE po_num ~* '%s'" % (data)
+        elif field == 'poprice' or field == 'po_price':
+            node.st = "SELECT id FROM purchase WHERE price = %s" % (data)
+        elif field == 'pocomment' or field == 'po_comment':
+            node.st = "SELECT id FROM purchase WHERE comment ~* '%s'" % (data)
+        else:
+            print "Warning: Unrecognized search field: %s" % field
+            
 if __name__ == '__main__':
     import sys
     #lex = Lexer('hostname=mothra')

@@ -542,6 +542,46 @@ class edb ( TextUI ):
 
         self.confirmUpdate()
     
+    def query(self, args):
+        search = Search.EdbSearch(udb.getConnection())
+        result = search.run(args[0])
+        if not result:
+            return
+        print result
+        
+        if len(args) == 1:
+            for id in result:
+                eqrec = EquipmentRecord.fetchEqById(id)
+                hostnames = eqrec.getHostnames()
+                if hostnames:
+                    print hostnames[0]
+        elif args[1] == 'all':
+            if len(result) == 1:
+                self.profile(result[0])
+            else:
+                for id in result:
+                    print '=' * 40
+                    self.profile(id)
+        else:
+            for id in result:
+                eqrec = EquipmentRecord.fetchEqById(id)
+                self.printFields(eqrec, args)
+
+    def printFields(self, eqrec, args):
+        l = []
+        for field in args[1:]:
+            if field == 'hostname':
+                hostnames = eqrec.getHostnames()
+                if hostnames:
+                    l.append(hostnames[0])
+                else:
+                    l.append('')
+            elif field == 'desc' or field == 'descr':
+                l.append(eqrec.getDescr() or '')
+            else:
+                self.warn("Unrecognized field: %s" % field)
+        print '\t'.join(l)
+
     def getRec(self, target):
         if type(target) is int or target.isdigit():
             eqrec = EquipmentRecord.fetchEqById(target)
@@ -598,7 +638,7 @@ class cdb ( TextUI ):
         udb.commit()
 
     def query(self, args):
-        search = Search.Search(udb.getConnection())
+        search = Search.CdbSearch(udb.getConnection())
         result = search.run(args[0])
         if not result:
             return

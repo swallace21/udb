@@ -134,12 +134,6 @@ def fetchNetByHostname(host):
         return None
     return NetworkRecord(netrec)
         
-def fetchNetByEqId(id):
-    netrec = Network.getUnique(id = id)
-    if netrec is None:
-        return None
-    return NetworkRecord(netrec)
-
 def fetchNetByNid(nid):
     netrec = Network.getUnique(nid = nid)
     if netrec is None:

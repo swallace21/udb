@@ -15,7 +15,18 @@ class Search:
     def parse(self, query):
         lex = Parser.Lexer(query)
         tree = lex.getExpression()
-        self.sql = Parser.SqlGenerator(tree)
+        self.sql = self.getParser(tree)
         
     def getSql(self):
         return self.sql.getSQL()
+
+    def getParser(self, tree):
+        raise NotImplementedError
+
+class CdbSearch(Search):
+    def getParser(self, tree):
+        return Parser.NidSql(tree)
+
+class EdbSearch(Search):
+    def getParser(self, tree):
+        return Parser.IdSql(tree)
