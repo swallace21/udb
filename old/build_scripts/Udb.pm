@@ -11,8 +11,8 @@ sub new {
     my($type) = shift;
     my($dbh, $r);
 
-#    $dbh = DBI->connect("dbi:Pg:dbname=udb;host=db", 'twh', 'changeme');
-    $dbh = DBI->connect("dbi:Pg:dbname=udb", 'twh', 'changeme');
+    $dbh = DBI->connect("dbi:Pg:dbname=udb;host=db", 'twh', 'changeme');
+#    $dbh = DBI->connect("dbi:Pg:dbname=udb", 'twh', 'changeme');
     $dbh || die "Can't connect to data base: $DBI::errstr\n";
     $dbh->{AutoCommit} = 0;
     $r->{dbh} = $dbh;

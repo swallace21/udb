@@ -88,7 +88,7 @@ sub insert_host {
 
     $cmd = "INSERT INTO network ( $fields ) VALUES ( $values )";
     if ( !$db->do($cmd) ) {
-	$db-close();
+	$db->close();
 	die "ERROR: $hostname, $ethernet\n";
     }
 
