@@ -31,8 +31,8 @@ def commit():
 # - PyDO doesn't recognize 'macaddr' type, so changed it to text.
 # - changed 'numeric' to 'float' for Purchase.price and Dispose.price
 
-#PyDO.DBIInitAlias('udb', 'pydo:postgresql:db.cs.brown.edu:udb:twh:changeme')
-PyDO.DBIInitAlias('udb', 'pydo:postgresql:localhost:udb:twh:changeme')
+PyDO.DBIInitAlias('udb', 'pydo:postgresql:db.cs.brown.edu:udb:twh:changeme')
+#PyDO.DBIInitAlias('udb', 'pydo:postgresql:localhost:udb:twh:changeme')
 
 class Status(PyDO.PyDO):
     connectionAlias = 'udb'
