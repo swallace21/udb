@@ -98,6 +98,15 @@ class EquipmentRecord(DBRecord.DBRecord):
     def setLid(self, lid):
         self.record['lid'] = lid
 
+    def getBuilding(self):
+        return self.record.getLocation()['building']
+
+    def getFloor(self):
+        return self.record.getLocation()['floor']
+
+    def getRoom(self):
+        return self.record.getLocation()['room']
+
     def getUsers(self):
         urec = self.record.getUsers()
         if not urec:
@@ -240,9 +249,37 @@ class EquipmentRecord(DBRecord.DBRecord):
         return self.record.getConfig()
     
     def getConfiguration(self):
+        m = {'cpu': None, 'disk': None, 'memory': None, 'graphics': None,
+             'comment': None}
         c = self.getConfRec()
         if not c:
-            return (None, None, None, None, None)
-        return (c['cpu'], c['disk'], c['memory'], c['graphics'], c['comment'])
+            return m
+        for k in c.keys():
+            m[k] = c[k]
+        del m['id']
+        return m
+
+    def setConf(self, field, data):
+        if not data:
+            data = None
+        rec = self.getConfRec()
+        if not rec:
+            if not data:
+                return
+            rec = udb.Config.new(self.getId())
+        rec[field] = data
         
-        
+    def setCpu(self, cpu):
+        self.setConf('cpu', cpu)
+            
+    def setDisk(self, disk):
+        self.setConf('disk', disk)
+
+    def setMem(self, mem):
+        self.setConf('memory', mem)
+
+    def setGraphics(self, gfx):
+        self.setConf('graphics', gfx)
+
+    def setConfComment(self, comment):
+        self.setConf('comment', comment)

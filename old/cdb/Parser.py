@@ -118,8 +118,6 @@ class Lexer:
 
     def getEquals(self):
         self.skipWhitespace()
-        if self.currentPos >= len(self.st):
-            raise ParseError, 'Invalid term'
         if self.st[self.currentPos] == '=':
             self.currentPos += 1
             return Token(TOKEN_EQUALS, '=')
@@ -142,8 +140,6 @@ class Lexer:
     def getExpression(self):
         if self.currentPos >= len(self.st):
             raise ParseError, 'Empty expression'
-            return
-
         termNode = self.getTerm()
         tok = self.getBinOp()
         if not tok:
@@ -196,12 +192,13 @@ class NidSql(SqlGenerator):
     def initSearchStrings(self):
         self.field2sql = {
             'hostname': self.makeSqlString('network', 'hostname'),
-            'ethernet': self.makeSqlString('network', 'ethernet'),
+            'ethernet': self.makeSqlString('network', 'text(ethernet)'),
             'mxhost': self.makeSqlString('network', 'mxhost'),
             'comment': self.makeSqlString('network', 'comment'),
             'id': self.makeSqlStringNum('network', 'id'),
             'nid': self.makeSqlStringNum('network', 'nid'),
-            'ipaddr': "SELECT nid FROM network WHERE text(ipaddr) ~* '%s'",
+            'ipaddr': self.makeSqlString('network', 'text(ipaddr)'),
+            'status': self.makeSqlString('status', 'status'),
             'os': "SELECT nid FROM network, os_type WHERE os_type.os ~* '%s' AND os_type.id = network.id",
             'arch': "SELECT nid FROM network, architecture WHERE architecture.arch ~* '%s' AND architecture.id = network.id",
             'lid': "SELECT nid FROM network, equipment WHERE lid ~* '%s' AND network.id = equipment.id",
@@ -209,6 +206,7 @@ class NidSql(SqlGenerator):
             'building': "SELECT n.nid FROM network n, equipment e, location l WHERE l.building ~* '%s' AND e.lid = l.lid AND e.id = n.id",
             'alias': "SELECT DISTINCT network.nid FROM network, aliases WHERE aliases.alias ~* '%s' AND network.nid = aliases.nid",
             'netgroup': "SELECT nid FROM network WHERE netgroup ~* '%s' UNION SELECT nid FROM netgroups WHERE netgroup ~* '%s'",
+            'subnet': "SELECT nid FROM network WHERE bcast = '128.148.%s.255/24'"
             }
         self.field2sql['host'] = self.field2sql['hostname']
         self.field2sql['ether'] = self.field2sql['ethernet']
@@ -298,8 +296,8 @@ class IdSql(SqlGenerator):
         field = node.left.data.value
         data = node.right.data.value
         if self.field2sql.has_key(field):
-            if field.find('date') > 0 :
-                data.replace('/', '-')
+            if field.find('date') >= 0 :
+                data = data.replace('/', '-')
             node.st = self.field2sql[field] % ( data )
         else:
             raise ParseError, "Unrecognized search field: %s" % field

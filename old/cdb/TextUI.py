@@ -434,6 +434,61 @@ class TextUI:
             new = self.makeList(resp)
             eqrec.setUsers(new)
 
+    def setCpu(self, eqrec, hasDefault):
+        if hasDefault:
+            default = eqrec.getConfiguration()['cpu']
+            if not default:
+                default = ''
+        else:
+            default = ''
+        resp = self.prompt("Enter CPU:", default)
+        if resp != default:
+            eqrec.setCpu(resp)
+        
+    def setDisk(self, eqrec, hasDefault):
+        if hasDefault:
+            default = eqrec.getConfiguration()['disk']
+            if not default:
+                default = ''
+        else:
+            default = ''
+        resp = self.prompt("Enter disk:", default)
+        if resp != default:
+            eqrec.setDisk(resp)
+
+    def setMem(self, eqrec, hasDefault):
+        if hasDefault:
+            default = eqrec.getConfiguration()['memory']
+            if not default:
+                default = ''
+        else:
+            default = ''
+        resp = self.prompt("Enter memory:", default)
+        if resp != default:
+            eqrec.setMem(resp)
+
+    def setGraphics(self, eqrec, hasDefault):
+        if hasDefault:
+            default = eqrec.getConfiguration()['graphics']
+            if not default:
+                default = ''
+        else:
+            default = ''
+        resp = self.prompt("Enter graphics:", default)
+        if resp != default:
+            eqrec.setGraphics(resp)
+
+    def setConfComment(self, eqrec, hasDefault):
+        if hasDefault:
+            default = eqrec.getConfiguration()['comment']
+            if not default:
+                default = ''
+        else:
+            default = ''
+        resp = self.prompt("Enter config comment:", default)
+        if resp != default:
+            eqrec.setConfComment(resp)
+
     def makeDate(self, st):
         return mx.DateTime.Parser.DateFromString(st, ('us', 'altus',
                                                       'iso', 'altiso',
@@ -465,7 +520,7 @@ class edb ( TextUI ):
         hostnames = eqrec.getHostnames()
         self.display("hostnames", ','.join(hostnames))
         self.display("descr", eqrec.getDescr())
-        self.display("location", eqrec.getLid())
+        self.display("lid", eqrec.getLid())
         self.display("serial number", eqrec.getSerialNumber())
         self.display("inventory number", eqrec.getInventoryNumber())
         self.display("type", eqrec.getUsage())
@@ -478,13 +533,13 @@ class edb ( TextUI ):
         (inst_date, inst_comment) = eqrec.getInstallation()
         self.display("install date", inst_date)
         self.display("install comment", inst_comment)
-        self.display("User(s)", self.joinList(eqrec.getUsers()))
-        (cpu, disk, memory, graphics, comment) = eqrec.getConfiguration()
-        self.display("cpu", cpu)
-        self.display("disk", disk)
-        self.display("memory", memory)
-        self.display("graphics", graphics)
-        self.display("conf_comment", comment)
+        self.display("users", self.joinList(eqrec.getUsers()))
+        conf = eqrec.getConfiguration()
+        self.display("cpu", conf['cpu'])
+        self.display("disk", conf['disk'])
+        self.display("memory", conf['memory'])
+        self.display("graphics", conf['graphics'])
+        self.display("conf_comment", conf['comment'])
 
     def delete(self, target):
         #
@@ -524,6 +579,11 @@ class edb ( TextUI ):
         self.setInstallDate(eqrec)
         self.setInstallComment(eqrec)
         self.setUsers(eqrec)
+        self.setCpu(eqrec)
+        self.setDisk(eqrec)
+        self.setMem(eqrec)
+        self.setGraphics(eqrec)
+        self.setConfComment(eqrec)
 
         self.confirmInsert()
 
@@ -544,6 +604,11 @@ class edb ( TextUI ):
         self.setInstallDate(eqrec, 1)
         self.setInstallComment(eqrec, 1)
         self.setUsers(eqrec, 1)
+        self.setConfComment(eqrec, 1)
+        self.setCpu(eqrec, 1)
+        self.setDisk(eqrec, 1)
+        self.setMem(eqrec, 1)
+        self.setGraphics(eqrec, 1)
 
         self.confirmUpdate()
     
@@ -557,7 +622,6 @@ class edb ( TextUI ):
         
         if not result:
             return
-        print result
         
         if len(args) == 1:
             for id in result:
@@ -587,10 +651,60 @@ class edb ( TextUI ):
                 else:
                     l.append('')
             elif field == 'desc' or field == 'descr':
-                l.append(eqrec.getDescr() or '')
+                l.append(eqrec.getDescr())
+            elif field == 'serial_num' or field == 'serial':
+                l.append(eqrec.getSerialNumber())
+            elif field == 'inventory_number' or field == 'inv' \
+                     or field == 'inv_num':
+                l.append(eqrec.getInventoryNumber())
+            elif field == 'comment':
+                l.append(eqrec.getComment())
+            elif field == 'lid':
+                l.append(eqrec.getLid())
+            elif field == 'id':
+                l.append(str(eqrec.getId()))
+            elif field == 'type':
+                l.append(eqrec.getUsage())
+            elif field == 'po_num' or field == 'ponum':
+                l.append(eqrec.getPO()[0])
+            elif field == 'po_date' or field == 'podate':
+                l.append(eqrec.getPO()[1])
+            elif field == 'po_price' or field == 'poprice' or field == 'price':
+                price = eqrec.getPO()[2]
+                if price is None:
+                    l.append('')
+                else:
+                    l.append(str(price))
+            elif field == 'po_comment' or field == 'pocomment':
+                l.append(eqrec.getPO()[3])
+            elif field == 'arch' or field == 'hw_arch':
+                l.append(eqrec.getArch())
+            elif field == 'users':
+                l.append(self.joinList(eqrec.getUsers()))
+            elif field == 'inst_date' or field == 'install_date' \
+                     or field == 'instdate':
+                l.append(eqrec.getInstallation()[0])
+            elif field == 'inst_comment' or field == 'instcomment':
+                l.append(eqrec.getInstallation()[1])
+            elif field == 'cpu':
+                l.append(eqrec.getConfiguration()['cpu'])
+            elif field == 'memory' or field == 'mem':
+                l.append(eqrec.getConfiguration()['memory'])
+            elif field == 'disk':
+                l.append(eqrec.getConfiguration()['disk'])
+            elif field == 'graphics' or field == 'gfx':
+                l.append(eqrec.getConfiguration()['graphics'])
+            elif field == 'conf_comment' or field == 'config_comment':
+                l.append(eqrec.getConfiguration()['comment'])
+            elif field == 'building':
+                l.append(eqrec.getBuilding())
+            elif field == 'floor':
+                l.append(eqrec.getFloor())
+            elif field == 'room':
+                l.append(eqrec.getRoom())
             else:
                 self.warn("Unrecognized field: %s" % field)
-        print '\t'.join(l)
+        print '\t'.join([ a or '' for a in l])
 
     def getRec(self, target):
         if type(target) is int or target.isdigit():
@@ -609,6 +723,10 @@ class cdb ( TextUI ):
 
         self.display("nid", netrec.getNid())
         self.display("hostname", netrec.getHostname())
+        eqrec = netrec.getEquipmentRec()
+        if eqrec:
+            self.display("id", eqrec.getId())
+            self.display("lid", eqrec.getLid())
         self.display("netgroups", self.joinList(netrec.getNetgroups()))
         self.display("aliases", self.joinList(netrec.getAliases()))
         self.display("comment", netrec.getComment())
@@ -655,7 +773,6 @@ class cdb ( TextUI ):
             return
         if not result:
             return
-        print result
         
         if len(args) == 1:
             for nid in result:
@@ -675,38 +792,45 @@ class cdb ( TextUI ):
 
     def printFields(self, netrec, args):
         l = []
+        eqrec = netrec.getEquipmentRec()
+        
         for field in args[1:]:
             if field == 'hostname':
-                l.append(netrec.getHostname() or '')
-            elif field == 'ipaddr' or field == 'ip_addr':
-                l.append(netrec.getIP() or '')
+                l.append(netrec.getHostname())
+            elif field == 'ipaddr' or field == 'ip_addr' or field == 'ip':
+                l.append(netrec.getIP())
+            elif field == 'mxhost' or field == 'mx':
+                l.append(netrec.getMxHost())
+            elif field == 'status':
+                l.append(self.joinList(netrec.getStatus()))
             elif field == 'os' or field == 'os_type':
-                val = netrec.getOses()
-                l.append(','.join(val))
+                l.append(self.joinList(netrec.getOses()))
             elif field == 'alias' or field == 'aliases':
-                val = netrec.getAliases()
-                l.append(','.join(val))
+                l.append(self.joinList(netrec.getAliases()))
             elif field == 'comment':
-                l.append(netrec.getComment() or '')
+                l.append(netrec.getComment())
             elif field == 'ether' or field == 'ethernet' or field == 'mac':
-                l.append( netrec.getEthernet() or '')
+                l.append(netrec.getEthernet())
             elif field == 'arch' or field == 'hw_arch':
-                l.append( netrec.getArch() or '' )
+                l.append(netrec.getArch())
             elif field == 'lid':
-                val = netrec.getEquipmentRec().getLid()
-                l.append( val or '' )
+                val = ''
+                if eqrec:
+                    val = eqrec.getLid()
+                l.append( val )
             elif field == 'nid':
                 l.append(str(netrec.getNid()))
             elif field == 'id':
-                eqrec = netrec.getEquipmentRec()
+                val = ''
                 if eqrec:
                     val = str(eqrec.getId())
-                else:
-                    val = None
-                l.append(val or '')
+                l.append(val)
+            elif field in ('netgroup', 'netgroups', 'group', 'supp_grps',
+                           'prim_grp'):
+                l.append(self.joinList(netrec.getNetgroups()))
             else:
                 self.warn("Unrecognized field: %s" % field)
-        print '\t'.join(l)
+        print '\t'.join([a or '' for a in l])
     
     def insert(self, args):
         if len(args) == 1:
