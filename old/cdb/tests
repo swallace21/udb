@@ -1,0 +1,22 @@
+#!/usr/bin/python2.1
+
+import sys
+import unittest
+import NetworkRecordTest
+import EquipmentRecordTest
+import UtilTests
+import TextUITest
+
+def suite():
+    suite = unittest.TestSuite()
+    suite.addTest(UtilTests.suite())
+    suite.addTest(NetworkRecordTest.suite())
+    suite.addTest(EquipmentRecordTest.suite())
+    suite.addTest(TextUITest.suite())
+    return suite
+
+if len(sys.argv) > 1:
+    runner = unittest.TextTestRunner(verbosity=2)
+else:
+    runner = unittest.TextTestRunner()
+runner.run(suite())

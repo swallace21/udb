@@ -1,0 +1,26 @@
+#!/usr/bin/python2.2
+
+# $Id$
+
+import sys
+import unittest
+import MainTest
+import UtilsTest
+import DBTest
+import TargetFileTest
+import DNSFileTest
+
+def suite():
+    suite = unittest.TestSuite()
+    suite.addTest(MainTest.suite())
+    suite.addTest(DBTest.suite())
+    suite.addTest(TargetFileTest.suite())
+    suite.addTest(DNSFileTest.suite())
+    suite.addTest(UtilsTest.suite())
+    return suite
+
+if len(sys.argv) > 1:
+    runner = unittest.TextTestRunner(verbosity=2)
+else:
+    runner = unittest.TextTestRunner()
+runner.run(suite())

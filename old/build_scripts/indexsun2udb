@@ -1,0 +1,220 @@
+#!/usr/bin/perl -w
+
+use strict;
+use Udb;
+my($db) = new Udb;
+$db->set_print(1);
+
+my($hostname, $desc, $inv, $serial, $ug_serial, $po, $po_rem1, $po_rem2,
+   $puch_date, $puch_rem1, $install_date, $ug_install_date, $inst_rem1,
+   $inst_rem2, $loc, $type, $users, $ug_po, $puch_rem2);
+my($id, $first_line, $result);
+$first_line = <>;
+
+# o Hostname
+# o Description
+# o Brown inv. #
+# o Serial #
+# - Upgrade Serial #
+# o Purchase Order#
+# - Upgrade PO#
+# o PO remarks
+# - PO remarks
+# o Purchase date
+# o PD remarks
+# o PD remarks
+# o Install date
+# o Upgrade Installation Date
+# o Install remarks
+# o Install remarks
+# o Location
+# o Type
+# o User(s)
+
+while ( <> ) {
+    ($hostname, $desc, $inv, $serial, $ug_serial, $po, $ug_po, $po_rem1,
+     $po_rem2, $puch_date, $puch_rem1, $puch_rem2, $install_date, $ug_install_date,
+     $inst_rem1, $inst_rem2, $loc, $type, $users) = split(/\t/);
+
+    print "$hostname\n";
+
+    &create_usage($type);
+    &create_location($loc);
+
+    $result
+      = $db->select("SELECT id FROM equipment WHERE descr = '($hostname)'");
+    if ( !$result ) {
+	die "error from db\n";
+    }
+    if ( $#{$result} == -1 ) {
+	&insert();
+    }
+    else {
+	if ( $#{$result} != 0 ) {
+	    die "got multiple matches for $hostname\n";
+	}
+	$id = $result->[0]->[0];
+	&update();
+    }
+
+    &purchase_info();
+    &users();
+    &install();
+}
+
+$db->commit();
+$db->close();
+
+sub install {
+    my($comment) = '';
+
+    if ( $install_date ) {
+	$install_date = &fix_date($install_date);
+    }
+    $install_date = $db->quote($install_date);
+
+    if ( $inst_rem1 ) {
+	$comment = $inst_rem1;
+    }
+    if ( $inst_rem2 ) {
+	$comment .= " $inst_rem2";
+    }
+    if ( $ug_install_date ) {
+	$comment .= "upgrade installed: $ug_install_date";
+    }
+    $comment = $db->quote($comment);
+
+    $db->do("INSERT INTO installation ( id, date, comment ) VALUES ( $id, $install_date, $comment )");
+}
+
+sub users {
+    return unless ( $users );
+    $users = $db->quote($users);
+    $db->do("INSERT INTO users ( id, users ) VALUES ( $id, $users )");
+}
+
+sub purchase_info {
+    my($comment) = '';
+
+    if ( $po_rem1 ) {
+	$comment = $po_rem1;
+    }
+    if ( $puch_rem1 ) {
+	$comment .= " $puch_rem1";
+    }
+    if ( $puch_rem2 ) {
+	$comment .= " $puch_rem2";
+    }
+    $po = $db->quote($po);
+    $puch_date = &fix_date($puch_date);
+    $puch_date = $db->quote($puch_date);
+    $comment = $db->quote($comment);
+
+    $db->do("INSERT INTO purchase ( id, po_num, date, comment ) VALUES ( $id, $po, $puch_date, $comment)");
+}
+
+sub insert {
+    $id = $db->create_id();
+    if ( !$id ) {
+	die "Can't get id\n";
+    }
+    $loc = $db->quote($loc);
+    $desc = $db->quote($desc);
+    $serial = $db->quote($serial);
+    $inv = $db->quote($inv);
+    $type = $db->quote($type);
+    my($h) = $db->quote("index host: $hostname");
+
+    $db->do("INSERT INTO equipment ( id, descr, lid, serial_num, inventory_num, usage, comment ) VALUES ($id, $desc, $loc, $serial, $inv, $type, $h)");
+}
+
+sub update {
+    $loc = $db->quote($loc);
+    $serial = $db->quote($serial);
+    $desc = $db->quote($desc);
+    $inv = $db->quote($inv);
+    $type = $db->quote($type);
+    my ($comment) = $db->quote("index host: $hostname");
+
+    $db->do("UPDATE equipment SET descr = $desc, lid = $loc, serial_num = $serial, inventory_num = $inv, usage = $type, comment = $comment WHERE id = $id");
+}
+
+sub create_usage {
+    my($usage) = shift;
+
+    return if ( $usage eq '');
+    my($result) = $db->select("SELECT * FROM usage WHERE usage = '$usage'");
+    if ( !$result ) {
+	die "error\n";
+    }
+    if ( $#{$result} == -1 ) {
+	$db->do("INSERT INTO usage ( usage ) VALUES ( '$usage' )");
+    }
+}
+
+sub create_location {
+    my($loc) = shift;
+
+    return if ( $loc eq '');
+    my($result) = $db->select("SELECT * FROM location WHERE lid = '$loc'");
+    if ( !$result ) {
+	die "error\n";
+    }
+    if ( $#{$result} == -1 ) {
+	$db->do("INSERT INTO location ( lid ) VALUES ( '$loc' )");
+    }
+}
+
+sub fix_date {
+    my($orig) = shift;
+    my($month, $day, $year);
+
+    if ( $orig =~ m%^\d+/\d+$% ) {
+        ($month, $year) = ($orig =~ m%^(\d+)/(\d+)$% );
+        $year = &fix_year($year);
+        return "$year-$month-01";
+    }
+
+    if ( $orig =~ m%\d+-\d+-\d+$% ) {
+        ($month, $day, $year) = ( $orig =~ m%(\d+)-(\d+)-(\d+)$% );
+        $year = &fix_year($year);
+        return "$year-$month-$day";
+    }
+
+    if ( $orig =~ m%^\d+-[A-Za-z]+-\d+$% ) {
+        ($day, $month, $year) = ( $orig =~ m%^(\d+)-([A-Za-z]+)-(\d+)$% );
+        $year = &fix_year($year);
+        $month = &fix_month($month);
+        return "$year-$month-$day";
+    }
+    return '';
+}
+
+sub fix_month {
+    my($month) = shift;
+
+    if ( $month =~ /Jun/ ) {
+        6;
+    }
+    elsif ( $month =~ /May/) {
+        5;
+    }
+    else {
+        '';
+    }
+}
+
+sub fix_year {
+    my($year) = shift;
+
+    if ( $year > 100 ) {
+	return $year;
+    }
+
+    if ( $year =~ /^0/ ) {
+        $year = '20' . $year;
+    }
+    else {
+        $year = '19' . $year;
+    }
+}

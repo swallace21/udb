@@ -1,0 +1,153 @@
+#!/usr/bin/perl -w
+
+#use strict;
+
+use Udb;
+
+my($data_file) = shift;
+
+if ( !$data_file ) {
+    $data_file = '/u/system/lib/cdb_data.pl';
+}
+require $data_file;
+
+my($db) = new Udb;
+
+my($key, $data);
+
+while ( ($key, $data) = each(%$cdb_by_hostname) ) {
+    &insert_host($db, $data);
+}
+
+$db->commit();
+$db->close();
+
+sub insert_host {
+    my($db, $host) = @_;
+    my($id);
+    my($nid);
+
+    my $hostname = $host->{'hostname'};
+    print $hostname, "\n";
+    my $netgroup = $host->{'prim_grp'};
+    my $os_type = $host->{'os_type'};
+    my $mxhost = $host->{'mxhost'};
+    my $ipaddr = $host->{'ip_addr'};
+    $ipaddr .= '/24';
+    my $comment = $host->{'comment'};
+    my $hw_arch = $host->{'hw_arch'};
+    my $ethernet = $host->{'ethernet'};
+    $host->{'status'} =~ s/\s//g;
+    my @status = split(/,/, $host->{'status'});
+    $host->{'aliases'} =~ s/\s//g;
+    my @aliases = split(/,/, $host->{'aliases'});
+    $host->{'supp_grps'} =~ s/\s//g;
+    my @sup_groups = split(/,/, $host->{'supp_grps'});
+
+    $id = $db->create_id();
+    my $cmd = "INSERT INTO equipment (id, descr, lid) VALUES ($id, '($hostname)', 'unknown')";
+    $db->do($cmd);
+
+    my $fields = 'id';
+    my $values = "$id";
+
+    $nid = $db->create_nid();
+    $fields .= ', nid';
+    $values .= ", $nid";
+
+    if ( $ipaddr ) {
+	$fields .= ', ipaddr';
+	$values .= ", '$ipaddr'";
+
+	$fields .= ', bcast';
+	$values .= ", broadcast('$ipaddr')";
+    }
+
+    if ( $hostname ) {
+	$fields .= ', hostname';
+	$values .= ", '$hostname'";
+    }
+
+    if ( $ethernet ) {
+	$fields .= ', ethernet';
+	$values .= ", '$ethernet'";
+    }
+
+    if ( $netgroup && $netgroup ne 'none' ) {
+	$fields .= ', netgroup';
+	$values .= ", '$netgroup'";
+    }
+
+    if ( $mxhost ) {
+	$fields .= ', mxhost';
+	$values .= ", '$mxhost'";
+    }
+
+    if ( $comment ) {
+	$fields .= ', comment';
+	$comment =~ s/'/\\'/g;
+	$values .= ", '$comment'";
+    }
+
+    $cmd = "INSERT INTO network ( $fields ) VALUES ( $values )";
+    $db->do($cmd);
+
+    if ( $hw_arch ) {
+	$cmd = "INSERT INTO architecture (id, arch) ";
+	$cmd .= "SELECT $id, arch FROM arch_list WHERE arch ~* '$hw_arch'";
+	$db->do($cmd);
+    }
+
+    if ( $os_type ) {
+	my(@os_list) = split(/\//, $os_type);
+	foreach $os_type (@os_list) {
+	    $os_type =~ s/\s+//g;
+	    next if ( $os_type eq 'none' );
+
+	    if ( $os_type =~ /^w2k$/ ) {
+		$os_type = 'Win2k';
+	    }
+	    if ( $os_type =~ /^win$/i ) {
+		$os_type = 'Windows';
+	    }
+	    if ( $os_type =~ /^nt server$/i ) {
+		$os_type = 'NTServer';
+	    }
+	    if ( $os_type =~ /^winnt$/i ) {
+		$os_type = 'NT';
+	    }
+	    $cmd = "INSERT INTO os_type (id, os) ";
+	    $cmd .= "SELECT $id, os FROM os_list WHERE os ~* '$os_type'";
+	    $db->do($cmd);
+	}
+    }
+
+    if ( $#status != -1 ) {
+	foreach (@status) {
+	    next if ( /netIDonly/ ); 
+	    if ( /none/ ) {
+		$_ = 'special';
+	    }
+	    $cmd = 'INSERT INTO status (nid, status) ';
+	    $cmd .= "SELECT $nid, status FROM status_list WHERE status ~* '$_'";
+	    $db->do($cmd);
+	}
+    }
+
+    if ( $#aliases != -1 ) {
+	foreach (@aliases) {
+	    $cmd = "INSERT INTO aliases ( nid, alias ) ";
+	    $cmd .= "VALUES ( $nid, '$_')";
+	    $db->do($cmd);
+	}
+    }
+
+    if ( $#sup_groups != -1 ) {
+	foreach (@sup_groups) {
+	    next if ( $_ eq 'none');
+	    $cmd = "INSERT INTO netgroups ( nid, netgroup ) ";
+	    $cmd .= "VALUES ( $nid, '$_')";
+	    $db->do($cmd);
+	}
+    }
+}
