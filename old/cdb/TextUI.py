@@ -509,12 +509,28 @@ class TextUI:
             udb.commit()
         else:
             print "Insert cancelled."
-            
+
+    def searchForRecord(self, target, searchClass):
+        if target.find('=') == -1:
+            return None
+        search = searchClass(udb.getConnection())
+        try:
+            result = search.run(target)
+        except Search.ParseError:
+            return None
+        if len(result) == 1:
+            return self.getRec(result[0])
+        self.warn("Multiple records for %s" % target)
+        return None
+
 class edb ( TextUI ):
     def profile(self, target):
         eqrec = self.getRec(target)
         if not eqrec:
-            return
+            eqrec = self.searchForRecord(target, Search.EdbSearch)
+            if not eqrec:
+                self.warn('No record for "%s" found in database' % target)
+                return
 
         self.display("id", eqrec.getId())
         hostnames = eqrec.getHostnames()
@@ -555,8 +571,11 @@ class edb ( TextUI ):
             else:
                 eqrec = None
         if not eqrec:
-            self.warn('No record for "%s" found in database' % target)
-            return
+            eqrec = self.searchForRecord(target, Search.EdbSearch)
+            if not eqrec:
+                self.warn('No record for "%s" found in database' % target)
+                return
+            eqrec = eqrec.record
         netrecs = udb.Network.getSome(id = eqrec['id'])
         for n in netrecs:
             n['id'] = None
@@ -590,7 +609,10 @@ class edb ( TextUI ):
     def modify(self, target):
         eqrec = self.getRec(target)
         if not eqrec:
-            return
+            eqrec = self.searchForRecord(target, Search.EdbSearch)            
+            if not eqrec:
+                self.warn('No record for "%s" found in database' % target)
+                return
         self.setDescription(eqrec, 1)
         self.setLid(eqrec, 1)
         self.setSerialNumber(eqrec, 1)
@@ -711,16 +733,17 @@ class edb ( TextUI ):
             eqrec = EquipmentRecord.fetchEqById(target)
         else:
             eqrec = EquipmentRecord.fetchEqByHostname(target)
-        if not eqrec:
-            self.warn('No record for "%s" found in database' % target)
         return eqrec
 
 class cdb ( TextUI ):
     def profile(self, target):
         netrec = self.getRec(target)
         if not netrec:
-            return
-
+            netrec = self.searchForRecord(target, Search.CdbSearch)            
+            if not netrec:
+                self.warn('No record for "%s" found in database' % target)
+                return
+            
         self.display("nid", netrec.getNid())
         self.display("hostname", netrec.getHostname())
         eqrec = netrec.getEquipmentRec()
@@ -754,8 +777,12 @@ class cdb ( TextUI ):
         else:
             netrec = udb.Network.getUnique(hostname = target)
         if netrec is None:
-            self.warn('No record for "%s" found in database' % target)
-            return
+            netrec = self.searchForRecord(target, Search.CdbSearch)
+            if not netrec:
+                self.warn('No record for "%s" found in database' % target)
+                return
+            else:
+                netrec = netrec.record
         id = netrec['id']
         netrec.delete()
         if id:
@@ -878,7 +905,10 @@ class cdb ( TextUI ):
     def modify(self, target):
         netrec = self.getRec(target)
         if not netrec:
-            return
+            netrec = self.searchForRecord(target, Search.CdbSearch)
+            if not netrec:
+                self.warn('No record for "%s" found in database' % target)
+                return
 
         #
         # Equipment ID
@@ -913,6 +943,4 @@ class cdb ( TextUI ):
             netrec = NetworkRecord.fetchNetByNid(target)
         else:
             netrec = NetworkRecord.fetchNetByHostname(target)
-        if not netrec:
-            self.warn('No record for "%s" found in database' % target)
         return netrec

@@ -1,7 +1,8 @@
 # $Id$
 
 import Parser
-from Parser import ParseError
+
+ParseError = Parser.ParseError
 
 class Search:
     def __init__(self, dbConn):

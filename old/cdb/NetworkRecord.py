@@ -140,9 +140,6 @@ def fetchNetByNid(nid):
     return NetworkRecord(netrec)
 
 class NetworkRecord(DBRecord.DBRecord):
-    record = None
-    eqRec = None
-
     def __init__(self, netrec = None):
         if netrec is None:
             self.record = udb.Network.new()
