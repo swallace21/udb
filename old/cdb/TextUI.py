@@ -827,7 +827,7 @@ class edb ( TextUI ):
         except Search.ParseError, ex:
             self.warn("ERROR: Can't parse query: " + ex.args[0])
             return
-        
+
         if not result:
             return
         
@@ -913,6 +913,11 @@ class edb ( TextUI ):
                 l.append(eqrec.getFloor())
             elif field == 'room':
                 l.append(eqrec.getRoom())
+            elif field == 'surplus':
+                if eqrec.isSurplus():
+                    l.append('Surplus')
+                else:
+                    l.append('')
             else:
                 self.warn("Unrecognized field: %s" % field)
         print '\t'.join([ a or '' for a in l])

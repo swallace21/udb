@@ -204,6 +204,7 @@ class NidSql(SqlGenerator):
             'lid': "SELECT nid FROM network, eq WHERE lid ~* '%s' AND network.id = eq.id",
             'floor': "SELECT n.nid FROM network n, eq e, location l WHERE l.floor = '%s' AND e.lid = l.lid AND e.id = n.id",
             'building': "SELECT n.nid FROM network n, eq e, location l WHERE l.building ~* '%s' AND e.lid = l.lid AND e.id = n.id",
+            'room': "SELECT n.nid FROM network n, eq e, location l WHERE l.room ~* '%s' AND e.lid = l.lid AND e.id = n.id",
             'alias': "SELECT DISTINCT network.nid FROM network, aliases WHERE aliases.alias ~* '%s' AND network.nid = aliases.nid",
             'netgroup': "SELECT nid FROM netgroups WHERE netgroup ~* '%s'",
             'subnet': "SELECT nid FROM network WHERE bcast = '128.148.%s.255/24'"
@@ -266,6 +267,7 @@ class IdSql(SqlGenerator):
             'conf_comment': self.makeSqlString('config', 'comment'),
             'floor': "SELECT e.id FROM %s e, location l WHERE l.floor = '%%s' AND e.lid = l.lid" % self.eqTable,
             'building': "SELECT e.id FROM %s e, location l WHERE l.building ~* '%%s' AND e.lid = l.lid" % self.eqTable,
+            'room': "SELECT e.id FROM %s e, location l WHERE l.room ~* '%%s' AND e.lid = l.lid" % self.eqTable,
             'active': "SELECT id FROM %s WHERE active = '%%s'" % self.eqTable,
             'surplus': "SELECT id FROM %s WHERE active != '%%s'" % self.eqTable,
             }
