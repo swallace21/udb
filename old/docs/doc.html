@@ -1,0 +1,168 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<!-- $Id$ -->
+<html>
+  <head>
+    <title>UDB Documentation</title>
+  </head>
+
+  <body>
+    <h1>UDB Documentation</h1>
+
+    <h2>Table of Contents</h2>
+
+    <h2>Introduction</h2>
+    <h2>User's Guide</h2>
+    <h3>Overview</h3>
+    Explain about nids, ids.  The difference between network records
+    and equpiment records.  An equipment record is the record of a
+    physical thing -- something that can be kicked.  A network record
+    can be associated with an equipment record, but it doesn't might
+    not be.  In the former case, a simple user workstation probably
+    has one equipment record and one network record.  A server with
+    multiple network cards will have one equipment record, but
+    multiple network records.  A dynamically assigned DHCP address has
+    no equipment associated with it, but will have a network record.
+    <p>
+      To work with network records, <tt>cdb</tt> is used.  To work
+      with equipment records, use <tt>edb</tt>.  You can think of
+      <tt>cdb</tt> as being the new, improved cdb, and <tt>edb</tt> as
+      being the new, (improved?) <tt>index</tt>.
+
+    <h3>cdb</h3>
+    <tt>cdb</tt> is used to manipulate network records.  There are
+    serveral command you can give to cdb:
+    <kbd><blockquote>
+      cdb &lt;command&gt; [argument...]
+      <ul>
+	<li>insert
+	<li>profile
+	<li>delete
+	<li>modify
+	<li>query
+      </ul>
+    </blockquote></kbd>
+    <h4>cdb insert</h4>
+    <h4>cdb profile</h4>
+    <h4>cdb delete</h4>
+    NOTE: Unlike the old version of cdb, this version will confirm
+    that you want to delete the record.
+    <h4>cdb modify</h4>
+    <h4>cdb query</h4>
+
+    <h3>edb</h3>
+    <h4>edb insert</h4>
+    <h4>edb profile</h4>
+    <h4>edb delete</h4>
+    <h4>edb modify</h4>
+    <h4>edb query</h4>
+    <h4>edb surplus</h4>
+    <h4>edb unsurplus</h4>
+
+    <h3>pgaccess</h3>
+
+    <h3>cdb_make</h3>
+
+    <h3>SQL</h3>
+    Hopefully, almost all of the day-to-day use of the database can be
+    done with cdb/edb/pgaccess.  However, if the need arises, it's
+    possible to directly access the database using pgsl, like this:
+    <blockquote>
+    <kbd>psql -h db.cs.brown.edu udb</kbd>
+    </blockquote>
+
+    <h4>Transactions</h4>
+    Whenever you use psql to change the database, it's a good
+    idea to do it within a "transaction".  To start a transaction,
+    execute:
+    <blockquote>
+      <kbd>begin;</kbd>
+    </blockquote>
+    at the psql prompt.  Now make whatever changes you need to, and
+    <em>verify</em> that you've changed what you think you have.  If
+    you're happy with the results, make your changes permanent by
+    running:
+    <blockquote>
+      <kbd>commit;</kbd>
+    </blockquote>
+    at the psql prompt.  If you goofed, and the changes you made had
+    unintened consiquences, you can cancel the transaction like this:
+    <blockquote>
+      <kbd>rollback;</kbd>
+    </blockquote>
+    If you are working within a transaction, be sure to
+    <kbd>commit</kbd> before you exit psql, or you changes will be lost
+
+    <h2>Developer's Guide</h2>
+
+    <h3>CVS Repository</h3>
+    All of the scripts and other files associated with "udb" are in a
+    CVS repository.  The CVSROOT is /tstaff/projects/.CVS, so to
+    checkout a copy of the latest stuff, run:
+    <kbd><blockquote>
+      cvs -d /tstaff/projects/.CVS co udb
+    </blockquote></kbd>
+    The <tt>README</tt> file that gets checked out should explain the
+    directory hierarchy.
+
+    <h3>The Database</h3>
+    <h4>The Schema</h4>
+    <img src="schema.gif">
+    <h4>Buiding the Database</h4>
+
+    <h3>cdb/edb</h3>
+
+    <h3>cdb_make</h3>
+    I tried to get to clever in my class inheritance, and created a
+    mess.  It works, but it takes forever to find where to make
+    changes.  This should really be fixed.
+
+    <h3>Why Python?</h3>
+    Okay, I know you're thinking to yourself, "Why the hell didn't he
+    just user Perl?", so this is my answer.
+    <p>
+      I started off using Perl.  However, as the program grew, I tried
+      to get more "object orienty", and that lead to an "impedance
+      mismatch" with the database (I didn't make up that term.  It's
+      apparently a well known problem, which I stumbled across as I
+      re-invented the wheel).  I searched high and low for a Perl
+      module that would automate the datbase to object mapping, and
+      came up empty
+    <p>
+      However, in my searches I ran across "PyDO", which was exactly
+      what I was looking for, but for the wrong language.  Not just
+      the wrong language, but that screwed up one where whitespace
+      matters.
+    <p>
+      After several false starts writing my own, I finally decided to
+      try python and PyDO.  Once I got used to Python, I
+      <em>loved</em> it, and PyDO did the job very nicely.
+
+    <h4>Perl versus Python</h4>
+    Don't worry -- I haven't completely gone off the Python deep end.
+    I still use Perl.  In fact, the scripts that build the inital udb
+    database are written in Perl.  For a task that requires lot's of
+    slinging of strings and regular expressions, Perl is definately
+    the right tool for the job.  On the other hand, Python's object
+    oriented syntax is nicer, and for a program with anything but the
+    most simple data structures, I'll use Python.
+
+    <h2>To Do</h2>
+    <h3>Features</h3>
+    <ul>
+      <li>Documentation
+      <li>More testing of cdb_make
+      <li>GUI
+      <li>Test on Windows
+      <li>Add <tt>-f</tt> flag to not confirm update/insert/delete
+    </ul>
+    <h3>Bugs</h3>
+    <ul>
+      <li><tt>cdb insert</tt> doesn't work with a query argument
+    </ul>
+    <hr>
+<!-- Created: Thu Oct 30 14:57:04 EST 2003 -->
+<!-- hhmts start -->
+Last modified: Thu Oct 30 17:10:43 EST 2003
+<!-- hhmts end -->
+  </body>
+</html>
