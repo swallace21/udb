@@ -822,6 +822,9 @@ class edb ( TextUI ):
                 hostnames = eqrec.getHostnames()
                 if hostnames:
                     print hostnames[0]
+                else:
+                    print eqrec.getId()
+                
         elif args[1] == 'all':
             if len(result) == 1:
                 self.profile(result[0])
