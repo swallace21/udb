@@ -516,3 +516,12 @@ CREATE TABLE config (
 
 DROP VIEW eq;
 CREATE VIEW eq AS SELECT network.hostname, equipment.* FROM equipment LEFT OUTER JOIN network ON equipment.id = network.id;
+
+/*
+ * A table of ethernet manufacturer's.  Download the list from:
+ *      http://standards.ieee.org/regauth/oui/oui.txt
+ */
+CREATE TABLE mac_manu (
+	ethernet	MACADDR,
+	manu		TEXT
+);
