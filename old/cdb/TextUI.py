@@ -624,6 +624,7 @@ class TextUI:
         if len(result) == 1:
             return self.getRec(result[0])
         if len(result) == 0:
+            self.warn("No records for %s" % target)
             return None
         self.warn("Multiple records for %s" % target)
         return None
@@ -1034,35 +1035,46 @@ class cdb ( TextUI ):
             else:
                 self.warn("Unrecognized field: %s" % field)
         print '\t'.join([a or '' for a in l])
-    
+
+    def setOrSearchEqId(self, eqId = None):
+        if eqId:
+            if eqId.isdigit():
+                return EquipmentRecord.fetchEqById(eqId)
+            else:
+                match = self.searchForRecord(eqId, Search.EdbSearch)
+                if match:
+                    return EquipmentRecord.fetchEqById(match.getId())
+                return None
+        else:
+            while 1:
+                resp = self.prompt("Enter equipment ID:")
+                if not resp:
+                    resp = self.prompt("Creating a network entry with no associated equipment.\nIs this really what you want to do? (y/n)", 'N')
+                    if self.isYes(resp):
+                        return None
+                elif resp.isdigit():
+                    eqrec = EquipmentRecord.fetchEqById(resp)
+                    if eqrec:
+                        return eqrec                
+                    print 'No equipment with id %s in database' % resp
+                else:
+                    match = self.searchForRecord(resp, Search.EdbSearch)
+                    if match:
+                        return EquipmentRecord.fetchEqById(match.getId())
+        
     def insert(self, args):
         if len(args) == 1:
             eqid = args[0]
         else:
             eqid = None
         netrec = NetworkRecord.NetworkRecord()
-        eqrec = None
 
-        #
-        # Eq ID
-        #
-        if not eqid:
-            while 1:
-                resp = self.prompt("Enter equipment ID:")
-                if not resp:
-                    resp = self.prompt("Creating a network entry with no associated equipment.\nIs this really what you want to do? (y/n)", 'N')
-                    if not self.isYes(resp):
-                        continue
-                    else:
-                        break
-                else:
-                    eqrec = EquipmentRecord.fetchEqById(resp)
-                    if not eqrec:
-                        print 'No equipment with id %s in database' % resp
-                    else:
-                        netrec.setId(eqrec.getId())
-                        break
+        eqrec = self.setOrSearchEqId(eqid)
+        if eqid and not eqrec:
+            return
+        
         if eqrec:
+            netrec.setId(eqrec.getId()) 
             self.setLid(eqrec)
         self.setHostname(netrec)
         self.setAliases(netrec)

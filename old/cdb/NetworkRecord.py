@@ -77,7 +77,7 @@ def checkSubnetEthernet(ip, ether, nid = None):
             if rec[0]['nid'] == nid:
                 return None
         return rec[0]['hostname']
-    assert 0, "NOT REACHED: Ethernet: %s, Ip: %s" % (ether, ip)
+    assert False, "NOT REACHED: Ethernet: %s, Ip: %s" % (ether, ip)
 
 def bcast(ip):
     bytes = ip.split('.')

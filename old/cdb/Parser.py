@@ -183,7 +183,7 @@ class SqlGenerator:
         elif node.data.value == '||':
             self.do_or(node)
         else:
-            assert 0, 'NOT REACHED'
+            assert False, 'NOT REACHED'
 
     def do_or(self, node):
         node.st = node.right.st + ' UNION ' + node.left.st
