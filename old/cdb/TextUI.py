@@ -183,7 +183,7 @@ class TextUI:
 
     def setNetgroups(self, netrec, hasDefault = 0):
         if hasDefault:
-            groups = netrec.getOtherNetgroups()
+            groups = netrec.getNetgroups()
             default = ','.join(groups)
         else:
             groups = []
@@ -192,7 +192,7 @@ class TextUI:
         new = self.makeList(resp)
         new.sort()
         if new != groups:
-            netrec.setOtherNetgroups(new)
+            netrec.setNetgroups(new)
 
     def setEthernet(self, netrec, hasDefault = 0):
         if hasDefault:
