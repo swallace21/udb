@@ -74,7 +74,7 @@ class TextUI:
         sys.stderr.write(self.prog + ": " + message + '\n')
 
     def usage(self):
-        self.warn("Usage: " + self.prog + " <command> [<hostname>]")
+        self.warn("Usage: " + self.prog + " <command> [<arguments>]")
 
     def display(self, field, val):
         sys.stdout.write("%s = " % field)
@@ -132,12 +132,23 @@ class TextUI:
         l = [ s.strip() for s in l ]
         return [ s for s in l if s ]
 
+    def showLidList(self):
+        recs = udb.Location.getSQLWhere("building != 'CIT' AND building != 'home' OR building ISNULL ORDER BY lid")
+        for l in recs:
+            sys.stdout.write(l['lid'])
+            if l['descr']:
+                sys.stdout.write(' - %s' % l['descr'])
+            sys.stdout.write('\n')
+
     def setLid(self, eqrec, notUsed = 0):
         while 1:
             default = eqrec.getLid()
             resp = self.prompt("Enter location ID:", default)
             if default == resp:
                 return
+            if resp == '?':
+                self.showLidList()
+                continue
             if EquipmentRecord.isValidLid(resp):
                 eqrec.setLid(resp)
                 return
@@ -753,7 +764,10 @@ class edb ( TextUI ):
         eqrec.delete()
         self.confirmDelete()
 
-    def insert(self, notUsed):
+    def insert(self, notUsed = None):
+        if notUsed:
+            self.usage()
+            sys.exit(1)
         eqrec = EquipmentRecord.EquipmentRecord('Unknown')
         self.setDescription(eqrec)
         self.setLid(eqrec)
