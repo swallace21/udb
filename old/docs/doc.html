@@ -34,15 +34,15 @@
     <kbd><blockquote>
       cdb &lt;command&gt; [argument...]
       <ul>
-	<li>insert
 	<li>profile
+	<li>insert
 	<li>delete
 	<li>modify
 	<li>query
       </ul>
     </blockquote></kbd>
-    <h4>cdb insert</h4>
     <h4>cdb profile</h4>
+    <h4>cdb insert</h4>
     <h4>cdb delete</h4>
     NOTE: Unlike the old version of cdb, this version will confirm
     that you want to delete the record.
@@ -50,13 +50,98 @@
     <h4>cdb query</h4>
 
     <h3>edb</h3>
-    <h4>edb insert</h4>
+    <h4>Location Ids</h4>
+    Every peice of equipment has to be <em>somewhere</em>.  The
+    location is tracked by the <tt>lid</tt>, the location idetifier.
+    The <tt>lid</tt> for rooms in the CIT are simply the room number,
+    and machines at a user's home will just be their username.  To get
+    a list of available lids, you can enter a '?' at the prompt in
+    edb.
+    <p>
+    If you don't know where an item is located, you can use the lid
+    'unknown'.  However this is not recommended, as it will cause
+    inventory problems. 
+
     <h4>edb profile</h4>
+    <tt>profile</tt> displays the record for a single item.  It
+    requires a single argument that can be an id, a hostname, or a
+    search that returns a single item.  It simple prints the
+    informatino about a peice of equipment.
+
+    Example:
+    <blockquote><pre>
+	% edb profile 738
+	id = 738
+	hostnames = mandolin
+	descr = Maxbuilt
+	lid = 523
+	serial number = 
+	inventory number = CS-722
+	type = Research
+	comment = index host: mandolin
+	po number = 952415
+	po date = 5/1/2002
+	po price = 
+	po comment = 
+	install date = 
+	install comment = 
+	users = Stan Zdonik
+	cpu = 1.5GHz
+	disk = 40GB
+	memory = 500MB
+	graphics = GF3
+	conf_comment = 
+    </pre></blockquote>
+    The same record could be retrieved using the hostname:
+    <blockquote><pre>% edb profile mandolin</pre></blockquote>
+    or via a search: <blockquote><pre>edb profile inv=CS-722</pre></blockquote>
+    For more information about searches, see edb query.
+
+    <h4>edb insert</h4>
+    <tt>insert</tt> creates a new equipment record.  <tt>insert</tt>
+    accepts no argument, and will prompt you to fill in the data for
+    an equipment record.  Note that the description field is required
+    to be none empty.
+
     <h4>edb delete</h4>
+    <tt>delete</tt> removes all traces of an equpiment record from the
+    database.  It it final, and unrecoverable.  All the information
+    in the record is lost after the deletion.  Use <tt>surplus</tt> to
+    mark an item as surplused but continue to track it.
+    <p>
+      <tt>delete</tt> requires a single argument which can be an id, a
+      hostname or a search that returns a single item.  You will be
+      shown the profile information, and then asked to confirm the
+      deletion.
+    <p>
+      You may receive the message "Orphaning network record
+      &lt;hostname/nid&gt;" when you delete a record.  This message
+      indicates that there are still network records still associated
+      with the item you're deleting.  Since it's highly unlikely that
+      an item that doesn't exist is still going to be on the network,
+      this message is a strong indication that you shouldn't be
+      deleteing the record.
+
     <h4>edb modify</h4>
+    <tt>modify</tt> allows you to modify an existing record.  It takes
+    a single argument, which can be a hostname, an id, or a search
+    string that returns a single record.
+
     <h4>edb query</h4>
     <h4>edb surplus</h4>
+    <tt>suplus</tt> is used to surplus an item.  It requires a single
+    argument that can be an id, a hostname, or a search that returns a
+    single item.  You will be shown the profile information on the
+    item and asked if you wish to proceed.  If you do proceed, you
+    will be prompted for some additional information regarding the
+    surplusing.  (Note: if you later <tt>unsurplus</tt> this item,
+    the information in these additional fields will be lost).
+
     <h4>edb unsurplus</h4>
+    <tt>unsurplus</tt> is used to fix an accidently suplused item.  It
+    takes a single argument, the equipment id of the item to be
+    unsurplused.  You should note that the surplus information
+    (surplus date, price, comment, buyer), if any, will be lost.
 
     <h3>pgaccess</h3>
 
@@ -116,6 +201,15 @@
     mess.  It works, but it takes forever to find where to make
     changes.  This should really be fixed.
 
+    <h3>Weaknesses</h3>
+    A major drawback to using a real data base is that in order to
+    build the network files (i.e., run cdb_make), the systems must be
+    up and running.  For example, since cdb_make depends on DNS
+    function properly, if the DNS files get corrupt, they can't be
+    rebuilt using cdb_make, as cdb_make needs to use DNS.  To get
+    around this problem, it might be wise to keep copies of the
+    network files in the build directory.
+
     <h3>Why Python?</h3>
     Okay, I know you're thinking to yourself, "Why the hell didn't he
     just user Perl?", so this is my answer.
@@ -147,22 +241,26 @@
     most simple data structures, I'll use Python.
 
     <h2>To Do</h2>
-    <h3>Features</h3>
+    <h3>Features to Add</h3>
     <ul>
       <li>Documentation
       <li>More testing of cdb_make
       <li>GUI
       <li>Test on Windows
       <li>Add <tt>-f</tt> flag to not confirm update/insert/delete
+      <li>Add <tt>not equal</tt> to searches
     </ul>
-    <h3>Bugs</h3>
+    <h3>Bugs to Fix</h3>
     <ul>
-      <li><tt>cdb insert</tt> doesn't work with a query argument
+      <li><tt>id</tt> is too general.  It should be called
+	<tt>eqid</tt> or something, at least, when presented to the
+	user.
+      <li>Refactor <tt>cdb_make</tt>
     </ul>
     <hr>
 <!-- Created: Thu Oct 30 14:57:04 EST 2003 -->
 <!-- hhmts start -->
-Last modified: Thu Oct 30 17:10:43 EST 2003
+Last modified: Wed Dec  3 15:25:08 EST 2003
 <!-- hhmts end -->
   </body>
 </html>
