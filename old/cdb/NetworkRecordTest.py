@@ -14,6 +14,12 @@ class NetworkRecordTest(unittest.TestCase):
         netrec = NetworkRecord.fetchNetByHostname('mothra')
         self.assertEquals('mothra', netrec.getHostname())
 
+    def testFetchByNid(self):
+        netrec = NetworkRecord.fetchNetByNid(94)
+        self.assertEquals('mothra', netrec.getHostname())
+        netrec = NetworkRecord.fetchNetByNid('94')
+        self.assertEquals('mothra', netrec.getHostname())
+
     def testHostname(self):
         netrec = NetworkRecord.NetworkRecord()
         self.assert_( netrec.setHostname('mothra') == 0 )

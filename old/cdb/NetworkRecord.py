@@ -21,7 +21,7 @@ def checkAliases(aliases, nid = None):
 #
 def isNameAvailable(name, nid = None):
     if not name:
-        return 0
+        return 1
     if nid:
         rec = Network.getSQLWhere("hostname = '%s' and nid != %d"
                                   % (name, nid))
@@ -86,6 +86,8 @@ def bcast(ip):
     return string.join(bytes, '.')
 
 def isValidIp(ip):
+    if not ip:
+        return None
     bytes = ip.split('.')
     if len(bytes) < 4:
         return "Not enough bytes.  Need 4, got %d" % len(bytes)
@@ -169,7 +171,9 @@ class NetworkRecord(DBRecord.DBRecord):
     def setHostname(self, name):
         if not isNameAvailable(name):
             return 0
-        
+
+        if not name:
+            name = None
         self.record['hostname'] = name
         if self.eqRec.getDescr() == 'None':
             self.eqRec.setDescr('(' + name + ')')
@@ -188,6 +192,8 @@ class NetworkRecord(DBRecord.DBRecord):
         self.record['mxhost'] = host
         
     def setId(self, id):
+        if not id:
+            id = None
         self.record['id'] = id
 
     def getNetgroup(self):
@@ -281,20 +287,22 @@ class NetworkRecord(DBRecord.DBRecord):
         return ip
 
     def setIP(self, ip):
-        error = isValidIp(ip)
-        if error:
-            return "Not a valid IP: " + error
-        if not isIpAvailable(ip, self.getNid()):
-            return "Ip is in use"
+        if ip:
+            error = isValidIp(ip)
+            if error:
+                return "Not a valid IP: " + error
+            if not isIpAvailable(ip, self.getNid()):
+                return "Ip is in use"
 
-        error = checkSubnetEthernet(ip, self.getEthernet(), self.getNid())
-        if error:
-            return "Ethernet in use on subnet by %s" % error
+            error = checkSubnetEthernet(ip, self.getEthernet(), self.getNid())
+            if error:
+                return "Ethernet in use on subnet by %s" % error
 
         self.record['bcast'] = None
         self.record['ipaddr'] = None
-        self.record['bcast'] = self.quote(bcast(ip) + '/24')
-        self.record['ipaddr'] = self.quote(ip + '/24')
+        if ip:
+            self.record['bcast'] = self.quote(bcast(ip) + '/24')
+            self.record['ipaddr'] = self.quote(ip + '/24')
         return None
 
     def getStatus(self):

@@ -15,8 +15,6 @@
 # 	|	'||'
 #
 
-import sys
-
 TOKEN_FIELD = 0
 TOKEN_DATA = 1
 TOKEN_BINOP = 2
@@ -155,7 +153,7 @@ class SqlGenerator:
     def do_equal(self, node):
         field = node.left.data.value
         data = node.right.data.value
-        if field in ('hostname', 'ipaddr', 'id', 'ethernet', 'netgroup',
+        if field in ('hostname', 'ipaddr', 'id', 'ethernet',
                      'mxhost', 'comment', 'nid'):
             node.st = "SELECT nid FROM network WHERE %s ~* '%s'"\
                       % (field, data)
@@ -170,12 +168,12 @@ class SqlGenerator:
         elif field == 'building':
             node.st = "SELECT n.nid FROM network n, equipment e, location l WHERE l.building ~* '%s' AND e.lid = l.lid AND e.id = n.id" % (data)
         elif field == 'alias' or field == 'aliases':
-            node.st = "SELECT network.nid FROM network, aliases WHERE aliases.alias ~* '%s' AND network.nid = aliases.nid" % (data)
+            node.st = "SELECT DISTINCT network.nid FROM network, aliases WHERE aliases.alias ~* '%s' AND network.nid = aliases.nid" % (data)
         elif field in [ 'group', 'netgroup', 'netgroups', 'supp_grps',
                         'prim_grp' ]:
-            node.st = "SELECT nid FROM network WHERE netgroup ~* %s UNION SELECT nid FROM netgroups WHERE netgroup ~* %s" % (data, data)
+            node.st = "SELECT nid FROM network WHERE netgroup ~* '%s' UNION SELECT nid FROM netgroups WHERE netgroup ~* '%s'" % (data, data)
         else:
-            pass
+            print "Warning: Unrecognized search field: %s" % field
 
     def do_op(self, node):
         if node.data.value == '&&':
@@ -193,6 +191,7 @@ class SqlGenerator:
 
 
 if __name__ == '__main__':
+    import sys
     #lex = Lexer('hostname=mothra')
     #lex = Lexer('hostname=mothra||hostname=foo')
     #lex = Lexer('(hostname=mothra||hostname=foo)')

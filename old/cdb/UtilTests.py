@@ -9,13 +9,13 @@ mothraNid = 94
 
 class IPTests(unittest.TestCase):
     def test_isValidIp(self):
-        bad = ['', 'x', '1.2.3', '12.-4.34.34', '128.148.32.255',
+        bad = ['x', '1.2.3', '12.-4.34.34', '128.148.32.255',
                '192.168.1.255', '255.255.255.255', '0.0.0.0']
         for ip in bad:
             self.assert_(NetworkRecord.isValidIp(ip) is not None,
                          "%s should be invalid" % ip)
 
-        good = ['10.0.0.2', '128.148.33.100']
+        good = [None, '', '10.0.0.2', '128.148.33.100']
         for ip in good:
             self.assert_(NetworkRecord.isValidIp(ip) is None, "%s should be valid" % ip)
 
@@ -45,7 +45,8 @@ class HostnameTests(unittest.TestCase):
         self.assert_(NetworkRecord.isNameAvailable('mothra') == 0)
         self.assert_(NetworkRecord.isNameAvailable('mothra', mothraNid) == 1)
         self.assert_(NetworkRecord.isNameAvailable('printhost') == 0)
-        self.assert_(NetworkRecord.isNameAvailable('') == 0)
+        self.assert_(NetworkRecord.isNameAvailable('') == 1)
+        self.assert_(NetworkRecord.isNameAvailable(None) == 1)
         self.assert_(NetworkRecord.isNameAvailable('xyzzy'))
 
     def test_checkAliases(self):

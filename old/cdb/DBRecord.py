@@ -1,5 +1,3 @@
-#!/usr/bin/python2.1
-
 def quote(st):
     if not st:
         return None

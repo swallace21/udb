@@ -6,6 +6,14 @@ from udb import *
 import DBRecord
 import NetworkRecord
 
+def isValidLid(lid):
+    if not lid:
+        return 0
+    locRec = Location.getUnique(lid = lid)
+    if locRec:
+        return 1
+    return 0
+
 def isArchValid(arch):
     if not arch:
         return 1
@@ -31,6 +39,9 @@ def fixOs(os):
     return rec[0]['os']
 
 def fetchEqById(id):
+    if not type(id) is int:
+        if not id.isdigit():
+            return None
     rec = Equipment.getUnique(id = id)
     if rec is None:
         return None
@@ -78,6 +89,9 @@ class EquipmentRecord(DBRecord.DBRecord):
 
     def getLid(self):
         return self.record['lid']
+
+    def setLid(self, lid):
+        self.record['lid'] = lid
 
     def getUsers(self):
         urec = self.record.getUsers()
