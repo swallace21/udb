@@ -1,5 +1,7 @@
 #!/usr/bin/python2.1
 
+# $Id$
+
 import sys, string
 from udb import *
 import NetworkRecord
@@ -501,4 +503,3 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         Network.rollback()
         print "\nCaught control-C"
-
