@@ -128,6 +128,103 @@
     string that returns a single record.
 
     <h4>edb query</h4>
+    <pre>
+    edb query &lt;search&gt; [field...]
+	field=regexp
+	&& || ( )
+    Fields:
+	hostname
+	descr
+        desc
+	serial_num
+        serial
+	inventory_num
+        inv
+        inv_num
+	comment
+	lid
+	id
+	type
+	po_num
+        ponum
+	po_date
+        podate
+	po_price
+        price
+        poprice
+	po_comment
+        pocomment
+	arch
+        hw_arch
+	users
+	inst_date
+        install_date
+        instdate
+	inst_comment
+        instcomment
+	cpu
+	memory
+        mem
+	disk
+	graphics
+        gfx
+	conf_comment
+        config_comment
+	floor
+	building
+	active
+	surplus
+    </pre>
+    By default, the hostname is returned, or, if there is no hostname,
+    the id is returned.  The special field 'all' can be used to print
+    the 'profile' information 
+
+    <h5>Date Searches</h5>
+    Although edb/cdb presents dates in the "normal" format of
+    mm/dd/yyyy, dates are stored in the data base as yyyy-mm-dd.  You
+    need to keep this in mind when searching on date fields.
+
+    <h5>Examples</h5>
+
+    <pre>
+    To find all suns located in the machine room:
+
+       % ./edb query 'arch=sun&&building=cit&&room=531'
+       bruford
+       in
+       mothra
+       poplar
+       trogon
+
+    To find all items installed in December 2000, and print everything
+    about them:
+
+       % edb query 'inst_date=2000-12' all
+       ========================================
+       id = 676
+       hostnames = crittendon
+       descr = Maxbuilt
+       lid = 472
+       ...
+       ========================================
+       id = 344
+       hostnames = discordia
+       descr = Maxbuilt
+       lid = 569
+       ...
+    
+    To find all items in room 569 or room 570 of the CIT that have
+    been surplused:
+
+       % edb query 'building=cit&&(room=569||room=570)&&surplus=t' descr comment surplus
+       Inspiron D300LT laptop  index host: ainge       Surplus
+       Sparcstation 5  index host: bob Surplus
+       Sparcstation10/41GX     index host: hobbes      Surplus
+       Sparcstation10/41GX     index host: locke       Surplus
+       Sparcstation10/41GX     index host: susie       Surplus
+
+    </pre>
+
     <h4>edb surplus</h4>
     <tt>suplus</tt> is used to surplus an item.  It requires a single
     argument that can be an id, a hostname, or a search that returns a
@@ -260,7 +357,7 @@
     <hr>
 <!-- Created: Thu Oct 30 14:57:04 EST 2003 -->
 <!-- hhmts start -->
-Last modified: Wed Dec  3 15:25:08 EST 2003
+Last modified: Fri Dec  5 14:27:41 EST 2003
 <!-- hhmts end -->
   </body>
 </html>
