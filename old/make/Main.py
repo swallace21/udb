@@ -20,7 +20,6 @@ map_depends = {
     'os_type': [ 'bootparams', 'tftpboot' ],
     'arch': [ 'bootparams', 'tftpboot' ],
     'netgroup': [ 'netgroup', 'bootparams', 'tftpboot' ],
-    'supp_groups': [ 'netgroup' ],
     'mxhost': [ 'dns' ],
     'jspaths': [ 'tftpboot', 'bootparams']
     }

@@ -13,7 +13,7 @@ class DNSFile(TargetFile.TargetFile):
 
     def getTargetDir(self):
         if globals.debug:
-            return '/tmp/'
+            return './tmp/'
         return self.targetDirName
     
     def getFirstNumberAfterParen(self, st):

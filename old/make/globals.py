@@ -52,7 +52,7 @@ dns_server = 'ns.cs.brown.edu'
 #   TODO: We aren't currently building a reverse map for subnet 34.  This
 #         is an oversight and needs to be fixed.
 #
-dns_subnets = [ 31, 32, 33, 37, 38 ]
+dns_subnets = [ 31, 32, 34, 33, 37, 38 ]
 
 ###########################################################################
 
@@ -79,4 +79,4 @@ prog = ''
 #
 # Verbosity level
 #
-verbose = 1
+verbose = 2

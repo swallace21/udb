@@ -88,7 +88,7 @@ class TargetFile(Target):
 
     def getTargetFile(self):
         if globals.debug:
-            return '/tmp/' + os.path.split(self.targetFilename)[1]
+            return './tmp/' + os.path.split(self.targetFilename)[1]
         return self.targetFilename
 
     def getBuildFile(self):
@@ -474,23 +474,12 @@ class DNS(Target):
 
     def getDNSServer(self):
         if globals.debug and globals.dns_server:
-            return 'discordia.cs.brown.edu'
+            return None
         return globals.dns_server
     
     def copyFilesToBuildDir(self, dbfiles):
         files = ','.join(dbfiles)
         server = self.getDNSServer()
-        if globals.debug:
-            server = 'ns.cs.brown.edu'
-
-        #
-        # HACK ALERT: Whether or not we're in debug mode, we have to grab
-        #   the files from to real server.  The method getTargetFile()
-        #   doesn't return the real target in debug mode, so temporarily
-        #   leave debug mode.
-        #
-        debug = globals.debug
-        globals.debug = 0
         if server:
             status = Utils.scp("%s:%s{%s}" % ( server,
                                                self.toBuild[0].getTargetDir(),
@@ -500,8 +489,6 @@ class DNS(Target):
             status = Utils.scp("%s{%s}" % ( self.toBuild[0].getTargetDir(),
                                             files),
                                Target.getBuildDir() )
-        globals.debug = debug
-
         if status:
             Utils.die("Can't get DNS files from server %s" % server)
         for f in dbfiles:

@@ -23,7 +23,7 @@ class DBIter:
 class DB:
     def __init__(self):
         self.connection = dbModule.connect(database='udb',
-                                           host='db.cs.brown.edu',
+                                           #host='db.cs.brown.edu',
                                            user='twh', password='changeme')
 
     def runQueuryAndReturnIter(self, sql):
@@ -60,26 +60,21 @@ class DB:
         return self.runQueryAndReturnResult(sql)
 
     def getDdhcp(self):
-        nids = self.getNetgroup('ddhcp')
-        sql = """SELECT nid, ethernet, comment
-                   FROM network
-                   WHERE nid IN ( %s )
-                   ORDER BY nid""" % (makeSt(nids))
+        sql = """SELECT network.nid, network.ethernet, network.comment
+                   FROM network, netgroups, status
+                   WHERE netgroups.netgroup = 'dynamic'
+                     AND network.nid = netgroups.nid
+                     AND status.nid = network.nid
+                     AND status.status ~* '^active$'"""
         return self.runQueryAndReturnResult(sql)
     
     def getNetgroup(self, netgroup):
-        sql = """SELECT nid FROM network
-                   WHERE netgroup = '%s'
-                     UNION
-                   SELECT nid FROM netgroups
-                     WHERE netgroup = '%s'""" % (netgroup, netgroup)
+        sql = """SELECT nid FROM netgroups
+                     WHERE netgroup = '%s'""" % (netgroup)
         return self.runQueryAndReturnList(sql)
 
     def getAllNetgroups(self):
-        sql = """SELECT netgroup FROM network WHERE netgroup NOTNULL
-                   GROUP BY netgroup
-                 UNION
-                 SELECT netgroup FROM netgroups GROUP BY netgroup 
+        sql = """SELECT netgroup FROM netgroups GROUP BY netgroup 
                  ORDER BY netgroup"""
         return self.runQueryAndReturnList(sql)
         
@@ -89,11 +84,7 @@ class DB:
                    WHERE netgroups.netgroup = '%s'
                      AND network.nid = netgroups.nid
                      AND network.hostname NOTNULL
-                  UNION
-                 SELECT hostname FROM network
-                   WHERE netgroup = '%s'
-                     AND hostname NOTNULL
-                 ORDER BY hostname""" % (netgroup, netgroup)
+                   ORDER BY network.hostname""" % (netgroup)
         return self.runQueryAndReturnList(sql)
 
     def getAliases(self, nid):
@@ -144,12 +135,9 @@ class DB:
     def get_nid_ipaddr_hostname(self, group):
         sql = """SELECT nid, host(ipaddr), hostname FROM network
                    WHERE nid IN (
-                     SELECT nid FROM network
-                       WHERE netgroup = '%s'
-                     UNION
                      SELECT nid FROM netgroups
                        WHERE netgroup = '%s')
-                   AND hostname NOTNULL and ipaddr NOTNULL""" % (group, group)
+                   AND hostname NOTNULL and ipaddr NOTNULL""" % (group)
         return self.runQueuryAndReturnIter(sql)
 
     def getDNSData(self):

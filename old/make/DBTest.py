@@ -5,6 +5,18 @@
 import unittest
 import DB
 
+mothraNid = 108
+phredNid = 535
+charlesNid = 6
+adminhostNid = 474
+firstEtherNoIpNid = 6
+firstEtherNoIpEther = '00:0a:95:66:51:d8'
+numDNSEntries = 797
+numHostsInLinuxNetgroup = 313
+numHostsInUnsuppNetgroup = 86
+hostWithNoAliasesNid = 342
+numActiveDynamicHosts = 81
+
 class DBTest(unittest.TestCase):
         
     def setUp(self):
@@ -23,29 +35,29 @@ class DBTest(unittest.TestCase):
 
     def testEthernetNoIp(self):
         foo = db.getEthernetNoIp()
-        self.assertEquals(953, foo[0][0])
-        self.assertEquals('00:02:a5:99:8f:f8', foo[0][1])
+        self.assertEquals(firstEtherNoIpNid, foo[0][0])
+        self.assertEquals(firstEtherNoIpEther, foo[0][1])
 
     def testNetgroup(self):
         result = db.getNetgroup('linux')
-        self.assertEquals(289, len(result))
-        self.assert_(86 in result)
-        self.assert_(1 not in result)
+        self.assertEquals(313, len(result))
+        self.assert_(phredNid in result)
+        self.assert_(10000 not in result)
 
     def testDdhcp(self):
         result = db.getDdhcp()
-        self.assertEquals(89, len(result))
-        self.assert_([1026, '00:0a:95:66:51:d8', 'charles: '] in result)
+        self.assertEquals(numActiveDynamicHosts, len(result))
+        self.assert_([charlesNid, '00:0a:95:66:51:d8', 'spr?'] in result)
         
     def testMakeSt(self):
         st = DB.makeSt( [1, 2] )
         self.assertEquals('1, 2', st)
 
     def testGetAliases(self):
-        result = db.getAliases(94)
-        self.assertEquals(['abhost', 'calhost', 'cvs', 'fingerhost',
+        result = db.getAliases(mothraNid)
+        self.assertEquals(['abhost', 'calhost', 'fingerhost',
                            'hqnserver1', 'radmin'], result)
-        result = db.getAliases(480)
+        result = db.getAliases(hostWithNoAliasesNid)
         self.assertEquals([], result)
 
     def testGetHostfile(self):
@@ -58,8 +70,8 @@ class DBTest(unittest.TestCase):
         result = db.getHostnamesInNetgroup('cgc')
         self.assertEquals(['maxou', 'sphere', 'tetra'], result)
         result = db.getHostnamesInNetgroup('unsup')
-        self.assertEquals(81, len(result))
-        self.assertEquals('z', result[80])
+        self.assertEquals(numHostsInUnsuppNetgroup, len(result))
+        self.assertEquals('z', result[-1])
 
     def testGetAllNetgroups(self):
         result = db.getAllNetgroups()
@@ -67,7 +79,7 @@ class DBTest(unittest.TestCase):
 
     def testGetFAIConfig(self):
         # this should be in the table
-        result = db.getFAIConfig(678)
+        result = db.getFAIConfig(phredNid)
         self.assertEquals('phred', result)
         result = db.getFAIConfig(-1)
         self.assertEquals(None, result)
@@ -88,7 +100,7 @@ class DBTest(unittest.TestCase):
             count += 1
             row = iter.next()
             self.assertNotEquals(None, row)
-            self.assertEquals([635, '128.148.31.174', 'adminhost'], row)
+            self.assertEquals([474, '128.148.31.174', 'adminhost'], row)
         self.assertEquals(1, count)
 
     def testIterManyResult(self):
@@ -98,7 +110,7 @@ class DBTest(unittest.TestCase):
             count += 1
             row = iter.next()
             self.assertNotEquals(None, row)
-        self.assertEquals(289, count)
+        self.assertEquals(numHostsInLinuxNetgroup, count)
 
     def testGetDNSData(self):
         iter = db.getDNSData()
@@ -109,7 +121,7 @@ class DBTest(unittest.TestCase):
         while iter.hasNext():
             count += 1
             row = iter.next()
-        self.assertEquals(751, count)
+        self.assertEquals(numDNSEntries, count)
         self.assertEquals('zuul2', row[2])
 
     def testGetRevDNS(self):

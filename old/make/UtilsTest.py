@@ -89,7 +89,7 @@ class UtilsTest(unittest.TestCase):
         try:
             Utils.moveFile(src, dst)
             self.fail("Didn't get OSError")
-        except IOError, e:
+        except OSError, e:
             self.assertEquals(errno.EACCES, e.errno)
 
     def testDifferentFileSystemMove(self):
