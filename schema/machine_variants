@@ -1,0 +1,19 @@
+This is a list of the different "types" of equipments we need to track.
+
+- departmental desktop machine
+- departmental server
+- dmz server
+- user dmz server
+- ilab
+- switches
+
+Network aliases, i.e. maytag or winprint
+
+List of system files this schema should generate
+
+List of actions
+
+- insert
+- delete
+- modify 
+- surplus
