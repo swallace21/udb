@@ -205,7 +205,7 @@ class NidSql(SqlGenerator):
             'floor': "SELECT n.nid FROM network n, equipment e, location l WHERE l.floor = '%s' AND e.lid = l.lid AND e.id = n.id",
             'building': "SELECT n.nid FROM network n, equipment e, location l WHERE l.building ~* '%s' AND e.lid = l.lid AND e.id = n.id",
             'alias': "SELECT DISTINCT network.nid FROM network, aliases WHERE aliases.alias ~* '%s' AND network.nid = aliases.nid",
-            'netgroup': "SELECT nid FROM network WHERE netgroup ~* '%s' UNION SELECT nid FROM netgroups WHERE netgroup ~* '%s'",
+            'netgroup': "SELECT nid FROM netgroups WHERE netgroup ~* '%s'",
             'subnet': "SELECT nid FROM network WHERE bcast = '128.148.%s.255/24'"
             }
         self.field2sql['host'] = self.field2sql['hostname']
@@ -232,10 +232,7 @@ class NidSql(SqlGenerator):
         field = node.left.data.value
         data = node.right.data.value
         if self.field2sql.has_key(field):
-            if field in [ 'group', 'netgroup', 'netgroups', 'supp_grps', 'prim_grp' ]:
-                node.st = self.field2sql[field] % ( data, data )
-            else:
-                node.st = self.field2sql[field] % ( data )
+            node.st = self.field2sql[field] % ( data )
         else:
             raise ParseError, "Unrecognized search field: %s" % field
             
