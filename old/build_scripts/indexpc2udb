@@ -7,7 +7,7 @@
 use strict;
 use Udb;
 my($db) = new Udb;
-$db->set_print(0);
+$db->set_print(1);
 
 my($hostname, $desc, $inv, $ug_serial, $serial, $ug_po, $po, $po_rem1,
    $po_rem2, $puch_date, $puch_rem1, $puch_rem2, $ether,  $install_date,
@@ -77,6 +77,7 @@ while ( <> ) {
 }
 
 $db->commit();
+#$db->rollback();
 $db->close();
 
 sub config() {

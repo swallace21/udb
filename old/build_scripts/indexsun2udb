@@ -38,6 +38,10 @@ while ( <> ) {
 
     print "$hostname\n";
 
+    if ( !$desc ) {
+	$desc = 'None';
+    }
+
     &create_usage($type);
     &create_location($loc);
 
@@ -63,6 +67,7 @@ while ( <> ) {
 }
 
 $db->commit();
+#$db->rollback();
 $db->close();
 
 sub install {

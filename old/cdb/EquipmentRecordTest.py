@@ -14,14 +14,14 @@ class EquipmentRecordTest(unittest.TestCase):
         self.assert_(rec.getId() > 0 )
 
     def testFetch(self):
-        rec = EquipmentRecord.fetchEqById(1)
+        rec = EquipmentRecord.fetchEqById(393)
         self.assert_(rec is not None)
         self.assertEquals('(clclap)', rec.getDescr())
 
     def testFetchByHostname(self):
         rec = EquipmentRecord.fetchEqByHostname('clclap');
         self.assert_(rec is not None)
-        self.assertEquals(1, rec.getId())
+        self.assertEquals(393, rec.getId())
 
         # hostname doesn't exists
         rec = EquipmentRecord.fetchEqByHostname('aadfijhadkfb');

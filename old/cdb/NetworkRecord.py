@@ -189,14 +189,6 @@ class NetworkRecord(DBRecord.DBRecord):
             id = None
         self.record['id'] = id
 
-    def getNetgroup(self):
-        return self.record['netgroup']
-
-    def setNetgroup(self, group):
-        if not group:
-            group = None
-        self.record['netgroup'] = group
-        
     def getAliases(self):
         aliases = self.record.getAliases()
         list = [ a['alias'] for a in aliases ]
@@ -226,20 +218,20 @@ class NetworkRecord(DBRecord.DBRecord):
             udb.Aliases.new(nid = self.record['nid'], alias = a)
         return None
 
-    def getOtherNetgroups(self):
+    def getNetgroups(self):
         groups = self.record.getNetgroups()
         list = [ a['netgroup'] for a in groups ]
         list.sort()
         return list
 
-    def setOtherNetgroups(self, groups):
+    def setNetgroups(self, groups):
         if not groups:
             for group in self.record.getNetgroups():
                 group.delete()
             return
             
         groups.sort()
-        old = self.getOtherNetgroups()
+        old = self.getNetgroups()
         if old:
             if groups == old:
                 return

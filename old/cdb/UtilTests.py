@@ -3,7 +3,7 @@
 import unittest
 import NetworkRecord
 
-mothraNid = 94
+mothraNid = 108
 
 class IPTests(unittest.TestCase):
     def test_isValidIp(self):

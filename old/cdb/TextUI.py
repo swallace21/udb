@@ -479,6 +479,12 @@ class edb ( TextUI ):
         self.display("install date", inst_date)
         self.display("install comment", inst_comment)
         self.display("User(s)", self.joinList(eqrec.getUsers()))
+        (cpu, disk, memory, graphics, comment) = eqrec.getConfiguration()
+        self.display("cpu", cpu)
+        self.display("disk", disk)
+        self.display("memory", memory)
+        self.display("graphics", graphics)
+        self.display("conf_comment", comment)
 
     def delete(self, target):
         #
@@ -598,7 +604,7 @@ class cdb ( TextUI ):
 
         self.display("nid", netrec.getNid())
         self.display("hostname", netrec.getHostname())
-        self.display("prim_grp", netrec.getNetgroup())
+        self.display("netgroups", self.joinList(netrec.getNetgroups()))
         self.display("aliases", self.joinList(netrec.getAliases()))
         self.display("comment", netrec.getComment())
         self.display("ethernet", netrec.getEthernet())
@@ -614,7 +620,6 @@ class cdb ( TextUI ):
         self.display("mxhost", netrec.getMxHost())
         self.display("os_type", self.joinList(netrec.getOses()))
         self.display("status", self.joinList(netrec.getStatus()))
-        self.display("supp_grps", self.joinList(netrec.getOtherNetgroups()))
 
     def delete(self, target):
         #

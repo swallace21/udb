@@ -29,14 +29,122 @@ def commit():
 # but one change was made -- PyDO doesn't recognize 'macaddr' type, so changed
 # it to text.
 
-PyDO.DBIInitAlias('udb', 'pydo:postgresql:db.cs.brown.edu:udb:twh:changeme')
+#PyDO.DBIInitAlias('udb', 'pydo:postgresql:db.cs.brown.edu:udb:twh:changeme')
+PyDO.DBIInitAlias('udb', 'pydo:postgresql:localhost:udb:twh:changeme')
+
+class Status(PyDO.PyDO):
+    connectionAlias = 'udb'
+    table = 'status'
+    fields = (
+        ('status', 'text'),
+        ('nid', 'int4'),
+    )
+    unique = [('status', 'nid')]
+
+    def getStatusList(self):
+        return StatusList.getUnique(status = self['status'])
+
+    def setStatusList(self, item):
+        if item == None:
+            self['status'] = None
+        else:
+            self['status'] = item['status']
+
+    def getNetwork(self):
+        return Network.getUnique(nid = self['nid'])
+
+    def setNetwork(self, item):
+        if item == None:
+            self['nid'] = None
+        else:
+            self['nid'] = item['nid']
+
+class Users(PyDO.PyDO):
+    connectionAlias = 'udb'
+    table = 'users'
+    fields = (
+        ('id', 'int4'),
+        ('users', 'text'),
+    )
+    unique = [('id', 'users')]
+
+    def getEquipment(self):
+        return Equipment.getUnique(id = self['id'])
+
+    def setEquipment(self, item):
+        if item == None:
+            self['id'] = None
+        else:
+            self['id'] = item['id']
+
+class Netgroups(PyDO.PyDO):
+    connectionAlias = 'udb'
+    table = 'netgroups'
+    fields = (
+        ('netgroup', 'text'),
+        ('nid', 'int4'),
+    )
+    unique = [('netgroup', 'nid')]
+
+    def getNetwork(self):
+        return Network.getUnique(nid = self['nid'])
+
+    def setNetwork(self, item):
+        if item == None:
+            self['nid'] = None
+        else:
+            self['nid'] = item['nid']
+
+class OsList(PyDO.PyDO):
+    connectionAlias = 'udb'
+    table = 'os_list'
+    fields = (
+        ('os', 'text'),
+    )
+    unique = [('os',)]
+
+    def getJsPath(self):
+        return JsPaths.getUnique(os = self['os'])
+
+    def setJsPath(self, item):
+        if item == None:
+            self['os'] = None
+        else:
+            self['os'] = item['os']
+
+    def getOsTypes(self):
+        return OsType.getSome(os = self['os'])
+
+    def addOsType(self, item):
+        item.setOsList(self)
+
+    def removeOsType(self, item):
+        item.setOsList(None)
+
+class Fai(PyDO.PyDO):
+    connectionAlias = 'udb'
+    table = 'fai'
+    fields = (
+        ('config', 'text'),
+        ('nid', 'int4'),
+    )
+    unique = [('nid',)]
+
+    def getNetwork(self):
+        return Network.getUnique(nid = self['nid'])
+
+    def setNetwork(self, item):
+        if item == None:
+            self['nid'] = None
+        else:
+            self['nid'] = item['nid']
 
 class Aliases(PyDO.PyDO):
     connectionAlias = 'udb'
     table = 'aliases'
     fields = (
-        ('nid', 'int4'),
         ('alias', 'text'),
+        ('nid', 'int4'),
     )
     unique = [('alias',)]
 
@@ -49,33 +157,137 @@ class Aliases(PyDO.PyDO):
         else:
             self['nid'] = item['nid']
 
-class StatusList(PyDO.PyDO):
+class Purchase(PyDO.PyDO):
     connectionAlias = 'udb'
-    table = 'status_list'
+    table = 'purchase'
     fields = (
-        ('status', 'text'),
+        ('comment', 'text'),
+        ('date', 'date'),
+        ('price', 'numeric'),
+        ('po_num', 'text'),
+        ('id', 'int4'),
     )
-    unique = [('status',)]
+    unique = [('id',)]
 
+    def getEquipment(self):
+        return Equipment.getUnique(id = self['id'])
+
+    def setEquipment(self, item):
+        if item == None:
+            self['id'] = None
+        else:
+            self['id'] = item['id']
+
+class Account(PyDO.PyDO):
+    connectionAlias = 'udb'
+    table = 'account'
+    fields = (
+        ('acct', 'text'),
+        ('percent', 'int4'),
+        ('id', 'int4'),
+    )
+    unique = [('acct', 'id')]
+
+    def getEquipment(self):
+        return Equipment.getUnique(id = self['id'])
+
+    def setEquipment(self, item):
+        if item == None:
+            self['id'] = None
+        else:
+            self['id'] = item['id']
+
+class Installation(PyDO.PyDO):
+    connectionAlias = 'udb'
+    table = 'installation'
+    fields = (
+        ('comment', 'text'),
+        ('date', 'date'),
+        ('id', 'int4'),
+    )
+    unique = [('id',)]
+
+    def getEquipment(self):
+        return Equipment.getUnique(id = self['id'])
+
+    def setEquipment(self, item):
+        if item == None:
+            self['id'] = None
+        else:
+            self['id'] = item['id']
+
+class Network(PyDO.PyDO):
+    connectionAlias = 'udb'
+    table = 'network'
+    fields = (
+        ('comment', 'text'),
+        ('mxhost', 'text'),
+        ('ethernet', 'text'),
+        ('bcast', 'inet'),
+        ('hostname', 'text'),
+        ('ipaddr', 'inet'),
+        ('id', 'int4'),
+        ('nid', 'int4'),
+    )
+    unique = [('nid',), ('ipaddr',), ('hostname',), ('ethernet', 'bcast')]
+
+    sequenced = {
+        'nid': 'network_nid_seq',
+    }
     def getStatuses(self):
-        return Status.getSome(status = self['status'])
+        return Status.getSome(nid = self['nid'])
 
     def addStatus(self, item):
-        item.setStatusList(self)
+        item.setNetwork(self)
 
     def removeStatus(self, item):
-        item.setStatusList(None)
+        item.setNetwork(None)
 
-class Config(PyDO.PyDO):
+    def getNetgroups(self):
+        return Netgroups.getSome(nid = self['nid'])
+
+    def addNetgroup(self, item):
+        item.setNetwork(self)
+
+    def removeNetgroup(self, item):
+        item.setNetwork(None)
+
+    def getFai(self):
+        return Fai.getUnique(nid = self['nid'])
+
+    def setFai(self, item):
+        if item == None:
+            self['nid'] = None
+        else:
+            self['nid'] = item['nid']
+
+    def getAliases(self):
+        return Aliases.getSome(nid = self['nid'])
+
+    def addAliase(self, item):
+        item.setNetwork(self)
+
+    def removeAliase(self, item):
+        item.setNetwork(None)
+
+    def getEquipment(self):
+        return Equipment.getUnique(id = self['id'])
+
+    def setEquipment(self, item):
+        if item == None:
+            self['id'] = None
+        else:
+            self['id'] = item['id']
+
+class Dispose(PyDO.PyDO):
     connectionAlias = 'udb'
-    table = 'config'
+    table = 'dispose'
     fields = (
-        ('id', 'int4'),
-        ('disk', 'text'),
-        ('cpu', 'text'),
-        ('graphics', 'text'),
-        ('memory', 'text'),
         ('comment', 'text'),
+        ('sold_date', 'date'),
+        ('price', 'numeric'),
+        ('id', 'int4'),
+        ('surplus_date', 'date'),
     )
     unique = [('id',)]
 
@@ -88,41 +300,227 @@ class Config(PyDO.PyDO):
         else:
             self['id'] = item['id']
 
-class Architecture(PyDO.PyDO):
+class Location(PyDO.PyDO):
     connectionAlias = 'udb'
-    table = 'architecture'
+    table = 'location'
     fields = (
+        ('building', 'text'),
+        ('lid', 'text'),
+        ('room', 'text'),
+        ('descr', 'text'),
+        ('floor', 'text'),
+    )
+    unique = [('lid',), ('building', 'room', 'floor')]
+
+    def getEquipments(self):
+        return Equipment.getSome(lid = self['lid'])
+
+    def addEquipment(self, item):
+        item.setLocation(self)
+
+    def removeEquipment(self, item):
+        item.setLocation(None)
+
+class Equipment(PyDO.PyDO):
+    connectionAlias = 'udb'
+    table = 'equipment'
+    fields = (
+        ('comment', 'text'),
+        ('inventory_num', 'text'),
+        ('lid', 'text'),
+        ('descr', 'text'),
+        ('usage', 'text'),
+        ('active', 'bool'),
         ('id', 'int4'),
+        ('owner', 'text'),
+        ('serial_num', 'text'),
+    )
+    unique = [('id',), ('serial_num',), ('inventory_num',)]
+
+    sequenced = {
+        'id': 'equipment_id_seq',
+    }
+    def getUsers(self):
+        return Users.getSome(id = self['id'])
+
+    def addUser(self, item):
+        item.setEquipment(self)
+
+    def removeUser(self, item):
+        item.setEquipment(None)
+
+    def getPurchase(self):
+        return Purchase.getUnique(id = self['id'])
+
+    def setPurchase(self, item):
+        if item == None:
+            self['id'] = None
+        else:
+            self['id'] = item['id']
+
+    def getAccounts(self):
+        return Account.getSome(id = self['id'])
+
+    def addAccount(self, item):
+        item.setEquipment(self)
+
+    def removeAccount(self, item):
+        item.setEquipment(None)
+
+    def getInstallation(self):
+        return Installation.getUnique(id = self['id'])
+
+    def setInstallation(self, item):
+        if item == None:
+            self['id'] = None
+        else:
+            self['id'] = item['id']
+
+    def getNetworks(self):
+        return Network.getSome(id = self['id'])
+
+    def addNetwork(self, item):
+        item.setEquipment(self)
+
+    def removeNetwork(self, item):
+        item.setEquipment(None)
+
+    def getDispose(self):
+        return Dispose.getUnique(id = self['id'])
+
+    def setDispose(self, item):
+        if item == None:
+            self['id'] = None
+        else:
+            self['id'] = item['id']
+
+    def getLocation(self):
+        return Location.getUnique(lid = self['lid'])
+
+    def setLocation(self, item):
+        if item == None:
+            self['lid'] = None
+        else:
+            self['lid'] = item['lid']
+
+    def getUsage(self):
+        return Usage.getUnique(usage = self['usage'])
+
+    def setUsage(self, item):
+        if item == None:
+            self['usage'] = None
+        else:
+            self['usage'] = item['usage']
+
+    def getComponentOfs(self):
+        return ComponentOf.getSome(parent = self['id'])
+
+    def addComponentOf(self, item):
+        item.setEquipment(self)
+
+    def removeComponentOf(self, item):
+        item.setEquipment(None)
+
+    def getComponentOf(self):
+        return ComponentOf.getUnique(id = self['id'])
+
+    def setComponentOf(self, item):
+        if item == None:
+            self['id'] = None
+        else:
+            self['id'] = item['id']
+
+    def getOsTypes(self):
+        return OsType.getSome(id = self['id'])
+
+    def addOsType(self, item):
+        item.setEquipment(self)
+
+    def removeOsType(self, item):
+        item.setEquipment(None)
+
+    def getConfig(self):
+        return Config.getUnique(id = self['id'])
+
+    def setConfig(self, item):
+        if item == None:
+            self['id'] = None
+        else:
+            self['id'] = item['id']
+
+    def getArchitecture(self):
+        return Architecture.getUnique(id = self['id'])
+
+    def setArchitecture(self, item):
+        if item == None:
+            self['id'] = None
+        else:
+            self['id'] = item['id']
+
+class ArchList(PyDO.PyDO):
+    connectionAlias = 'udb'
+    table = 'arch_list'
+    fields = (
         ('arch', 'text'),
     )
+    unique = [('arch',)]
+
+    def getArchitectures(self):
+        return Architecture.getSome(arch = self['arch'])
+
+    def addArchitecture(self, item):
+        item.setArchList(self)
+
+    def removeArchitecture(self, item):
+        item.setArchList(None)
+
+class JsPaths(PyDO.PyDO):
+    connectionAlias = 'udb'
+    table = 'js_paths'
+    fields = (
+        ('jumpstart', 'text'),
+        ('netboot', 'text'),
+        ('cache', 'text'),
+        ('os', 'text'),
+        ('install', 'text'),
+    )
+    unique = [('os',)]
+
+    def getOsList(self):
+        return OsList.getUnique(os = self['os'])
+
+    def setOsList(self, item):
+        if item == None:
+            self['os'] = None
+        else:
+            self['os'] = item['os']
+
+class Dirty(PyDO.PyDO):
+    connectionAlias = 'udb'
+    table = 'dirty'
+    fields = (
+        ('data', 'text'),
+        ('dirty', 'bool'),
+    )
+    unique = [('data',)]
+
+class ComponentOf(PyDO.PyDO):
+    connectionAlias = 'udb'
+    table = 'component_of'
+    fields = (
+        ('id', 'int4'),
+        ('parent', 'int4'),
+    )
     unique = [('id',)]
 
-    def getArchList(self):
-        return ArchList.getUnique(arch = self['arch'])
-
-    def setArchList(self, item):
-        if item == None:
-            self['arch'] = None
-        else:
-            self['arch'] = item['arch']
-
     def getEquipment(self):
-        return Equipment.getUnique(id = self['id'])
+        return Equipment.getUnique(id = self['parent'])
 
     def setEquipment(self, item):
         if item == None:
-            self['id'] = None
+            self['parent'] = None
         else:
-            self['id'] = item['id']
-
-class Users(PyDO.PyDO):
-    connectionAlias = 'udb'
-    table = 'users'
-    fields = (
-        ('id', 'int4'),
-        ('users', 'text'),
-    )
-    unique = [('id', 'users')]
+            self['parent'] = item['id']
 
     def getEquipment(self):
         return Equipment.getUnique(id = self['id'])
@@ -150,245 +548,14 @@ class Usage(PyDO.PyDO):
     def removeEquipment(self, item):
         item.setUsage(None)
 
-class ComponentOf(PyDO.PyDO):
-    connectionAlias = 'udb'
-    table = 'component_of'
-    fields = (
-        ('parent', 'int4'),
-        ('id', 'int4'),
-    )
-    unique = [('id',)]
-
-    def getEquipment(self):
-        return Equipment.getUnique(id = self['parent'])
-
-    def setEquipment(self, item):
-        if item == None:
-            self['parent'] = None
-        else:
-            self['parent'] = item['id']
-
-    def getEquipment(self):
-        return Equipment.getUnique(id = self['id'])
-
-    def setEquipment(self, item):
-        if item == None:
-            self['id'] = None
-        else:
-            self['id'] = item['id']
-
-class Dirty(PyDO.PyDO):
-    connectionAlias = 'udb'
-    table = 'dirty'
-    fields = (
-        ('dirty', 'bool'),
-        ('data', 'text'),
-    )
-    unique = [('data',)]
-
-class JsPaths(PyDO.PyDO):
-    connectionAlias = 'udb'
-    table = 'js_paths'
-    fields = (
-        ('install', 'text'),
-        ('os', 'text'),
-        ('cache', 'text'),
-        ('netboot', 'text'),
-        ('jumpstart', 'text'),
-    )
-    unique = [('os',)]
-
-    def getOsList(self):
-        return OsList.getUnique(os = self['os'])
-
-    def setOsList(self, item):
-        if item == None:
-            self['os'] = None
-        else:
-            self['os'] = item['os']
-
-class ArchList(PyDO.PyDO):
-    connectionAlias = 'udb'
-    table = 'arch_list'
-    fields = (
-        ('arch', 'text'),
-    )
-    unique = [('arch',)]
-
-    def getArchitectures(self):
-        return Architecture.getSome(arch = self['arch'])
-
-    def addArchitecture(self, item):
-        item.setArchList(self)
-
-    def removeArchitecture(self, item):
-        item.setArchList(None)
-
-class Equipment(PyDO.PyDO):
-    connectionAlias = 'udb'
-    table = 'equipment'
-    fields = (
-        ('serial_num', 'text'),
-        ('id', 'int4'),
-        ('lid', 'text'),
-        ('usage', 'text'),
-        ('inventory_num', 'text'),
-        ('descr', 'text'),
-        ('active', 'bool'),
-        ('owner', 'text'),
-        ('comment', 'text'),
-    )
-    unique = [('id',), ('serial_num',), ('inventory_num',)]
-
-    sequenced = {
-        'id': 'equipment_id_seq',
-    }
-    def getConfig(self):
-        return Config.getUnique(id = self['id'])
-
-    def setConfig(self, item):
-        if item == None:
-            self['id'] = None
-        else:
-            self['id'] = item['id']
-
-    def getOsTypes(self):
-        return OsType.getSome(id = self['id'])
-
-    def addOsType(self, item):
-        item.setEquipment(self)
-
-    def removeOsType(self, item):
-        item.setEquipment(None)
-
-    def getComponentOfs(self):
-        return ComponentOf.getSome(parent = self['id'])
-
-    def addComponentOf(self, item):
-        item.setEquipment(self)
-
-    def removeComponentOf(self, item):
-        item.setEquipment(None)
-
-    def getComponentOf(self):
-        return ComponentOf.getUnique(id = self['id'])
-
-    def setComponentOf(self, item):
-        if item == None:
-            self['id'] = None
-        else:
-            self['id'] = item['id']
-
-    def getLocation(self):
-        return Location.getUnique(lid = self['lid'])
-
-    def setLocation(self, item):
-        if item == None:
-            self['lid'] = None
-        else:
-            self['lid'] = item['lid']
-
-    def getUsage(self):
-        return Usage.getUnique(usage = self['usage'])
-
-    def setUsage(self, item):
-        if item == None:
-            self['usage'] = None
-        else:
-            self['usage'] = item['usage']
-
-    def getDispose(self):
-        return Dispose.getUnique(id = self['id'])
-
-    def setDispose(self, item):
-        if item == None:
-            self['id'] = None
-        else:
-            self['id'] = item['id']
-
-    def getNetworks(self):
-        return Network.getSome(id = self['id'])
-
-    def addNetwork(self, item):
-        item.setEquipment(self)
-
-    def removeNetwork(self, item):
-        item.setEquipment(None)
-
-    def getInstallation(self):
-        return Installation.getUnique(id = self['id'])
-
-    def setInstallation(self, item):
-        if item == None:
-            self['id'] = None
-        else:
-            self['id'] = item['id']
-
-    def getAccounts(self):
-        return Account.getSome(id = self['id'])
-
-    def addAccount(self, item):
-        item.setEquipment(self)
-
-    def removeAccount(self, item):
-        item.setEquipment(None)
-
-    def getPurchase(self):
-        return Purchase.getUnique(id = self['id'])
-
-    def setPurchase(self, item):
-        if item == None:
-            self['id'] = None
-        else:
-            self['id'] = item['id']
-
-    def getUsers(self):
-        return Users.getSome(id = self['id'])
-
-    def addUser(self, item):
-        item.setEquipment(self)
-
-    def removeUser(self, item):
-        item.setEquipment(None)
-
-    def getArchitecture(self):
-        return Architecture.getUnique(id = self['id'])
-
-    def setArchitecture(self, item):
-        if item == None:
-            self['id'] = None
-        else:
-            self['id'] = item['id']
-
-class Dispose(PyDO.PyDO):
-    connectionAlias = 'udb'
-    table = 'dispose'
-    fields = (
-        ('id', 'int4'),
-        ('surplus_date', 'date'),
-        ('price', 'numeric'),
-        ('comment', 'text'),
-        ('sold_date', 'date'),
-    )
-    unique = [('id',)]
-
-    def getEquipment(self):
-        return Equipment.getUnique(id = self['id'])
-
-    def setEquipment(self, item):
-        if item == None:
-            self['id'] = None
-        else:
-            self['id'] = item['id']
-
 class OsType(PyDO.PyDO):
     connectionAlias = 'udb'
     table = 'os_type'
     fields = (
-        ('id', 'int4'),
         ('os', 'text'),
+        ('id', 'int4'),
     )
-    unique = [('id', 'os')]
+    unique = [('os', 'id')]
 
     def getOsList(self):
         return OsList.getUnique(os = self['os'])
@@ -408,136 +575,16 @@ class OsType(PyDO.PyDO):
         else:
             self['id'] = item['id']
 
-class OsList(PyDO.PyDO):
+class Config(PyDO.PyDO):
     connectionAlias = 'udb'
-    table = 'os_list'
+    table = 'config'
     fields = (
-        ('os', 'text'),
-    )
-    unique = [('os',)]
-
-    def getOsTypes(self):
-        return OsType.getSome(os = self['os'])
-
-    def addOsType(self, item):
-        item.setOsList(self)
-
-    def removeOsType(self, item):
-        item.setOsList(None)
-
-    def getJsPath(self):
-        return JsPaths.getUnique(os = self['os'])
-
-    def setJsPath(self, item):
-        if item == None:
-            self['os'] = None
-        else:
-            self['os'] = item['os']
-
-class Netgroups(PyDO.PyDO):
-    connectionAlias = 'udb'
-    table = 'netgroups'
-    fields = (
-        ('netgroup', 'text'),
-        ('nid', 'int4'),
-    )
-    unique = [('netgroup', 'nid')]
-
-    def getNetwork(self):
-        return Network.getUnique(nid = self['nid'])
-
-    def setNetwork(self, item):
-        if item == None:
-            self['nid'] = None
-        else:
-            self['nid'] = item['nid']
-
-class Account(PyDO.PyDO):
-    connectionAlias = 'udb'
-    table = 'account'
-    fields = (
-        ('id', 'int4'),
-        ('percent', 'int4'),
-        ('acct', 'text'),
-    )
-    unique = [('id', 'acct')]
-
-    def getEquipment(self):
-        return Equipment.getUnique(id = self['id'])
-
-    def setEquipment(self, item):
-        if item == None:
-            self['id'] = None
-        else:
-            self['id'] = item['id']
-
-class Network(PyDO.PyDO):
-    connectionAlias = 'udb'
-    table = 'network'
-    fields = (
-        ('mxhost', 'text'),
-        ('netgroup', 'text'),
-        ('id', 'int4'),
-        ('ipaddr', 'inet'),
-        ('hostname', 'text'),
-        ('bcast', 'inet'),
-        #
-        # PyDO doesn't recognize macaddr as a database type, so it does
-        # strange quoting.  Change to text to make it work correctly.
-        #
-        #('ethernet', 'macaddr'),
-        ('ethernet', 'text'),
-        ('nid', 'int4'),
         ('comment', 'text'),
-    )
-    unique = [('nid',), ('ipaddr',), ('hostname',), ('bcast', 'ethernet')]
-
-    sequenced = {
-        'nid': 'network_nid_seq',
-    }
-    def getEquipment(self):
-        return Equipment.getUnique(id = self['id'])
-
-    def setEquipment(self, item):
-        if item == None:
-            self['id'] = None
-        else:
-            self['id'] = item['id']
-
-    def getAliases(self):
-        return Aliases.getSome(nid = self['nid'])
-
-    def addAliase(self, item):
-        item.setNetwork(self)
-
-    def removeAliase(self, item):
-        item.setNetwork(None)
-
-    def getStatuses(self):
-        return Status.getSome(nid = self['nid'])
-
-    def addStatus(self, item):
-        item.setNetwork(self)
-
-    def removeStatus(self, item):
-        item.setNetwork(None)
-
-    def getNetgroups(self):
-        return Netgroups.getSome(nid = self['nid'])
-
-    def addNetgroup(self, item):
-        item.setNetwork(self)
-
-    def removeNetgroup(self, item):
-        item.setNetwork(None)
-
-class Installation(PyDO.PyDO):
-    connectionAlias = 'udb'
-    table = 'installation'
-    fields = (
+        ('graphics', 'text'),
+        ('memory', 'text'),
+        ('disk', 'text'),
+        ('cpu', 'text'),
         ('id', 'int4'),
-        ('comment', 'text'),
-        ('date', 'date'),
     )
     unique = [('id',)]
 
@@ -550,71 +597,47 @@ class Installation(PyDO.PyDO):
         else:
             self['id'] = item['id']
 
-class Location(PyDO.PyDO):
+class StatusList(PyDO.PyDO):
     connectionAlias = 'udb'
-    table = 'location'
+    table = 'status_list'
     fields = (
-        ('floor', 'text'),
-        ('descr', 'text'),
-        ('room', 'text'),
-        ('lid', 'text'),
-        ('building', 'text'),
-    )
-    unique = [('lid',), ('floor', 'room', 'building')]
-
-    def getEquipments(self):
-        return Equipment.getSome(lid = self['lid'])
-
-    def addEquipment(self, item):
-        item.setLocation(self)
-
-    def removeEquipment(self, item):
-        item.setLocation(None)
-
-class Purchase(PyDO.PyDO):
-    connectionAlias = 'udb'
-    table = 'purchase'
-    fields = (
-        ('price', 'numeric'),
-        ('id', 'int4'),
-        ('po_num', 'text'),
-        ('date', 'date'),
-        ('comment', 'text'),
-    )
-    unique = [('id',)]
-
-    def getEquipment(self):
-        return Equipment.getUnique(id = self['id'])
-
-    def setEquipment(self, item):
-        if item == None:
-            self['id'] = None
-        else:
-            self['id'] = item['id']
-
-class Status(PyDO.PyDO):
-    connectionAlias = 'udb'
-    table = 'status'
-    fields = (
-        ('nid', 'int4'),
         ('status', 'text'),
     )
-    unique = [('nid', 'status')]
+    unique = [('status',)]
 
-    def getStatusList(self):
-        return StatusList.getUnique(status = self['status'])
+    def getStatuses(self):
+        return Status.getSome(status = self['status'])
 
-    def setStatusList(self, item):
+    def addStatus(self, item):
+        item.setStatusList(self)
+
+    def removeStatus(self, item):
+        item.setStatusList(None)
+
+class Architecture(PyDO.PyDO):
+    connectionAlias = 'udb'
+    table = 'architecture'
+    fields = (
+        ('arch', 'text'),
+        ('id', 'int4'),
+    )
+    unique = [('id',)]
+
+    def getArchList(self):
+        return ArchList.getUnique(arch = self['arch'])
+
+    def setArchList(self, item):
         if item == None:
-            self['status'] = None
+            self['arch'] = None
         else:
-            self['status'] = item['status']
+            self['arch'] = item['arch']
 
-    def getNetwork(self):
-        return Network.getUnique(nid = self['nid'])
+    def getEquipment(self):
+        return Equipment.getUnique(id = self['id'])
 
-    def setNetwork(self, item):
+    def setEquipment(self, item):
         if item == None:
-            self['nid'] = None
+            self['id'] = None
         else:
-            self['nid'] = item['nid']
+            self['id'] = item['id']
+

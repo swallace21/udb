@@ -164,7 +164,10 @@ class EquipmentRecord(DBRecord.DBRecord):
         return None
 
     def formatDate(self, d):
-        return '%d/%d/%d' % (d.month, d.day, d.year)
+        if d:
+            return '%d/%d/%d' % (d.month, d.day, d.year)
+        else:
+            return None
     
     def getPO(self):
         po = self.getPORec()
@@ -232,3 +235,14 @@ class EquipmentRecord(DBRecord.DBRecord):
             comment = None
         inst = self.fetchOrCreateInstall()
         inst['comment'] = comment
+
+    def getConfRec(self):
+        return self.record.getConfig()
+    
+    def getConfiguration(self):
+        c = self.getConfRec()
+        if not c:
+            return (None, None, None, None, None)
+        return (c['cpu'], c['disk'], c['memory'], c['graphics'], c['comment'])
+        
+        

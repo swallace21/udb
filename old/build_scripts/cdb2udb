@@ -15,11 +15,13 @@ my($db) = new Udb;
 
 my($key, $data);
 
+#$db->set_print(1);
 while ( ($key, $data) = each(%$cdb_by_hostname) ) {
     &insert_host($db, $data);
 }
 
 $db->commit();
+#$db->rollback();
 $db->close();
 
 sub insert_host {
@@ -33,7 +35,6 @@ sub insert_host {
     my $os_type = $host->{'os_type'};
     my $mxhost = $host->{'mxhost'};
     my $ipaddr = $host->{'ip_addr'};
-    $ipaddr .= '/24';
     my $comment = $host->{'comment'};
     my $hw_arch = $host->{'hw_arch'};
     my $ethernet = $host->{'ethernet'};
@@ -56,6 +57,7 @@ sub insert_host {
     $values .= ", $nid";
 
     if ( $ipaddr ) {
+	$ipaddr .= '/24';
 	$fields .= ', ipaddr';
 	$values .= ", '$ipaddr'";
 
@@ -73,11 +75,6 @@ sub insert_host {
 	$values .= ", '$ethernet'";
     }
 
-    if ( $netgroup && $netgroup ne 'none' ) {
-	$fields .= ', netgroup';
-	$values .= ", '$netgroup'";
-    }
-
     if ( $mxhost ) {
 	$fields .= ', mxhost';
 	$values .= ", '$mxhost'";
@@ -90,7 +87,15 @@ sub insert_host {
     }
 
     $cmd = "INSERT INTO network ( $fields ) VALUES ( $values )";
-    $db->do($cmd);
+    if ( !$db->do($cmd) ) {
+	$db-close();
+	die "ERROR: $hostname, $ethernet\n";
+    }
+
+    if ( $netgroup && $netgroup ne 'none' ) {
+	$cmd = "INSERT INTO netgroups ( nid, netgroup ) VALUES ( $nid, '$netgroup')";
+	$db->do($cmd)
+    }
 
     if ( $hw_arch ) {
 	$cmd = "INSERT INTO architecture (id, arch) ";

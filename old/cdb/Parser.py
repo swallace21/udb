@@ -174,10 +174,12 @@ class NidSql(SqlGenerator):
     def do_equal(self, node):
         field = node.left.data.value
         data = node.right.data.value
-        if field in ('hostname', 'ipaddr', 'id', 'ethernet',
+        if field in ('hostname', 'id', 'ethernet',
                      'mxhost', 'comment', 'nid'):
             node.st = "SELECT nid FROM network WHERE %s ~* '%s'"\
                       % (field, data)
+        elif field == 'ipaddr':
+            node.st = "SELECT nid FROM network WHERE text(ipaddr) ~* '%s'" % data
         elif field == 'os' or field == 'os_type':
             node.st = "SELECT nid FROM network, os_type WHERE os_type.os ~* '%s' AND os_type.id = network.id" % (data)
         elif field == 'arch' or field == 'hw_arch':

@@ -16,19 +16,19 @@ class SearchTest(unittest.TestCase):
         search = Search.CdbSearch(udb.getConnection())
         result = search.run('hostname=mothra')
         self.assertEquals(1, len(result))
-        self.assertEquals(94, result[0])
+        self.assertEquals(108, result[0])
 
     def testOr(self):
         search = Search.CdbSearch(udb.getConnection())
         result = search.run('hostname=mothra||hostname=discordia')
         self.assertEquals(2, len(result))
-        self.assertEquals([94, 480], result)
+        self.assertEquals([108, 342], result)
 
     def testAnd(self):
         search = Search.CdbSearch(udb.getConnection())
         result = search.run('hostname=mothra&&ipaddr=128.148.31')
         self.assertEquals(1, len(result))
-        self.assertEquals([94], result)
+        self.assertEquals([108], result)
 
 def suite():
     return unittest.makeSuite(SearchTest,'test')

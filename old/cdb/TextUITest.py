@@ -3,7 +3,7 @@
 import unittest
 import TextUI
 
-availableIP = '128.148.38.243'
+availableIP = '128.148.38.193'
 
 class TextUITest(unittest.TestCase):
     def testVirtual(self):
@@ -52,7 +52,7 @@ class TextUITest(unittest.TestCase):
     def test_pickIp(self):
         t = TextUI.TextUI('testprogram')
         ip = t.pickIp('128.148.34');
-        self.assertEquals('128.148.34.6', ip)
+        self.assertEquals('128.148.34.3', ip)
         ip = t.pickIp('128.148.38');
         self.assertEquals(availableIP, ip)
 

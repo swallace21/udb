@@ -15,9 +15,9 @@ class NetworkRecordTest(unittest.TestCase):
         self.assertEquals('mothra', netrec.getHostname())
 
     def testFetchByNid(self):
-        netrec = NetworkRecord.fetchNetByNid(94)
+        netrec = NetworkRecord.fetchNetByNid(108)
         self.assertEquals('mothra', netrec.getHostname())
-        netrec = NetworkRecord.fetchNetByNid('94')
+        netrec = NetworkRecord.fetchNetByNid('108')
         self.assertEquals('mothra', netrec.getHostname())
 
     def testHostname(self):
@@ -32,8 +32,8 @@ class NetworkRecordTest(unittest.TestCase):
         netrec = NetworkRecord.fetchNetByHostname('mothra')
         aliases = netrec.getAliases()
         self.assert_( aliases is not None )
-        self.assertEquals( 6, len(aliases) )
-        l = [ 'abhost', 'calhost', 'cvs', 'fingerhost','hqnserver1', 'radmin' ]
+        self.assertEquals( 5, len(aliases) )
+        l = [ 'abhost', 'calhost', 'fingerhost','hqnserver1', 'radmin' ]
         self.assertEquals( l, aliases )
 
         error = netrec.setAliases(['fingerhost'])
@@ -50,18 +50,19 @@ class NetworkRecordTest(unittest.TestCase):
 
     def testNetgroups(self):
         netrec = NetworkRecord.fetchNetByHostname('shutter')
-        self.assertEquals('linux', netrec.getNetgroup())
+        l = ['4th5th', 'graphics', 'linux', 'unsup']
+        self.assertEquals(l, netrec.getNetgroups())
         l = [ '4th5th', 'graphics', 'linux', 'unsup' ]
-        self.assertEquals(l, netrec.getOtherNetgroups())
-        netrec.setOtherNetgroups(l)
-        self.assertEquals(l, netrec.getOtherNetgroups())
+        self.assertEquals(l, netrec.getNetgroups())
+        netrec.setNetgroups(l)
+        self.assertEquals(l, netrec.getNetgroups())
         l = [ 'blort' ]
-        netrec.setOtherNetgroups(l)
-        self.assertEquals(l, netrec.getOtherNetgroups())
-        netrec.setOtherNetgroups([])
-        self.assertEquals([], netrec.getOtherNetgroups())
-        netrec.setOtherNetgroups(None)
-        self.assertEquals([], netrec.getOtherNetgroups())
+        netrec.setNetgroups(l)
+        self.assertEquals(l, netrec.getNetgroups())
+        netrec.setNetgroups([])
+        self.assertEquals([], netrec.getNetgroups())
+        netrec.setNetgroups(None)
+        self.assertEquals([], netrec.getNetgroups())
 
     def testIpAddr(self):
         netrec = NetworkRecord.fetchNetByHostname('mothra')

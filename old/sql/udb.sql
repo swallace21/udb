@@ -142,8 +142,6 @@ CREATE OR REPLACE FUNCTION check_alias ( TEXT )
 	AS 'SELECT alias FROM aliases WHERE alias = $1'
 	LANGUAGE 'sql';
 
-
-
 /*
  * A function that returns the equipment id for a given hostname
  */
