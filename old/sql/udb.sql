@@ -106,7 +106,6 @@ CREATE TABLE network (
 	bcast		INET	CHECK (ipaddr ISNULL
 					OR broadcast(ipaddr) = bcast),
 	ethernet	MACADDR,
-	netgroup	TEXT	CHECK (netgroup ISNULL OR netgroup <> ''),
 	mxhost		TEXT	CHECK (mxhost ISNULL OR mxhost <> ''),
 	comment		TEXT,
 	nid		INT4	PRIMARY KEY
@@ -198,7 +197,7 @@ CREATE TABLE status (
 	
 
 /*
- * Supplemental netgroups the host is in
+ * Netgroups the host is in
  */
 DROP TABLE netgroups;
 CREATE TABLE netgroups (
@@ -343,8 +342,6 @@ INSERT INTO dirty ( data, dirty ) VALUES ( 'jspaths', 'f');
 INSERT INTO dirty ( data, dirty ) VALUES ( 'arch', 'f');
 INSERT INTO dirty ( data, dirty ) VALUES ( 'os_type', 'f');
 INSERT INTO dirty ( data, dirty ) VALUES ( 'netgroup', 'f');
-INSERT INTO dirty ( data, dirty ) VALUES ( 'supp_groups', 'f');
-
 
 CREATE RULE mod_ethernet AS ON UPDATE
 	TO network WHERE NEW.ethernet != OLD.ethernet
@@ -386,16 +383,6 @@ CREATE RULE del_mxhost AS ON DELETE
 	TO network WHERE OLD.mxhost NOTNULL
 	DO UPDATE dirty SET dirty = 't' WHERE data = 'mxhost';
 	
-CREATE RULE mod_netgroup AS ON UPDATE
-	TO network WHERE NEW.netgroup != OLD.netgroup
-	DO UPDATE dirty SET dirty = 't' WHERE data = 'netgroup';
-CREATE RULE ins_netgroup AS ON INSERT
-	TO network WHERE NEW.netgroup NOTNULL
-	DO UPDATE dirty SET dirty = 't' WHERE data = 'netgroup';
-CREATE RULE del_netgroup AS ON DELETE
-	TO network WHERE OLD.netgroup NOTNULL
-	DO UPDATE dirty SET dirty = 't' WHERE data = 'netgroup';
-
 CREATE RULE mod_alias AS ON UPDATE
 	TO aliases
 	DO UPDATE dirty SET dirty = 't' WHERE data = 'aliases';
@@ -408,14 +395,14 @@ CREATE RULE del_alias AS ON DELETE
 
 CREATE RULE mod_supgroup AS ON UPDATE
 	TO netgroups
-	DO UPDATE dirty SET dirty = 't' WHERE data = 'supp_groups';
+	DO UPDATE dirty SET dirty = 't' WHERE data = 'netgroup';
 CREATE RULE ins_supgroup AS ON INSERT
 	TO netgroups
-	DO UPDATE dirty SET dirty = 't' WHERE data = 'supp_groups';
+	DO UPDATE dirty SET dirty = 't' WHERE data = 'netgroup';
 
 CREATE RULE del_supgroup AS ON DELETE
 	TO netgroups
-	DO UPDATE dirty SET dirty = 't' WHERE data = 'supp_groups';
+	DO UPDATE dirty SET dirty = 't' WHERE data = 'netgroup';
 
 CREATE RULE mod_architecture AS ON UPDATE
 	TO architecture
