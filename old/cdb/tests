@@ -1,4 +1,6 @@
-#!/usr/bin/python2.1
+#!/usr/bin/python2.2
+
+# $Id#
 
 import sys
 import unittest
@@ -6,6 +8,7 @@ import NetworkRecordTest
 import EquipmentRecordTest
 import UtilTests
 import TextUITest
+import SearchTest
 
 def suite():
     suite = unittest.TestSuite()
@@ -13,6 +16,7 @@ def suite():
     suite.addTest(NetworkRecordTest.suite())
     suite.addTest(EquipmentRecordTest.suite())
     suite.addTest(TextUITest.suite())
+    suite.addTest(SearchTest.suite())
     return suite
 
 if len(sys.argv) > 1:

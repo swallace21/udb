@@ -1,4 +1,6 @@
-#!/usr/bin/python2.1
+#!/usr/bin/python
+
+# $Id$
 
 from udb import *
 import DBRecord
@@ -69,7 +71,10 @@ class EquipmentRecord(DBRecord.DBRecord):
         self.record['descr'] = desc
 
     def getArch(self):
-        return self.record.getArchitecture()['arch']
+        archRec = self.record.getArchitecture()
+        if archRec:
+            return archRec['arch']
+        return None
 
     def getLid(self):
         return self.record['lid']
@@ -103,7 +108,8 @@ class EquipmentRecord(DBRecord.DBRecord):
 
     def getOses(self):
         os = self.record.getOsTypes()
-        list = map(lambda o: o['os'], os)
+        #list = map(lambda o: o['os'], os)
+        list = [ o['os'] for o in os ]
         list.sort()
         return list
 

@@ -1,4 +1,4 @@
-#!/usr/bin/python2.1
+#!/usr/bin/python2.2
 
 # $Id$
 
@@ -6,6 +6,7 @@ import sys, string
 from udb import *
 import NetworkRecord
 import EquipmentRecord
+import Search
 
 #
 # Writes message to stderr, adding program name.
@@ -68,7 +69,8 @@ def pickIp(subnet):
     rec = Network.getSQLWhere("network(ipaddr) = '%s' order by ipaddr"
                               % subnet)
 
-    ips = map(lambda n: n['ipaddr'][:-3], rec)
+    #ips = map(lambda n: n['ipaddr'][:-3], rec)
+    ips = [ n['ipaddr'][:-3] for n in rec ]
     for i in xrange(len(ips)):
         ips[i] = gethostnum(ips[i], subnet)
     for i in xrange(2, 254):
@@ -89,14 +91,20 @@ def profile(argv):
     if len(argv) < 3:
         warn("Usage: cdb profile <hostname>")
         return
-    host = argv[2]    
 
-    netrec = NetworkRecord.fetchNetByHostname(host)
+    if type(argv[2]) is int:
+        netrec = NetworkRecord.fetchNetByNid(argv[2])
+    else:
+        if argv[2].isdigit():
+            netrec = NetworkRecord.fetchNetByNid(argv[2])
+        else:
+            netrec = NetworkRecord.fetchNetByHostname(argv[2])
     if not netrec:
-        warn('No record for "%s" found in database' % host)
+        warn('No record for "%s" found in database' % argv[2])
         return
 
-    print "hostname = " + netrec.getHostname()
+    sys.stdout.write("hostname = ")
+    writeVal(netrec.getHostname())
 
     sys.stdout.write("prim_grp = ")
     writeVal(netrec.getNetgroup())
@@ -133,7 +141,10 @@ def profile(argv):
 
     sys.stdout.write("os_type = ")
     oses = netrec.getOses()
-    st = string.join(oses, ",")
+    if oses:
+        st = ','.join(oses)
+    else:
+        st = ''
     print st
 
     sys.stdout.write("status = ")
@@ -469,6 +480,53 @@ def insert(argv):
 
     insert.confirm()
 
+def query(argv):
+    search = Search.Search(getConnection())
+    result = search.run(argv[2])
+    if len(result) == 0:
+        return
+
+    print result
+    if len(argv) == 3:
+        for nid in result:
+            netrec = NetworkRecord.fetchNetByNid(nid)
+            print netrec.getHostname()
+    elif argv[3] == 'all':
+        if len(result) == 1:
+            profile(['cdb', 'profile', result[0]])
+        else:
+            for nid in result:
+                print '=' * 40
+                profile(['cdb', 'profile', nid])
+    else:
+        for nid in result:
+            netrec = NetworkRecord.fetchNetByNid(nid)
+            l = []
+            for field in argv[3:]:
+                if field == 'hostname':
+                    l.append(netrec.getHostname() or '')
+                elif field == 'ipaddr' or field == 'ip_addr':
+                    l.append(netrec.getIP() or '')
+                elif field == 'os' or field == 'os_type':
+                    val = netrec.getOses()
+                    l.append(','.join(val))
+                elif field == 'alias' or field == 'aliases':
+                    val = netrec.getAliases()
+                    l.append(','.join(val))
+                elif field == 'comment':
+                    l.append(netrec.getComment() or '')
+                elif field == 'ether' or field == 'ethernet' or field == 'mac':
+                    l.append( netrec.getEthernet() or '')
+                elif field == 'arch' or field == 'hw_arch':
+                    l.append( netrec.getArch() or '' )
+                elif field == 'lid':
+                    val = netrec.getEquipmentRec()
+                    val = val.getLid()
+                    l.append( val or '' )
+                else:
+                    l.append(field)
+            print '\t'.join(l)
+
 ###########################################################################
 # MAIN
 ###########################################################################
@@ -486,6 +544,8 @@ def main():
         modify(sys.argv)
     elif command == 'profile':
         profile(sys.argv)
+    elif command == 'query':
+        query(sys.argv)
     else:
         warn(prog + ": Unknown command: " + command + "\n")
         sys.exit(1)

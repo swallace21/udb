@@ -1,7 +1,8 @@
 #!/usr/bin/python
 
+# $Id$
+
 import unittest
-import cdb
 import NetworkRecord
 
 class NetworkRecordTest(unittest.TestCase):

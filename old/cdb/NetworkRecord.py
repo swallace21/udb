@@ -1,4 +1,6 @@
-#!/usr/bin/python2.1
+#!/usr/bin/python
+
+# $Id$
 
 import string
 from udb import *
@@ -87,7 +89,7 @@ def isValidIp(ip):
     bytes = ip.split('.')
     if len(bytes) < 4:
         return "Not enough bytes.  Need 4, got %d" % len(bytes)
-    bytes = map(lambda n: int(n), bytes)
+    bytes = [ int(n) for n in bytes ]
     for b in bytes:
         if not 0 <= b <= 255:
             return "Bytes must be between 0 and 255, not %d" % b
@@ -132,6 +134,12 @@ def fetchNetByHostname(host):
         
 def fetchNetByEqId(id):
     netrec = Network.getUnique(id = id)
+    if netrec is None:
+        return None
+    return NetworkRecord(netrec)
+
+def fetchNetByNid(nid):
+    netrec = Network.getUnique(nid = nid)
     if netrec is None:
         return None
     return NetworkRecord(netrec)
@@ -192,7 +200,7 @@ class NetworkRecord(DBRecord.DBRecord):
         
     def getAliases(self):
         aliases = self.record.getAliases()
-        list = map(lambda a: a['alias'], aliases)
+        list = [ a['alias'] for a in aliases ]
         list.sort()
         return list
 
@@ -221,7 +229,7 @@ class NetworkRecord(DBRecord.DBRecord):
 
     def getOtherNetgroups(self):
         groups = self.record.getNetgroups()
-        list = map(lambda a: a['netgroup'], groups)
+        list = [ a['netgroup'] for a in groups ]
         list.sort()
         return list
 
@@ -269,7 +277,7 @@ class NetworkRecord(DBRecord.DBRecord):
             return None
         ip = self.record['ipaddr']
         if ip:
-            ip = ip[:-3]   # string the /24 off the end
+            ip = ip[:-3]   # strip the /24 off the end
         return ip
 
     def setIP(self, ip):
@@ -291,7 +299,7 @@ class NetworkRecord(DBRecord.DBRecord):
 
     def getStatus(self):
         stats = self.record.getStatuses()
-        list = map(lambda s: s['status'], stats)
+        list = [ s['status'] for s in stats ]
         list.sort()
         return list
         
@@ -317,6 +325,11 @@ class NetworkRecord(DBRecord.DBRecord):
         if not self.eqRec:
             return 'No equpiment record'
         return self.eqRec.setOs(osList)
+
+    def getArch(self):
+        if not self.eqRec:
+            return None
+        return self.eqRec.getArch()
 
     def commit(self):
         self.record.commit()
