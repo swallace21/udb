@@ -30,5 +30,11 @@ class SearchTest(unittest.TestCase):
         self.assertEquals(1, len(result))
         self.assertEquals([108], result)
 
+    def testArch(self):
+        search = Search.CdbSearch(udb.getConnection())
+        result = search.run('hostname=mothra&&arch=sun')
+        self.assertEquals(1, len(result))
+        self.assertEquals([108], result)        
+
 def suite():
     return unittest.makeSuite(SearchTest,'test')

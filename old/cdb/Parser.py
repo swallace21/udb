@@ -19,7 +19,10 @@ TOKEN_FIELD = 0
 TOKEN_DATA = 1
 TOKEN_BINOP = 2
 TOKEN_EQUALS = 3
-    
+
+class ParseError(Exception):
+    pass
+
 class Token:
     def __init__(self, token_type, value):
         self.type = token_type
@@ -73,6 +76,10 @@ class Lexer:
         node.setLeft(Node(f))
         node.setRight(Node(d))
         return node
+
+    def checkField(self, field):
+        if not field:
+            raise ParseError, 'Empty field'
         
     def getField(self):
         if self.currentPos >= len(self.st):
@@ -82,23 +89,37 @@ class Lexer:
         startpos = self.currentPos
         while self.currentPos < len(self.st):
             if self.st[self.currentPos] == '=':
+                field = self.st[startpos:self.currentPos].rstrip()
+                self.checkField(field)
                 return Token(TOKEN_FIELD,
                              self.st[startpos:self.currentPos].rstrip())
             self.currentPos += 1
+        field = self.st[startpos:-1]
+        self.checkField(field)
         return Token(TOKEN_FIELD, self.st[startpos:-1])
 
+    def checkData(self, data):
+        if not data:
+            raise ParseError, 'Empty data'
+        
     def getData(self):
         self.skipWhitespace()
         startpos = self.currentPos
         while self.currentPos < len(self.st):
             if self.st[self.currentPos] in '=&|()':
+                data = self.st[startpos:self.currentPos].rstrip()
+                self.checkData(data)
                 return Token(TOKEN_DATA,
                              self.st[startpos:self.currentPos].rstrip())
             self.currentPos += 1
+        data = self.st[startpos:]
+        self.checkData(data)
         return Token(TOKEN_DATA, self.st[startpos:])
 
     def getEquals(self):
         self.skipWhitespace()
+        if self.currentPos >= len(self.st):
+            raise ParseError, 'Invalid term'
         if self.st[self.currentPos] == '=':
             self.currentPos += 1
             return Token(TOKEN_EQUALS, '=')
@@ -108,7 +129,7 @@ class Lexer:
         self.skipWhitespace()
         if self.currentPos >= len(self.st):
             return None
-        
+
         if self.st[self.currentPos] == '|' and self.st[self.currentPos+1] == '|':
             self.currentPos += 2
             return Token(TOKEN_BINOP, '||')
@@ -120,6 +141,7 @@ class Lexer:
 
     def getExpression(self):
         if self.currentPos >= len(self.st):
+            raise ParseError, 'Empty expression'
             return
 
         termNode = self.getTerm()
@@ -134,17 +156,17 @@ class Lexer:
 class SqlGenerator:
     def __init__(self, parseTree):
         self.tree = parseTree
+        self.initSearchStrings()
 
     def getSQL(self):
         self.visit(self.tree)
         return self.tree.st
 
-    def visit(self, tree, indent = ''):
+    def visit(self, tree):
         if tree is None:
             return
-        child_indent = '  ' + indent
-        self.visit(tree.left, child_indent)
-        self.visit(tree.right, child_indent)
+        self.visit(tree.left)
+        self.visit(tree.right)
         if tree.data.type == TOKEN_EQUALS:
             self.do_equal(tree)
         if tree.data.type == TOKEN_BINOP:
@@ -155,7 +177,10 @@ class SqlGenerator:
 
     def do_and(self, node):
         raise NotImplementedError
-        
+
+    def initSearchStrings(self):
+        raise NotImplementedError
+            
     def do_op(self, node):
         if node.data.value == '&&':
             self.do_and(node)
@@ -168,42 +193,103 @@ class SqlGenerator:
         node.st = node.right.st + ' UNION ' + node.left.st
 
 class NidSql(SqlGenerator):
+    def initSearchStrings(self):
+        self.field2sql = {
+            'hostname': self.makeSqlString('network', 'hostname'),
+            'ethernet': self.makeSqlString('network', 'ethernet'),
+            'mxhost': self.makeSqlString('network', 'mxhost'),
+            'comment': self.makeSqlString('network', 'comment'),
+            'id': self.makeSqlStringNum('network', 'id'),
+            'nid': self.makeSqlStringNum('network', 'nid'),
+            'ipaddr': "SELECT nid FROM network WHERE text(ipaddr) ~* '%s'",
+            'os': "SELECT nid FROM network, os_type WHERE os_type.os ~* '%s' AND os_type.id = network.id",
+            'arch': "SELECT nid FROM network, architecture WHERE architecture.arch ~* '%s' AND architecture.id = network.id",
+            'lid': "SELECT nid FROM network, equipment WHERE lid ~* '%s' AND network.id = equipment.id",
+            'floor': "SELECT n.nid FROM network n, equipment e, location l WHERE l.floor = '%s' AND e.lid = l.lid AND e.id = n.id",
+            'building': "SELECT n.nid FROM network n, equipment e, location l WHERE l.building ~* '%s' AND e.lid = l.lid AND e.id = n.id",
+            'alias': "SELECT DISTINCT network.nid FROM network, aliases WHERE aliases.alias ~* '%s' AND network.nid = aliases.nid",
+            'netgroup': "SELECT nid FROM network WHERE netgroup ~* '%s' UNION SELECT nid FROM netgroups WHERE netgroup ~* '%s'",
+            }
+        self.field2sql['host'] = self.field2sql['hostname']
+        self.field2sql['ether'] = self.field2sql['ethernet']
+        self.field2sql['mac'] = self.field2sql['ethernet']
+        self.field2sql['mx'] =  self.field2sql['mxhost']
+        self.field2sql['ip'] =  self.field2sql['ipaddr']
+        self.field2sql['ip_addr'] = self.field2sql['ipaddr']
+        self.field2sql['os_type'] = self.field2sql['os']
+        self.field2sql['hw_arch'] = self.field2sql['arch']
+        self.field2sql['aliases'] = self.field2sql['alias']
+        for k in ['netgroups', 'group', 'supp_grps', 'prim_grp']:
+            self.field2sql[k] = self.field2sql['netgroup']        
+        
+    def makeSqlString(self, table, field):
+        return "SELECT nid FROM %s WHERE %s ~* '%%s'" % (table, field)
+    def makeSqlStringNum(self, table, field):
+        return "SELECT nid FROM %s WHERE %s = %%s" % (table, field)
+        
     def do_and(self, node):
         node.st = node.right.st + ' AND nid IN ( ' + node.left.st + ' )'
     
     def do_equal(self, node):
         field = node.left.data.value
         data = node.right.data.value
-        if field in ('hostname', 'id', 'ethernet',
-                     'mxhost', 'comment', 'nid'):
-            node.st = "SELECT nid FROM network WHERE %s ~* '%s'"\
-                      % (field, data)
-        elif field == 'ipaddr':
-            node.st = "SELECT nid FROM network WHERE text(ipaddr) ~* '%s'" % data
-        elif field == 'os' or field == 'os_type':
-            node.st = "SELECT nid FROM network, os_type WHERE os_type.os ~* '%s' AND os_type.id = network.id" % (data)
-        elif field == 'arch' or field == 'hw_arch':
-            node.st = "SELECT nid FROM network, architecture WHERE architecture.arch ~* '%s' AND architecture.id = network.id" % (data)
-        elif field == 'lid':
-            node.st = "SELECT nid FROM network, equipment WHERE lid ~* '%s' AND network.id = equipment.id" % (data)
-        elif field == 'floor':
-            node.st = "SELECT n.nid FROM network n, equipment e, location l WHERE l.floor = '%s' AND e.lid = l.lid AND e.id = n.id" % (data)
-        elif field == 'building':
-            node.st = "SELECT n.nid FROM network n, equipment e, location l WHERE l.building ~* '%s' AND e.lid = l.lid AND e.id = n.id" % (data)
-        elif field == 'alias' or field == 'aliases':
-            node.st = "SELECT DISTINCT network.nid FROM network, aliases WHERE aliases.alias ~* '%s' AND network.nid = aliases.nid" % (data)
-        elif field in [ 'group', 'netgroup', 'netgroups', 'supp_grps',
-                        'prim_grp' ]:
-            node.st = "SELECT nid FROM network WHERE netgroup ~* '%s' UNION SELECT nid FROM netgroups WHERE netgroup ~* '%s'" % (data, data)
+        if self.field2sql.has_key(field):
+            if field in [ 'group', 'netgroup', 'netgroups', 'supp_grps', 'prim_grp' ]:
+                node.st = self.field2sql[field] % ( data, data )
+            else:
+                node.st = self.field2sql[field] % ( data )
         else:
-            print "Warning: Unrecognized search field: %s" % field
-
+            raise ParseError, "Unrecognized search field: %s" % field
+            
 class IdSql(SqlGenerator):
-    def makeSt(self, table, field, data):
-        return "SELECT id FROM %s WHERE %s ~* '%s'" % (table, field, data)
+    def initSearchStrings(self):
+        self.field2sql = {
+            'hostname': self.makeSqlString('network', 'hostname'),
+            'descr': self.makeSqlString('equipment', 'descr'),
+            'serial_num': self.makeSqlString('equipment', 'serial_num'),
+            'inventory_num': self.makeSqlString('equipment', 'inventory_num'),
+            'comment': self.makeSqlString('equipment', 'comment'),
+            'lid': self.makeSqlString('equipment', 'lid'),
+            'id': self.makeSqlStringNum('equipment', 'id'),
+            'type': self.makeSqlString('usage', 'usage'),
+            'po_num': self.makeSqlString('purchase', 'po_num'),
+            'po_date': self.makeSqlString('purchase', 'date'),
+            'po_price': self.makeSqlStringNum('purchase', 'price'),
+            'po_comment': self.makeSqlString('purchase', 'comment'),
+            'arch': self.makeSqlString('architecture', 'arch'),
+            'users': self.makeSqlString('users', 'users'),
+            'inst_date': self.makeSqlString('installation', 'date'),
+            'inst_comment': self.makeSqlString('installation', 'comment'),
+            'cpu': self.makeSqlString('config', 'cpu'),
+            'memory': self.makeSqlString('config', 'memory'),
+            'disk': self.makeSqlString('config', 'disk'),
+            'graphics': self.makeSqlString('config', 'graphics'),
+            'conf_comment': self.makeSqlString('config', 'comment'),
+            'floor': "SELECT e.id FROM equipment e, location l WHERE l.floor = '%s' AND e.lid = l.lid",
+            'building': "SELECT e.id FROM equipment e, location l WHERE l.building ~* '%s' AND e.lid = l.lid",
+            }
+        self.field2sql['desc'] = self.field2sql['descr']
+        self.field2sql['serial'] = self.field2sql['serial_num']
+        self.field2sql['inv'] = self.field2sql['inventory_num']
+        self.field2sql['inv_num'] = self.field2sql['inventory_num']
+        self.field2sql['ponum'] = self.field2sql['po_num']
+        self.field2sql['podate'] = self.field2sql['po_date']
+        self.field2sql['price'] = self.field2sql['po_price']
+        self.field2sql['poprice'] = self.field2sql['po_price']
+        self.field2sql['pocomment'] = self.field2sql['po_comment']
+        self.field2sql['hw_arch'] = self.field2sql['arch']
+        self.field2sql['install_date'] = self.field2sql['inst_date']
+        self.field2sql['instdate'] = self.field2sql['inst_date']
+        self.field2sql['instcomment'] = self.field2sql['inst_comment']
+        self.field2sql['mem'] = self.field2sql['memory']
+        self.field2sql['gfx'] = self.field2sql['graphics']
+        self.field2sql['config_comment'] = self.field2sql['conf_comment']
+        
+    def makeSqlString(self, table, field):
+        return "SELECT id FROM %s WHERE %s ~* '%%s'" % (table, field)
 
-    def makeNum(self, table, field, data):
-        return "SELECT id FROM %s WHERE %s = %s" % (table, field, data)
+    def makeSqlStringNum(self, table, field):
+        return "SELECT id FROM %s WHERE %s = %%s" % (table, field)
     
     def do_and(self, node):
         node.st = node.right.st + ' AND id IN ( ' + node.left.st + ' )'
@@ -211,34 +297,9 @@ class IdSql(SqlGenerator):
     def do_equal(self, node):
         field = node.left.data.value
         data = node.right.data.value
-        if field in ('descr', 'lid', 'serial_num', 'inventory_num',
-                     'comment'):
-            node.st = self.makeSt('equipment', field, data)
-        elif field == 'id':
-            node.st = self.makeNum('equipment', 'id', data)
-        elif field == 'desc':
-            node.st = self.makeSt('equipment', 'descr', data)
-        elif field == 'serial':
-            node.st = self.makeSt('equipment', 'serial_num', data)
-        elif field == 'inv_num' or field == 'inv':
-            node.st = self.makeSt('equipment', 'inventory_num', data)
-        elif field == 'type':
-            node.st = self.makeSt('usage', 'usage', data)
-        elif field == 'ponum' or field == 'po_num':
-            node.st = self.makeSt('purchase', 'po_num', data)
-        elif field == 'podate' or field == 'po_date':
-            node.st = self.makeSt('purchase', 'date', data.replace('/', '-'))
-        elif field == 'poprice' or field == 'po_price' or field == 'price':
-            node.st = self.makeNum('purchase', 'price', data)
-        elif field == 'pocomment' or field == 'po_comment':
-            node.st = self.makeSt('purchase', 'comment', data)
-        elif field == 'arch' or field == 'hw_arch':
-            node.st = self.makeSt('architecture', 'arch', data)
-        elif field == 'users' or field == 'user':
-            node.st = self.makeSt('users', 'users', data)
-        elif field == 'install_date' or field == 'inst_date' or field == 'instdate':
-            node.st = self.makeSt('installation', 'date', data.replace('/', '-'))
-        elif field == 'install_comment' or field == 'inst_comment' or field == 'commentdate':
-            node.st = self.makeSt('installation', 'comment', data)
+        if self.field2sql.has_key(field):
+            if field.find('date') > 0 :
+                data.replace('/', '-')
+            node.st = self.field2sql[field] % ( data )
         else:
-            print "Warning: Unrecognized search field: %s" % field
+            raise ParseError, "Unrecognized search field: %s" % field

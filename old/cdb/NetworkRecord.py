@@ -312,7 +312,7 @@ class NetworkRecord(DBRecord.DBRecord):
 
     def getOses(self):
         if not self.eqRec:
-            return None
+            return []
         return self.eqRec.getOses()
         
     def setOs(self, osList):

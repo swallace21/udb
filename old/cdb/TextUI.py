@@ -549,7 +549,12 @@ class edb ( TextUI ):
     
     def query(self, args):
         search = Search.EdbSearch(udb.getConnection())
-        result = search.run(args[0])
+        try:
+            result = search.run(args[0])
+        except Search.ParseError, ex:
+            self.warn("ERROR: Can't parse query: " + ex.args[0])
+            return
+        
         if not result:
             return
         print result
@@ -643,7 +648,11 @@ class cdb ( TextUI ):
 
     def query(self, args):
         search = Search.CdbSearch(udb.getConnection())
-        result = search.run(args[0])
+        try:
+            result = search.run(args[0])
+        except Search.ParseError, ex:
+            self.warn("ERROR: Can't parse query: " + ex.args[0])
+            return
         if not result:
             return
         print result
