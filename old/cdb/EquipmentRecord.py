@@ -68,7 +68,11 @@ class EquipmentRecord(DBRecord.DBRecord):
         for h in rec:
             names.append(h['hostname'])
         return names
-        
+
+    def getNids(self):
+        rec = Network.getSome(id = self.getId())
+        return [ r['nid'] for r in rec ]
+
     def getId(self):
         return self.record['id']
 

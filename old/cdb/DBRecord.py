@@ -1,3 +1,5 @@
+# $Id$
+
 def quote(st):
     if not st:
         return None

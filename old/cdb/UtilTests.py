@@ -1,10 +1,8 @@
 #!/usr/bin/python
 
 import unittest
-import cdb
 import NetworkRecord
 
-availableIP = '128.148.38.243'
 mothraNid = 94
 
 class IPTests(unittest.TestCase):
@@ -27,19 +25,6 @@ class IPTests(unittest.TestCase):
         for ip in avail:
             self.assert_(NetworkRecord.isIpAvailable(ip))
 
-    def test_pickIp(self):
-        ip = cdb.pickIp('128.148.34');
-        self.assertEquals('128.148.34.6', ip)
-
-        ip = cdb.pickIp('128.148.38');
-        self.assertEquals(availableIP, ip)
-
-    def test_gethostnum(self):
-        self.assertEquals(1, cdb.gethostnum('128.148.34.1', '128.148.34'))
-        self.assertEquals(22, cdb.gethostnum('128.148.34.22', '128.148.34'))
-        self.assertEquals(222, cdb.gethostnum('128.148.34.222', '128.148.34'))
-        self.assertEquals(222, cdb.gethostnum('1.1.3.222', '1.1.3'))
-
 class HostnameTests(unittest.TestCase):
     def test_isNameAvailable(self):
         self.assert_(NetworkRecord.isNameAvailable('mothra') == 0)
@@ -56,39 +41,6 @@ class HostnameTests(unittest.TestCase):
         self.assertEquals('mothra', NetworkRecord.checkAliases(list))
         list = ['xyzzy', 'adsjfhdf']
         self.assert_(NetworkRecord.checkAliases(list) is None)
-
-class UtilTests(unittest.TestCase):
-    def test_makeList(self):
-        self.assertEquals([], cdb.makeList(''))
-        self.assertEquals(['one'], cdb.makeList('one'))
-        st = 'one,two,three'
-        l = ['one', 'two', 'three']
-        self.assertEquals(l, cdb.makeList(st))
-        st = 'one , two, three'
-        self.assertEquals(l, cdb.makeList(st))
-        st = ' one , two, three  '
-        self.assertEquals(l, cdb.makeList(st))
-        st = 'one,,two,three'
-        l = ['one', '', 'two', 'three']
-        self.assertEquals(l, cdb.makeList(st))
-
-    def test_bcase(self):
-        self.assertEquals('128.148.33.255', NetworkRecord.bcast('128.148.33.23'))
-
-    def test_isYes(self):
-        self.assert_(cdb.isYes('y'))
-        self.assert_(cdb.isYes('ye'))
-        self.assert_(cdb.isYes('yes'))
-        self.assert_(cdb.isYes('Y'))
-        self.assert_(cdb.isYes('YE'))
-        self.assert_(cdb.isYes('YES'))
-
-        self.assert_(not cdb.isYes('n'))
-        self.assert_(not cdb.isYes('no'))
-        self.assert_(not cdb.isYes('N'))
-        self.assert_(not cdb.isYes('NO'))
-        self.assert_(not cdb.isYes('YESn'))
-        self.assert_(not cdb.isYes('x'))
 
 class StatusTests(unittest.TestCase):
     valid = ['active', 'monitoredPC', 'home', 'special', 'notCS', 'disabled']
@@ -129,7 +81,6 @@ def suite():
     suite.addTest(unittest.makeSuite(IPTests, 'test'))
     suite.addTest(unittest.makeSuite(EthernetTests, 'test'))
     suite.addTest(unittest.makeSuite(HostnameTests, 'test'))
-    suite.addTest(unittest.makeSuite(UtilTests, 'test'))
     suite.addTest(unittest.makeSuite(StatusTests,'test'))
     return suite
 

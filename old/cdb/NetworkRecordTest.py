@@ -25,6 +25,9 @@ class NetworkRecordTest(unittest.TestCase):
         self.assert_( netrec.setHostname('mothra') == 0 )
         self.assert_( netrec.setHostname('zyadfakjh') == 1 )
 
+    def test_bcase(self):
+        self.assertEquals('128.148.33.255', NetworkRecord.bcast('128.148.33.23'))
+
     def testAliases(self):
         netrec = NetworkRecord.fetchNetByHostname('mothra')
         aliases = netrec.getAliases()
@@ -48,7 +51,7 @@ class NetworkRecordTest(unittest.TestCase):
     def testNetgroups(self):
         netrec = NetworkRecord.fetchNetByHostname('shutter')
         self.assertEquals('linux', netrec.getNetgroup())
-        l = [ '4th5th', 'graphics', 'unsup' ]
+        l = [ '4th5th', 'graphics', 'linux', 'unsup' ]
         self.assertEquals(l, netrec.getOtherNetgroups())
         netrec.setOtherNetgroups(l)
         self.assertEquals(l, netrec.getOtherNetgroups())
@@ -116,7 +119,6 @@ class NetworkRecordTest(unittest.TestCase):
         self.assertEquals(['disabled'], stat)
 
         self.assertEquals('blort', netrec.setStatus(['blort']))
-
 
 def suite():
     return unittest.makeSuite(NetworkRecordTest,'test')

@@ -1,7 +1,7 @@
-# $Id#
+# $Id$
 
 import sys
-from udb import *
+import udb
 import EquipmentRecord
 import NetworkRecord
 import Search
@@ -127,6 +127,31 @@ class TextUI:
                 return
             print "ERROR: Invalid lid"
 
+    #
+    # Return the first available IP address on the given subnet.  The result
+    # will have a host portion between 2 and 254
+    #
+    def pickIp(self, subnet):
+        # select ipaddr from network where network(ipaddr) = '128.148.38';
+        # get all the records for the given subnet
+        rec = udb.Network.getSQLWhere("network(ipaddr) = '%s' order by ipaddr"
+                                  % subnet)
+
+        ips = [ n['ipaddr'][:-3] for n in rec ]
+        for i in xrange(len(ips)):
+            ips[i] = self.gethostnum(ips[i], subnet)
+        for i in xrange(2, 254):
+            if i not in ips:
+                return "%s.%d" % (subnet, i)
+        return None
+
+    #
+    # Given an ip address and a subnet, return the host portion
+    #
+    def gethostnum(self, ip, subnet):
+        l = len(subnet) + 1
+        return int(ip[l:])
+
     def setHostname(self, netrec, hasDefault = 0):
         if hasDefault:
             default = netrec.getHostname()
@@ -249,7 +274,7 @@ class TextUI:
             default = 'cs.brown.edu'
         resp = self.prompt("Enter mxhost:", default)
         if resp != default:
-            self.netrec.setMxHost(resp)
+            netrec.setMxHost(resp)
 
     def setStatus(self, netrec, hasDefault = 0):
         if hasDefault:
@@ -269,13 +294,8 @@ class TextUI:
 
 class edb ( TextUI ):
     def profile(self, target):
-        if type(target) is int or target.isdigit():
-            eqrec = EquipmentRecord.fetchEqById(target)
-        else:
-            eqrec = EquipmentRecord.fetchEqByHostname(target)
-
+        eqrec = self.getRec(target)
         if not eqrec:
-            self.warn('No record for "%s" found in database' % target)
             return
 
         self.display("id", eqrec.getId())
@@ -297,6 +317,38 @@ class edb ( TextUI ):
         self.display("install comment", inst_comment)
         self.display("User(s)", eqrec.getUsers())
 
+    def delete(self, target):
+        #
+        # Note: this eqrec is not an EquipmentRecord, but a "raw" PyDO
+        # Equipment object
+        #
+        if type(target) is int or target.isdigit():
+            eqrec = udb.Equipment.getUnique(id = target)
+        else:
+            netrec = NetworkRecord.fetchNetByHostname(target)
+            if netrec:
+                eqrec = udb.Equipment.getUnique(id = netrec.getId())
+            else:
+                eqrec = None
+        if not eqrec:
+            self.warn('No record for "%s" found in database' % target)
+            return
+        netrecs = udb.Network.getSome(id = eqrec['id'])
+        for n in netrecs:
+            n['id'] = None
+            print "Orphaning network record %s/%d" % (n['hostname'], n['nid'])
+        eqrec.delete()
+        udb.commit()
+
+    def getRec(self, target):
+        if type(target) is int or target.isdigit():
+            eqrec = EquipmentRecord.fetchEqById(target)
+        else:
+            eqrec = EquipmentRecord.fetchEqByHostname(target)
+        if not eqrec:
+            self.warn('No record for "%s" found in database' % target)
+        return eqrec
+
 class cdb ( TextUI ):
     def profile(self, target):
         netrec = self.getRec(target)
@@ -313,7 +365,7 @@ class cdb ( TextUI ):
         st = None
         id = netrec.getId()
         if id is not None:
-            archrec = Architecture.getUnique(id = id)
+            archrec = udb.Architecture.getUnique(id = id)
             if archrec is not None:
                 st = archrec['arch']
         self.display("hw_arch", st)
@@ -324,24 +376,27 @@ class cdb ( TextUI ):
         self.display("supp_grps", self.joinList(netrec.getOtherNetgroups()))
 
     def delete(self, target):
+        #
+        # Note: this netrec is not a NetworkRecord, but a "raw" PyDO
+        # Network object
+        #
         if type(target) is int or target.isdigit():
-            netrec = Network.getUnique(nid = target)
+            netrec = udb.Network.getUnique(nid = target)
         else:
-            netrec = Network.getUnique(hostname = target)
+            netrec = udb.Network.getUnique(hostname = target)
         if netrec is None:
             self.warn('No record for "%s" found in database' % target)
             return
-
         id = netrec['id']
         netrec.delete()
         if id:
-            eqrec = Equipment.getUnique(id = id)
+            eqrec = udb.Equipment.getUnique(id = id)
             if not eqrec['comment']:
                 eqrec['comment'] = 'formerly ' + target
-        Network.commit()
+        udb.commit()
 
     def query(self, args):
-        search = Search.Search(getConnection())
+        search = Search.Search(udb.getConnection())
         result = search.run(args[0])
         if not result:
             return
@@ -488,31 +543,6 @@ class cdb ( TextUI ):
             netrec.commit()
         else:
             print "No modifications saved."
-
-    #
-    # Return the first available IP address on the given subnet.  The result
-    # will have a host portion between 2 and 254
-    #
-    def pickIp(self, subnet):
-        # select ipaddr from network where network(ipaddr) = '128.148.38';
-        # get all the records for the given subnet
-        rec = Network.getSQLWhere("network(ipaddr) = '%s' order by ipaddr"
-                                  % subnet)
-
-        ips = [ n['ipaddr'][:-3] for n in rec ]
-        for i in xrange(len(ips)):
-            ips[i] = self.gethostnum(ips[i], subnet)
-        for i in xrange(2, 254):
-            if i not in ips:
-                return "%s.%d" % (subnet, i)
-        return None
-
-    #
-    # Given an ip address and a subnet, return the host portion
-    #
-    def gethostnum(self, ip, subnet):
-        l = len(subnet) + 1
-        return int(ip[l:])
 
     def getRec(self, target):
         if type(target) is int or target.isdigit():
