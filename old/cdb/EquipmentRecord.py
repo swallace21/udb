@@ -74,6 +74,15 @@ class EquipmentRecord(DBRecord.DBRecord):
         rec = udb.Network.getSome(id = self.getId())
         return [ r['nid'] for r in rec ]
 
+    def setSurplus(self):
+        self.record['active'] = 0
+
+    def unsetSurplus(self):
+        self.record['active'] = 1
+
+    def isSurplus(self):
+        return not self.record['active']
+        
     def getId(self):
         return self.record['id']
 
@@ -172,18 +181,11 @@ class EquipmentRecord(DBRecord.DBRecord):
             udb.OsType.new(id = self.getId(), os = fixOs(os))
         return None
 
-    def formatDate(self, d):
-        if d:
-            return '%d/%d/%d' % (d.month, d.day, d.year)
-        else:
-            return None
-    
     def getPO(self):
         po = self.getPORec()
         if not po:
             return (None, None, None, None)
-        return ( po['po_num'], self.formatDate(po['date']), po['price'],
-                 po['comment'] )
+        return ( po['po_num'], po['date'], po['price'], po['comment'] )
 
     def fetchOrCreatePO(self):
         po = self.getPORec()
@@ -231,7 +233,7 @@ class EquipmentRecord(DBRecord.DBRecord):
         inst = self.getInstallRec()
         if not inst:
             return ( None, None )
-        return ( self.formatDate(inst['date']), inst['comment'] )
+        return ( inst['date'], inst['comment'] )
 
     def setInstallDate(self, date):
         if not date:
@@ -247,6 +249,20 @@ class EquipmentRecord(DBRecord.DBRecord):
 
     def getConfRec(self):
         return self.record.getConfig()
+
+    def makeEmptyMap(self, table):
+        m = {}
+        for f in [f[0] for f in table.fields]:
+            if f != 'id':
+                m[f] = None
+        return m
+
+    def copyMap(self, rec):
+        m = {}
+        for f in [f[0] for f in rec.fields]:
+            if f != 'id':
+                m[f] = rec[f]
+        return m
     
     def getConfiguration(self):
         m = {'cpu': None, 'disk': None, 'memory': None, 'graphics': None,
@@ -258,6 +274,37 @@ class EquipmentRecord(DBRecord.DBRecord):
             m[k] = c[k]
         del m['id']
         return m
+
+    def getDispose(self):
+        rec = self.record.getDispose()
+        if not rec:
+            return self.makeEmptyMap(udb.Dispose)
+        return self.copyMap(rec)
+
+    def setDisp(self, field, data):
+        if not data:
+            data = None
+        rec = self.record.getDispose()
+        if not rec:
+            if not data:
+                return
+            rec = udb.Dispose.new(id = self.getId())
+        rec[field] = data
+
+    def setDisposeSurplusDate(self, date):
+        self.setDisp('surplus_date', date)
+
+    def setDisposeSoldDate(self, date):
+        self.setDisp('sold_date', date)
+
+    def setDisposePrice(self, price):
+        self.setDisp('price', price)
+
+    def setDisposeBuyer(self, buyer):
+        self.setDisp('buyer', buyer)
+
+    def setDisposeComment(self, comment):
+        self.setDisp('comment', comment)
 
     def setConf(self, field, data):
         if not data:

@@ -266,6 +266,8 @@ class IdSql(SqlGenerator):
             'conf_comment': self.makeSqlString('config', 'comment'),
             'floor': "SELECT e.id FROM %s e, location l WHERE l.floor = '%%s' AND e.lid = l.lid" % self.eqTable,
             'building': "SELECT e.id FROM %s e, location l WHERE l.building ~* '%%s' AND e.lid = l.lid" % self.eqTable,
+            'active': "SELECT id FROM %s WHERE active = '%%s'" % self.eqTable,
+            'surplus': "SELECT id FROM %s WHERE active != '%%s'" % self.eqTable,
             }
         self.field2sql['desc'] = self.field2sql['descr']
         self.field2sql['serial'] = self.field2sql['serial_num']

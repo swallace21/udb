@@ -41,15 +41,15 @@ class SearchTest(unittest.TestCase):
         result = search.run('serial=724f154c')
         self.assertEquals(1, len(result))
         self.assertEquals([108], result)
-        result = search.run('serial=wf84105048')
+        result = search.run('serial=wf84105048&&active=t')
         self.assertEquals(0, len(result))
         
     def testSurplusId(self):
-        search = Search.SurplusSearch(udb.getConnection())
-        result = search.run('serial=wf84105048')
+        search = Search.EdbSearch(udb.getConnection())
+        result = search.run('serial=wf84105048&&surplus=t')
         self.assertEquals(1, len(result))
         self.assertEquals([6630], result)
-        result = search.run('serial=724f154c')
+        result = search.run('serial=724f154c&&surplus=t')
         self.assertEquals(0, len(result))
 
 def suite():

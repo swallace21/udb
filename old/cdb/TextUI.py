@@ -16,7 +16,7 @@ class TextUI:
             self.usage()
             sys.exit(1)
         command = args.pop(0)
-        
+
         if command == 'insert':
             if len(args) > 1:
                 self.usage()
@@ -43,8 +43,14 @@ class TextUI:
                 sys.exit(1)
             self.profile(args[0])
         else:
-            self.warn("Unknown command: " + command + "\n")
-            sys.exit(1)
+            try:
+                exec "self.%s(args)" % command
+            except AttributeError, e:
+                if e.args[0].endswith("has no attribute '%s'" % command):
+                    self.warn("Unknown command: " + command + "\n")
+                    sys.exit(1)
+                else:
+                    raise e
 
     def profile(self, target):
         raise NotImplementedError
@@ -70,8 +76,8 @@ class TextUI:
     def usage(self):
         self.warn("Usage: " + self.prog + " <command> [<hostname>]")
 
-    def display(self, prompt, val):
-        sys.stdout.write("%s = " % prompt)        
+    def display(self, field, val):
+        sys.stdout.write("%s = " % field)
         if val is not None:
             sys.stdout.write(str(val))
         print
@@ -81,6 +87,15 @@ class TextUI:
             return None
         return ','.join(l)
 
+    def formatDate(self, d):
+        if d:
+            return '%d/%d/%d' % (d.month, d.day, d.year)
+        else:
+            return None
+
+    def bold(self, st):
+        return '\033[1m' + st + '\033[0m'
+    
     #
     # Prompt the user for information, possibly with a default value.  If a
     # default is given, a return key returns the default.  A '\' key
@@ -308,7 +323,7 @@ class TextUI:
             eqrec.setDescr(resp)
             break
 
-    def setSerialNumber(self, eqrec, hasDefault):
+    def setSerialNumber(self, eqrec, hasDefault = 0):
         if hasDefault:
             default = eqrec.getSerialNumber()
         else:
@@ -317,7 +332,7 @@ class TextUI:
         if resp != default:
             eqrec.setSerialNumber(resp)
 
-    def setInventoryNumber(self, eqrec, hasDefault):
+    def setInventoryNumber(self, eqrec, hasDefault = 0):
         if hasDefault:
             default = eqrec.getInventoryNumber()
         else:
@@ -326,7 +341,7 @@ class TextUI:
         if resp != default:
             eqrec.setInventoryNumber(resp)
 
-    def setUsage(self, eqrec, hasDefault):
+    def setUsage(self, eqrec, hasDefault = 0):
         if hasDefault:
             default = eqrec.getUsage()
         else:
@@ -340,7 +355,7 @@ class TextUI:
                 break
             print "ERROR: Not a valid type"
 
-    def setPONumber(self, eqrec, hasDefault):
+    def setPONumber(self, eqrec, hasDefault = 0):
         if hasDefault:
             default = eqrec.getPO()[0]
         else:
@@ -349,9 +364,9 @@ class TextUI:
         if resp != default:
             eqrec.setPONumber(resp)
 
-    def setPODate(self, eqrec, hasDefault):
+    def setPODate(self, eqrec, hasDefault = 0):
         if hasDefault:
-            default = eqrec.getPO()[1]
+            default = self.formatDate(eqrec.getPO()[1])
         else:
             default = ''
         while 1:
@@ -367,7 +382,7 @@ class TextUI:
                 break
             print "ERROR: Can't parse date"
             
-    def setPOPrice(self, eqrec, hasDefault):
+    def setPOPrice(self, eqrec, hasDefault = 0):
         if hasDefault:
             default = eqrec.getPO()[2]
             if not default:
@@ -388,7 +403,7 @@ class TextUI:
             except ValueError:
                 print "ERROR: Not a valid price" 
         
-    def setPOComment(self, eqrec, hasDefault):
+    def setPOComment(self, eqrec, hasDefault = 0):
         if hasDefault:
             default = eqrec.getPO()[3]
         else:
@@ -397,9 +412,9 @@ class TextUI:
         if resp != default:
             eqrec.setPOComment(resp)
 
-    def setInstallDate(self, eqrec, hasDefault):
+    def setInstallDate(self, eqrec, hasDefault = 0):
         if hasDefault:
-            default = eqrec.getInstallation()[0]
+            default = self.formatDate(eqrec.getInstallation()[0])
         else:
             default = ''
         while 1:
@@ -415,7 +430,7 @@ class TextUI:
                 break
             print "ERROR: Can't parse date"
 
-    def setInstallComment(self, eqrec, hasDefault):
+    def setInstallComment(self, eqrec, hasDefault = 0):
         if hasDefault:
             default = eqrec.getInstallation()[1]
         else:
@@ -424,7 +439,7 @@ class TextUI:
         if resp != default:
             eqrec.setInstallComment(resp)
 
-    def setUsers(self, eqrec, hasDefault):
+    def setUsers(self, eqrec, hasDefault = 0):
         if hasDefault:
             default = self.joinList(eqrec.getUsers())
         else:
@@ -434,7 +449,7 @@ class TextUI:
             new = self.makeList(resp)
             eqrec.setUsers(new)
 
-    def setCpu(self, eqrec, hasDefault):
+    def setCpu(self, eqrec, hasDefault = 0):
         if hasDefault:
             default = eqrec.getConfiguration()['cpu']
             if not default:
@@ -445,7 +460,7 @@ class TextUI:
         if resp != default:
             eqrec.setCpu(resp)
         
-    def setDisk(self, eqrec, hasDefault):
+    def setDisk(self, eqrec, hasDefault = 0):
         if hasDefault:
             default = eqrec.getConfiguration()['disk']
             if not default:
@@ -456,7 +471,7 @@ class TextUI:
         if resp != default:
             eqrec.setDisk(resp)
 
-    def setMem(self, eqrec, hasDefault):
+    def setMem(self, eqrec, hasDefault = 0):
         if hasDefault:
             default = eqrec.getConfiguration()['memory']
             if not default:
@@ -467,7 +482,7 @@ class TextUI:
         if resp != default:
             eqrec.setMem(resp)
 
-    def setGraphics(self, eqrec, hasDefault):
+    def setGraphics(self, eqrec, hasDefault = 0):
         if hasDefault:
             default = eqrec.getConfiguration()['graphics']
             if not default:
@@ -478,7 +493,7 @@ class TextUI:
         if resp != default:
             eqrec.setGraphics(resp)
 
-    def setConfComment(self, eqrec, hasDefault):
+    def setConfComment(self, eqrec, hasDefault = 0):
         if hasDefault:
             default = eqrec.getConfiguration()['comment']
             if not default:
@@ -489,13 +504,93 @@ class TextUI:
         if resp != default:
             eqrec.setConfComment(resp)
 
+    def setSurplusDate(self, eqrec, hasDefault = 0):
+        default = mx.DateTime.now()
+        if hasDefault:
+            default = eqrec.getDispose()['surplus_date']
+            if not default:
+                default = mx.DateTime.now()
+        default = self.formatDate(default)
+        while 1:
+            resp = self.prompt("Enter date surplused:", default)
+            if not resp:
+                eqrec.setDisposeSurplusDate(None)
+                break
+            dateTime = self.makeDate(resp)
+            if dateTime:
+                eqrec.setDisposeSurplusDate(dateTime)
+                break
+            print "ERROR: Can't parse date"
+
+    def setSoldDate(self, eqrec, hasDefault = 0):
+        if hasDefault:
+            default = eqrec.getDispose()['sold_date']
+        else:
+            default = ''
+        default = self.formatDate(default)
+        while 1:
+            resp = self.prompt("Enter date sold:", default)
+            if resp == default:
+                break
+            if not resp:
+                eqrec.setDisposeSoldDate(None)
+                break
+            dateTime = self.makeDate(resp)
+            if dateTime:
+                eqrec.setDisposeSoldDate(dateTime)
+                break
+            print "ERROR: Can't parse date"
+
+    def setSoldPrice(self, eqrec, hasDefault = 0):
+        if hasDefault:
+            default = eqrec.getDispose()['price']
+            if not default:
+                default = ''
+        else:
+            default = ''
+        while 1:
+            resp = self.prompt("Enter sold price:", default)
+            if resp == default:
+                break
+            if not resp:
+                eqrec.setDisposePrice(None)
+                break
+            try:
+                f = float(resp)
+                eqrec.setDisposePrice(f)
+                break
+            except ValueError:
+                print "ERROR: Not a valid price" 
+
+    def setSurplusBuyer(self, eqrec, hasDefault = 0):
+        if hasDefault:
+            default = eqrec.getDispose()['buyer']
+            if not default:
+                default = ''
+        else:
+            default = ''
+        resp = self.prompt("Enter buyer:", default)
+        if resp != default:
+            eqrec.setDisposeBuyer(resp)
+
+    def setSurplusComment(self, eqrec, hasDefault = 0):
+        if hasDefault:
+            default = eqrec.getDispose()['comment']
+            if not default:
+                default = ''
+        else:
+            default = ''
+        resp = self.prompt("Enter surplus comment:", default)
+        if resp != default:
+            eqrec.setDisposeComment(resp)
+
     def makeDate(self, st):
         return mx.DateTime.Parser.DateFromString(st, ('us', 'altus',
                                                       'iso', 'altiso',
                                                       'lit', 'altlit'))
 
     def confirmUpdate(self):
-        resp = self.prompt("\nSave changed record (y/n)[y]? ")
+        resp = self.prompt("\nSave changed record (y/n)[y]?", 'y')
         if not resp:
             resp = 'y'
         if self.isYes(resp):
@@ -504,11 +599,19 @@ class TextUI:
             print "No modifications saved."
 
     def confirmInsert(self):
-        resp = self.prompt("Insert new record (y/n)?", 'y')
+        resp = self.prompt("Insert new record (y/n)[y]?", 'y')
         if self.isYes(resp):
             udb.commit()
         else:
             print "Insert cancelled."
+
+    def confirmDelete(self):
+        print
+        resp = self.prompt("Delete this record (y/n)[n]?", 'n')
+        if self.isYes(resp):
+            udb.commit()
+        else:
+            print "Deletion cancelled."            
 
     def searchForRecord(self, target, searchClass):
         if target.find('=') == -1:
@@ -525,6 +628,12 @@ class TextUI:
         self.warn("Multiple records for %s" % target)
         return None
 
+    def displayIdSurp(self, id, surp):
+        sys.stdout.write("id = %d" % id)
+        if surp:
+            sys.stdout.write(self.bold(" *SURPLUS*"))
+        print
+
 class edb ( TextUI ):
     def profile(self, target):
         eqrec = self.getRec(target)
@@ -534,7 +643,7 @@ class edb ( TextUI ):
                 self.warn('No record for "%s" found in database' % target)
                 return
 
-        self.display("id", eqrec.getId())
+        self.displayIdSurp(eqrec.getId(), eqrec.isSurplus())
         hostnames = eqrec.getHostnames()
         self.display("hostnames", ','.join(hostnames))
         self.display("descr", eqrec.getDescr())
@@ -545,11 +654,11 @@ class edb ( TextUI ):
         self.display("comment", eqrec.getComment())
         (po_num, po_date, po_price, po_comment) = eqrec.getPO()
         self.display("po number", po_num)
-        self.display("po date", po_date)
+        self.display("po date", self.formatDate(po_date))
         self.display("po price", po_price)
         self.display("po comment", po_comment)
         (inst_date, inst_comment) = eqrec.getInstallation()
-        self.display("install date", inst_date)
+        self.display("install date", self.formatDate(inst_date))
         self.display("install comment", inst_comment)
         self.display("users", self.joinList(eqrec.getUsers()))
         conf = eqrec.getConfiguration()
@@ -558,7 +667,66 @@ class edb ( TextUI ):
         self.display("memory", conf['memory'])
         self.display("graphics", conf['graphics'])
         self.display("conf_comment", conf['comment'])
+        if eqrec.isSurplus():
+            self.profileSurplus(eqrec)
+                             
+    def profileSurplus(self, eqrec):
+        disp = eqrec.getDispose()
+        if disp:
+            self.display("surplus date", self.formatDate(disp['surplus_date']))
+            self.display("sold date", self.formatDate(disp['sold_date']))
+            self.display("sale price", disp['price'])
+            self.display("buyer", disp['buyer'])
+            self.display("surplus comment", disp['comment'])
 
+    def surplus(self, args):
+        if len(args) != 1:
+            self.usage()
+            sys.exit(1)
+        eqrec = self.getRec(args[0])
+        if not eqrec:
+            eqrec = self.searchForRecord(args[0], Search.EdbSearch)
+            if not eqrec:
+                self.warn('No record for "%s" found in database' % args[0])
+                return
+        self.profile(eqrec.getId())
+        print
+        resp = self.prompt("Surplus this item (y/n)[y]?", 'y')
+        if not self.isYes(resp):
+            print "Surplus cancelled."
+            return
+        eqrec.setSurplus()
+        self.setSurplusDate(eqrec, 1)
+        self.setSoldDate(eqrec, 1)
+        self.setSoldPrice(eqrec, 1)
+        self.setSurplusBuyer(eqrec, 1)
+        self.setSurplusComment(eqrec, 1)
+        udb.commit()
+
+    def unsurplus(self, args):
+        if len(args) != 1:
+            self.usage()
+            sys.exit(1)
+        if type(args[0]) is int or args[0].isdigit():
+            eqrec = udb.Equipment.getUnique(id = args[0])
+        else:
+            self.warn("'unsurplus' must be given an id")
+            return
+        if eqrec['active']:
+            self.warn("%s is not surplused" % args[0])
+        else:
+            eqrec['active'] = 1
+            disp = udb.Dispose.getUnique(id = eqrec['id'])
+            if disp:
+                disp.delete()
+            udb.commit()
+
+    def notifyOfOrphaning(self, id):
+        netrecs = udb.Network.getSome(id = id)
+        for n in netrecs:
+            n['id'] = None
+            print "Orphaning network record %s/%d" % (n['hostname'], n['nid'])
+        
     def delete(self, target):
         #
         # Note: this eqrec is not an EquipmentRecord, but a "raw" PyDO
@@ -578,12 +746,11 @@ class edb ( TextUI ):
                 self.warn('No record for "%s" found in database' % target)
                 return
             eqrec = eqrec.record
-        netrecs = udb.Network.getSome(id = eqrec['id'])
-        for n in netrecs:
-            n['id'] = None
-            print "Orphaning network record %s/%d" % (n['hostname'], n['nid'])
+        self.profile(eqrec['id'])
+        print
+        self.notifyOfOrphaning(eqrec['id'])
         eqrec.delete()
-        udb.commit()
+        self.confirmDelete()
 
     def insert(self, notUsed):
         eqrec = EquipmentRecord.EquipmentRecord('Unknown')
@@ -615,6 +782,8 @@ class edb ( TextUI ):
             if not eqrec:
                 self.warn('No record for "%s" found in database' % target)
                 return
+        if eqrec.isSurplus():
+            print self.bold('*SURPLUS*')
         self.setDescription(eqrec, 1)
         self.setLid(eqrec, 1)
         self.setSerialNumber(eqrec, 1)
@@ -750,7 +919,7 @@ class cdb ( TextUI ):
         self.display("hostname", netrec.getHostname())
         eqrec = netrec.getEquipmentRec()
         if eqrec:
-            self.display("id", eqrec.getId())
+            self.displayIdSurp(eqrec.getId(), eqrec.isSurplus())
             self.display("lid", eqrec.getLid())
         self.display("netgroups", self.joinList(netrec.getNetgroups()))
         self.display("aliases", self.joinList(netrec.getAliases()))
@@ -786,12 +955,14 @@ class cdb ( TextUI ):
             else:
                 netrec = netrec.record
         id = netrec['id']
+        self.profile(netrec['nid'])
         netrec.delete()
         if id:
             eqrec = udb.Equipment.getUnique(id = id)
             if not eqrec['comment']:
                 eqrec['comment'] = 'formerly ' + target
-        udb.commit()
+
+        self.confirmDelete()
 
     def query(self, args):
         search = Search.CdbSearch(udb.getConnection())

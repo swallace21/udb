@@ -74,5 +74,15 @@ class EquipmentRecordTest(unittest.TestCase):
         inst['comment'] = 'foobar'
         self.assertEquals('foobar', inst['comment'])
 
+    def test_surplus(self):
+        rec = EquipmentRecord.fetchEqById(393)
+        self.assert_(rec.record['active'])
+        rec.setSurplus()
+        rec = EquipmentRecord.fetchEqById(393)
+        self.assert_(not rec.record['active'])
+        rec.unsetSurplus()
+        rec = EquipmentRecord.fetchEqById(393)
+        self.assert_(rec.record['active'])
+        
 def suite():
     return unittest.makeSuite(EquipmentRecordTest,'test')

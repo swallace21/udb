@@ -31,11 +31,7 @@ class CdbSearch(Search):
 
 class EdbSearch(Search):
     def getParser(self, tree):
-        return Parser.ActiveIdSql(tree)
-
-class SurplusSearch(Search):
-    def getParser(self, tree):
-        return Parser.SurplusIdSql(tree)
+        return Parser.FullIdSql(tree)
 
 class FullSearch(Search):
     def getParser(self, tree):
