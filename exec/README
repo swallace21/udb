@@ -1,0 +1,6 @@
+This directory will be used by udb to run the export scripts.  It's purpose
+is similar to the rcX.d directories as a machine boots.  It should be populated
+with links to the export scripts, all of the names should be prefaced with a 
+two digit run level number.  By default, all scripts can start at a run level
+of 50 and be adjusted lower or higher depending on dependencies of the export
+scripts.
