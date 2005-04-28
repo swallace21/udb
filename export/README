@@ -1,0 +1,16 @@
+This directory contains the helper scripts used by udb to export data from
+the database and update the actual services or configuration files.  As udb 
+will be calling these scripts, they need to have a common api.
+
+Command Line Options
+
+All scripts should require a single command line option be presented.  This
+option can be either "update" or "export".  The update command line option
+will cause the script to update any changed records, if possible.  The export
+command line option, will cause the script to do a complete reload of all data
+it is responsible for.
+
+Return Codes
+
+All scripts should return a code of "0" for successful completion.  A negative
+return code is a fatal error, a positive return code is a warning error.
