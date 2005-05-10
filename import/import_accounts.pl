@@ -2,15 +2,35 @@
 
 use strict;
 use DBI;
+use Getopt::Std;
+use vars qw($opt_d $opt_v);
+
+sub trimwhitespace($);
 
 my $passwd_file = "/maytag/sys0/NIS/src/passwd.NEW";
 my $group_file = "/maytag/sys0/NIS/src/group";
 my $usage_file = "/maytag/sys0/NIS/src/usage.byID";
 my $identity_file = "/maytag/sys0/NIS/src/identity";
-
-my $dbh = DBI->connect("dbi:Pg:dbname=udb;host=db", 'tstaff', 'pr0bl3m')
+my $dbname = "udb";
+getopts('d:v');
+if($opt_d) {
+$dbname = $opt_d;
+}
+print "importing accounts...\n";
+my $dbh = DBI->connect("dbi:Pg:dbname=$dbname;host=db", 'tstaff', 'pr0bl3m')
 	or die "Couldn't connect to database: " . DBI->errstr;
 
+my $sth = $dbh->prepare("
+DELETE FROM group_list;
+DELETE FROM identity_list;
+DELETE FROM identities;
+DELETE FROM accounts;
+DELETE FROM groups;
+DELETE FROM people;
+");
+$sth->execute;
+$sth->finish;
+  
 open(INPUT, "<$group_file") or die("Couldn't open file: $group_file");
 
 while(<INPUT>) {
@@ -20,7 +40,7 @@ while(<INPUT>) {
 
 	my @list = split /:/,	$_;
 
-	print "adding group: $list[0] \tgid: $list[2]\n";	
+	if($opt_v){ print "adding group: $list[0] \tgid: $list[2]\n";}
 
 	my $sth_create = $dbh->prepare("INSERT INTO groups (group_name, gid) VALUES (?, ?)");
 	$sth_create->execute($list[0], $list[2]);
@@ -38,7 +58,7 @@ while(<INPUT>) {
 	my @list = split /:/,	$_;
 	my @info = split /,/,	$list[4];
 
-	print "adding account: $list[0]\n";
+	if($opt_v){ print "adding account: $list[0]\n"; }
 
 	my $sth = $dbh->prepare("SELECT nextval FROM nextval('person_id_seq')");
 	$sth->execute;
@@ -67,8 +87,8 @@ while(<INPUT>) {
 	my @grplst = split /,/,   $list[3];
 
 	foreach (@grplst) {
-			
-		print "adding login $_ to group $list[0]\n";
+
+		if($opt_v){ print "adding login $_ to group $list[0]\n"; }
 		my $sth = $dbh->prepare("INSERT INTO group_list (group_name, login) VALUES (?, ?)");
         	$sth->execute($list[0], trimwhitespace($_));
         	$sth->finish;
@@ -84,7 +104,7 @@ while(<INPUT>) {
         my @list = split /:/,   $_;
         if (!defined($list[1])) {next;}
 
-        print "adding identity $list[0]:$list[1]\n";
+        if($opt_v){ print "adding identity $list[0]:$list[1]\n"; }
         my $sth = $dbh->prepare("INSERT INTO identities (identity, space) VALUES (?,?)");
         $sth->execute($list[0], $list[1]);
         $sth->finish;
@@ -103,7 +123,7 @@ while(<INPUT>) {
 
         foreach (@identities) {
 
-                print "adding identity $_ to login $list[0]\n";
+                if($opt_v){ print "adding identity $_ to login $list[0]\n"; }
                 my $sth = $dbh->prepare("INSERT INTO identity_list (identity, login) VALUES(?,?)");
                 $sth->execute(trimwhitespace($_),trimwhitespace($list[0]));
                 $sth->finish;

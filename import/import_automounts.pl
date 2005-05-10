@@ -1,0 +1,63 @@
+#!/usr/local/bin/perl -w
+
+use strict;
+use DBI;
+use Getopt::Std;
+use vars qw($opt_d $opt_v);
+
+my $in_path = "/maytag/sys0/NIS/src";
+my $in_file = "";
+my $dbname = "udb";
+getopts('d:v');
+if($opt_d) {
+$dbname = $opt_d;
+}
+print "importing automounts...\n";
+my $dbh = DBI->connect("dbi:Pg:dbname=$dbname;host=db", 'tstaff', 'pr0bl3m')
+	or die "Couldn't connect to database: " . DBI->errstr;
+
+my $sth = $dbh->prepare("DELETE FROM fs_automounts; DELETE FROM fs_automaps;");
+$sth->execute;
+$sth->finish;
+
+opendir(DIR, $in_path) or die "can't opendir $in_path!";
+foreach $in_file (sort readdir(DIR)) {
+  if(substr($in_file, -4) eq ".map") {
+  
+    my $auto_dir = "/" . substr($in_file, 0, -4);
+    $sth = $dbh->prepare("INSERT INTO fs_automaps (automap) VALUES ('$auto_dir')");
+    $sth->execute;
+    $sth->finish;
+        
+    open(INPUT, "<$in_path/$in_file") or die("Couldn't open file: $in_path/$in_file");
+    
+    while(<INPUT>) {
+      chomp();
+      $_ =~ s/#.*//;
+      if($_ =~ m/(\S+)\s+(-.+)(\w+):(\S+)/) {
+        if($opt_v) { print "adding automount: $auto_dir/$1 \n"; }
+        $sth = $dbh->prepare("INSERT INTO fs_automounts (automap, automount, server, path, flags) VALUES (?, ?, ?, ?, ?)");
+        $sth->execute($auto_dir, $1, $3, $4, $2);
+	      $sth->finish;
+      } elsif ($_ =~ m/(\S+)\s+(\w+):(\S+)/) {
+        if($opt_v) { print "adding automount: $auto_dir/$1 \n"; }
+        $sth = $dbh->prepare("INSERT INTO fs_automounts (automap, automount, server, path) VALUES (?, ?, ?, ?)");
+        $sth->execute($auto_dir, $1, $2, $3);
+        $sth->finish;
+      } elsif ($_ =~ m/\S+/) {
+        print "Could not parse $_\n";
+      }
+    }
+    close(INPUT);
+  }
+}
+$dbh->disconnect || die "Can't disconnect from database: $DBI::errstr\n";
+
+
+sub trimwhitespace($)
+{
+	my $string = shift;
+	$string =~ s/^\s+//;
+	$string =~ s/\s+$//;
+	return $string;
+}
