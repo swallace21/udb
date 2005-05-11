@@ -45,7 +45,7 @@ sub insert_host {
     my @aliases = split(/,/, $host->{'aliases'});
     $host->{'supp_grps'} =~ s/\s//g;
     my @sup_groups = split(/,/, $host->{'supp_grps'});
-    $host->{'classes'} =~1 s/\s//g;
+    $host->{'classes'} =~ s/\s//g;
     my @classes = split(/,/, $host->{'classes'});
     my $contact = $host->{'contact'};
     my $expertise = $host->{'expertise'};
