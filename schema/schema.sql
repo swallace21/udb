@@ -9,7 +9,7 @@
 --                      See http://tedia2sql.tigris.org/AUTHORS.html for tedia2sql author information
 -- 
 --   Target Database:   postgres
---   Generated at:      Mon Mar 28 12:58:06 2005
+--   Generated at:      Tue May 10 12:18:20 2005
 --   Input File:        schema.dia
 -- 
 -- ================================================================================
@@ -20,13 +20,13 @@
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.9
---     Generated at:      Mon Mar 28 12:58:06 2005
+--     Generated at:      Tue May 10 12:18:20 2005
 --     Input File:        schema.dia
 
 -- alter table class_list drop constraint fk_os_class_list --(is implicitly done)
 -- alter table switchport drop constraint fk_switch_switchport --(is implicitly done)
 -- alter table surplus drop constraint fk_equip_surplus --(is implicitly done)
--- alter table purchase drop constraint fk_equip_purchase --(is implicitly done)
+-- alter table equipment drop constraint fk_purchase_equip --(is implicitly done)
 -- alter table os drop constraint fk_machine_os --(is implicitly done)
 -- alter table aliases drop constraint fk_netobj_aliases --(is implicitly done)
 -- alter table group_list drop constraint fk_accounts_group_list --(is implicitly done)
@@ -52,13 +52,15 @@
 -- alter table class_list drop constraint fk_classes_class_list --(is implicitly done)
 -- alter table net_service drop constraint fk_classes_net_service --(is implicitly done)
 -- alter table fs_exports drop constraint fk_fs_classes_fs_exports --(is implicitly done)
+-- alter table equipment drop constraint fk_parent_equip_id --(is implicitly done)
+-- alter table fs_automounts drop constraint fk_automaps_automounts --(is implicitly done)
 
 
 -- Generated Permissions Drops
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.9
---     Generated at:      Mon Mar 28 12:58:06 2005
+--     Generated at:      Tue May 10 12:18:20 2005
 --     Input File:        schema.dia
 
 
@@ -114,6 +116,12 @@ VALUE = 'unchanged' OR
 VALUE = 'changed' OR
 VALUE = 'deleted');
 
+DROP DOMAIN EQUIPSTATUS CASCADE;
+CREATE DOMAIN EQUIPSTATUS TEXT NOT NULL CHECK(
+VALUE = 'deployed' OR
+VALUE = 'spare' OR
+VALUE = 'surplus');
+
 drop FUNCTION check_vlan(INT) CASCADE;
 drop TABLE vlan_list;
 create TABLE vlan_list (
@@ -132,7 +140,7 @@ create FUNCTION check_vlan(INT)
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.9
---     Generated at:      Mon Mar 28 12:58:06 2005
+--     Generated at:      Tue May 10 12:18:20 2005
 --     Input File:        schema.dia
 
 
@@ -141,7 +149,7 @@ create FUNCTION check_vlan(INT)
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.9
---     Generated at:      Mon Mar 28 12:58:06 2005
+--     Generated at:      Tue May 10 12:18:20 2005
 --     Input File:        schema.dia
 
 drop table equipment cascade ;
@@ -149,7 +157,7 @@ drop table netobj cascade ;
 drop table switch cascade ;
 drop table switchport cascade ;
 drop table machine cascade ;
-drop table purchase cascade ;
+drop table purchase_orders cascade ;
 drop table surplus cascade ;
 drop table aliases cascade ;
 drop table class_list cascade ;
@@ -176,23 +184,27 @@ drop table net_service cascade ;
 drop table classes cascade ;
 drop table fs_exports cascade ;
 drop table fs_classes cascade ;
+drop table fs_automounts cascade ;
+drop table fs_automaps cascade ;
 
 
 -- Generated SQL Schema
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.9
---     Generated at:      Mon Mar 28 12:58:06 2005
+--     Generated at:      Tue May 10 12:18:20 2005
 --     Input File:        schema.dia
 
 
 -- equipment
 create table equipment (
   equip_id                  int4 default nextval('equip_id_seq') not null,
+  parent_equip_id           int4,
   cs_id                     int4 unique default nextval ('cs_id_seq'),
   equip_name                text unique,
-  brown_inv_num             text,
   descr                     text not null,
+  install_date              date,
+  po_num                    text,
   owner                     text,
   contact                   text,
   usage                     usage,
@@ -200,6 +212,9 @@ create table equipment (
   floor                     text,
   room                      text,
   comments                  text,
+  serial_num                text,
+  brown_inv_num             text,
+  equip_status              equipstatus not null,
   constraint pk_equipment primary key (equip_id)
 ) ;
 
@@ -260,25 +275,34 @@ create table machine (
   constraint pk_machine primary key (machine_name)
 ) ;
 
--- purchase
-create table purchase (
-  cs_id                     int4 not null,
+-- purchase_orders
+create table purchase_orders (
   po_num                    text not null,
-  serial_num                text,
-  brown_inv_num             text,
-  accounts                  text,
-  date                      date not null,
-  comments                  text
+  req_num                   text,
+  date                      date,
+  for_by                    text,
+  vendor                    text,
+  product                   text,
+  account1                  text,
+  account2                  text,
+  account3                  text,
+  account4                  text,
+  cost1                     float4,
+  cost2                     float4,
+  cost3                     float4,
+  cost4                     float4,
+  comments                  text,
+  constraint pk_purchase_orders primary key (po_num)
 ) ;
 
 -- surplus
 create table surplus (
-  cs_id                     int4 not null,
+  equip_id                  int4 not null,
   surplus_date              date,
   sale_date                 date,
   buyer                     text,
   CHECK (surplus_date NOTNULL OR sale_date NOTNULL) ,
-  constraint pk_surplus primary key (cs_id)
+  constraint pk_surplus primary key (equip_id)
 ) ;
 
 -- aliases
@@ -337,9 +361,8 @@ create table dirty_files (
 -- accounts
 create table accounts (
   uid                       int4  default nextval('uid_seq') not null,
-  person_id                 int4 unique not null,
+  person_id                 int4 not null,
   login                     text unique not null,
-  net_id                    text,
   gid                       text,
   shell                     text,
   home_dir                  text,
@@ -427,6 +450,7 @@ create table people (
   office                    text,
   office_phone              text,
   home_phone                text,
+  cell_phone                text,
   comments                  text,
   constraint pk_people primary key (person_id)
 ) ;
@@ -477,13 +501,12 @@ create table classes (
 
 -- fs_exports
 create table fs_exports (
+  server                    text not null,
+  path                      text not null,
   fs_class                  text not null,
-  host                      text,
-  host_path                 text,
-  mount_point               text,
-  automount_point           text,
   quota                     int4,
-  flags                     text
+  flags                     text,
+  constraint pk_fs_exports primary key (server,path)
 ) ;
 
 -- fs_classes
@@ -493,12 +516,29 @@ create table fs_classes (
   constraint pk_fs_classes primary key (fs_class)
 ) ;
 
+-- fs_automounts
+create table fs_automounts (
+  automap                   text not null,
+  automount                 text not null,
+  server                    text,
+  path                      text,
+  flags                     text,
+  constraint pk_fs_automounts primary key (automap,automount)
+) ;
+
+-- fs_automaps
+create table fs_automaps (
+  automap                   text not null,
+  flags                     text,
+  constraint pk_fs_automaps primary key (automap)
+) ;
+
 
 -- Generated SQL Views
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.9
---     Generated at:      Mon Mar 28 12:58:06 2005
+--     Generated at:      Tue May 10 12:18:20 2005
 --     Input File:        schema.dia
 
 
@@ -515,7 +555,7 @@ CREATE OR REPLACE FUNCTION num_ports(TEXT)
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.9
---     Generated at:      Mon Mar 28 12:58:06 2005
+--     Generated at:      Tue May 10 12:18:20 2005
 --     Input File:        schema.dia
 
 
@@ -524,7 +564,7 @@ CREATE OR REPLACE FUNCTION num_ports(TEXT)
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.9
---     Generated at:      Mon Mar 28 12:58:06 2005
+--     Generated at:      Tue May 10 12:18:20 2005
 --     Input File:        schema.dia
 
 
@@ -546,13 +586,13 @@ insert into vlan_list values ( '898', '10.116.0.0/16', 'ilab' ) ;
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.9
---     Generated at:      Mon Mar 28 12:58:06 2005
+--     Generated at:      Tue May 10 12:18:20 2005
 --     Input File:        schema.dia
 
 alter table class_list add constraint fk_os_class_list foreign key (machine_name,os_name) references os (machine_name,os_name) ON DELETE CASCADE ON UPDATE CASCADE ;
 alter table switchport add constraint fk_switch_switchport foreign key (switch_name) references switch (switch_name) ON DELETE CASCADE ON UPDATE CASCADE ;
-alter table surplus add constraint fk_equip_surplus foreign key (cs_id) references equipment (cs_id) ON DELETE CASCADE ON UPDATE CASCADE ;
-alter table purchase add constraint fk_equip_purchase foreign key (cs_id) references equipment (cs_id) ON DELETE CASCADE ON UPDATE CASCADE ;
+alter table surplus add constraint fk_equip_surplus foreign key (equip_id) references equipment (equip_id) ON DELETE CASCADE ON UPDATE CASCADE ;
+alter table equipment add constraint fk_purchase_equip foreign key (po_num) references purchase_orders (po_num) ON DELETE CASCADE ON UPDATE CASCADE ;
 alter table os add constraint fk_machine_os foreign key (machine_name) references machine (machine_name) ON DELETE CASCADE ON UPDATE CASCADE ;
 alter table aliases add constraint fk_netobj_aliases foreign key (dns_name,domain) references netobj (dns_name,domain) ON DELETE CASCADE ON UPDATE CASCADE ;
 alter table group_list add constraint fk_accounts_group_list foreign key (login) references accounts (login) ON DELETE CASCADE ON UPDATE CASCADE ;
@@ -578,4 +618,6 @@ alter table net_service add constraint fk_netobj_net_service foreign key (dns_na
 alter table class_list add constraint fk_classes_class_list foreign key (class) references classes (class) ON DELETE CASCADE ON UPDATE CASCADE ;
 alter table net_service add constraint fk_classes_net_service foreign key (class) references classes (class) ON DELETE CASCADE ON UPDATE CASCADE ;
 alter table fs_exports add constraint fk_fs_classes_fs_exports foreign key (fs_class) references fs_classes (fs_class) ON DELETE CASCADE ON UPDATE CASCADE ;
+alter table equipment add constraint fk_parent_equip_id foreign key (parent_equip_id) references equipment (equip_id) ON DELETE CASCADE ON UPDATE CASCADE ;
+alter table fs_automounts add constraint fk_automaps_automounts foreign key (automap) references fs_automaps (automap) ON DELETE CASCADE ON UPDATE CASCADE ;
 
