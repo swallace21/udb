@@ -9,7 +9,7 @@
 --                      See http://tedia2sql.tigris.org/AUTHORS.html for tedia2sql author information
 -- 
 --   Target Database:   postgres
---   Generated at:      Tue May 10 12:18:20 2005
+--   Generated at:      Thu Jun  2 12:08:12 2005
 --   Input File:        schema.dia
 -- 
 -- ================================================================================
@@ -20,7 +20,7 @@
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.9
---     Generated at:      Tue May 10 12:18:20 2005
+--     Generated at:      Thu Jun  2 12:08:11 2005
 --     Input File:        schema.dia
 
 -- alter table class_list drop constraint fk_os_class_list --(is implicitly done)
@@ -54,15 +54,22 @@
 -- alter table fs_exports drop constraint fk_fs_classes_fs_exports --(is implicitly done)
 -- alter table equipment drop constraint fk_parent_equip_id --(is implicitly done)
 -- alter table fs_automounts drop constraint fk_automaps_automounts --(is implicitly done)
+-- alter table grad_funding drop constraint fk_grads_funding --(is implicitly done)
+-- alter table enrollment drop constraint fk_grad_enrollment --(is implicitly done)
 
 
 -- Generated Permissions Drops
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.9
---     Generated at:      Tue May 10 12:18:20 2005
+--     Generated at:      Thu Jun  2 12:08:11 2005
 --     Input File:        schema.dia
 
+revoke all on people from GROUP graddb ;
+revoke all on grads from GROUP graddb ;
+revoke all on courses from GROUP graddb ;
+revoke all on enrollment from GROUP graddb ;
+revoke all on grad_funding from GROUP graddb ;
 
 
 -- Special statements for postgres:pre databases
@@ -130,6 +137,7 @@ create TABLE vlan_list (
   descr TEXT NOT NULL,
   CONSTRAINT pk_vlan_list PRIMARY KEY (vlan)
 );
+
 create FUNCTION check_vlan(INT)
   RETURNS INT
   AS 'SELECT vlan from vlan_list WHERE vlan = $1'
@@ -140,7 +148,7 @@ create FUNCTION check_vlan(INT)
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.9
---     Generated at:      Tue May 10 12:18:20 2005
+--     Generated at:      Thu Jun  2 12:08:11 2005
 --     Input File:        schema.dia
 
 
@@ -149,7 +157,7 @@ create FUNCTION check_vlan(INT)
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.9
---     Generated at:      Tue May 10 12:18:20 2005
+--     Generated at:      Thu Jun  2 12:08:11 2005
 --     Input File:        schema.dia
 
 drop table equipment cascade ;
@@ -177,7 +185,6 @@ drop table equip_users cascade ;
 drop table passwords cascade ;
 drop table people cascade ;
 drop table faculty cascade ;
-drop table grads cascade ;
 drop table staff cascade ;
 drop table ugrads cascade ;
 drop table net_service cascade ;
@@ -186,13 +193,17 @@ drop table fs_exports cascade ;
 drop table fs_classes cascade ;
 drop table fs_automounts cascade ;
 drop table fs_automaps cascade ;
+drop table grads cascade ;
+drop table courses cascade ;
+drop table enrollment cascade ;
+drop table grad_funding cascade ;
 
 
 -- Generated SQL Schema
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.9
---     Generated at:      Tue May 10 12:18:20 2005
+--     Generated at:      Thu Jun  2 12:08:11 2005
 --     Input File:        schema.dia
 
 
@@ -446,7 +457,12 @@ create table passwords (
 create table people (
   person_id                 int4 default nextval('person_id_seq') not null,
   full_name                 text,
+  first_name                text,
+  middle_name               text,
+  last_name                 text,
   net_id                    text,
+  brown_id                  text,
+  gender                    text,
   office                    text,
   office_phone              text,
   home_phone                text,
@@ -460,13 +476,6 @@ create table faculty (
   person_id                 int4 not null,
   comments                  text,
   constraint pk_faculty primary key (person_id)
-) ;
-
--- grads
-create table grads (
-  person_id                 int4 not null,
-  comments                  text,
-  constraint pk_grads primary key (person_id)
 ) ;
 
 -- staff
@@ -506,6 +515,7 @@ create table fs_exports (
   fs_class                  text not null,
   quota                     int4,
   flags                     text,
+  backup_policy             text,
   constraint pk_fs_exports primary key (server,path)
 ) ;
 
@@ -533,12 +543,75 @@ create table fs_automaps (
   constraint pk_fs_automaps primary key (automap)
 ) ;
 
+-- grads
+create table grads (
+  person_id                 int4 not null,
+  status                    text,
+  year_entered              text,
+  advisor                   text,
+  citizenship               text,
+  minority                  text,
+  prog_comp1                text,
+  prog_comp2                text,
+  res_prop                  text,
+  res_prop_date             date,
+  res_pres                  text,
+  res_pres_date             date,
+  entered_candidacy         date,
+  thesis_prop               text,
+  thesis_prop_date          date,
+  thesis_def                text,
+  thesis_def_date           date,
+  standing                  text,
+  comments                  text,
+  constraint pk_grads primary key (person_id)
+) ;
+
+-- courses
+create table courses (
+  course                    text not null,
+  year                      text not null,
+  instructor                text not null,
+  level_200                 text not null,
+  phd_area1                 text not null,
+  phd_area2                 text,
+  scm_theory                text not null,
+  scm_practice              text not null,
+  scm_prog                  text not null,
+  comments                  text,
+  constraint pk_courses primary key (course,year)
+) ;
+
+-- enrollment
+create table enrollment (
+  person_id                 int4 not null,
+  course                    text not null,
+  year                      text not null,
+  grade                     text,
+  phd_seq                   text,
+  phd_area                  text,
+  level_200                 boolean,
+  scm_theory                boolean,
+  scm_practice              boolean,
+  scm_prog                  boolean,
+  comments                  text,
+  constraint pk_enrollment primary key (person_id,course,year)
+) ;
+
+-- grad_funding
+create table grad_funding (
+  person_id                 int4 not null,
+  semester                  text not null,
+  source                    text not null,
+  constraint pk_grad_funding primary key (person_id,semester,source)
+) ;
+
 
 -- Generated SQL Views
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.9
---     Generated at:      Tue May 10 12:18:20 2005
+--     Generated at:      Thu Jun  2 12:08:11 2005
 --     Input File:        schema.dia
 
 
@@ -555,16 +628,21 @@ CREATE OR REPLACE FUNCTION num_ports(TEXT)
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.9
---     Generated at:      Tue May 10 12:18:20 2005
+--     Generated at:      Thu Jun  2 12:08:11 2005
 --     Input File:        schema.dia
 
+grant all on people to GROUP graddb ;
+grant all on grads to GROUP graddb ;
+grant all on courses to GROUP graddb ;
+grant all on enrollment to GROUP graddb ;
+grant all on grad_funding to GROUP graddb ;
 
 
 -- Generated SQL Insert statements
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.9
---     Generated at:      Tue May 10 12:18:20 2005
+--     Generated at:      Thu Jun  2 12:08:11 2005
 --     Input File:        schema.dia
 
 
@@ -586,7 +664,7 @@ insert into vlan_list values ( '898', '10.116.0.0/16', 'ilab' ) ;
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.9
---     Generated at:      Tue May 10 12:18:20 2005
+--     Generated at:      Thu Jun  2 12:08:11 2005
 --     Input File:        schema.dia
 
 alter table class_list add constraint fk_os_class_list foreign key (machine_name,os_name) references os (machine_name,os_name) ON DELETE CASCADE ON UPDATE CASCADE ;
@@ -620,4 +698,6 @@ alter table net_service add constraint fk_classes_net_service foreign key (class
 alter table fs_exports add constraint fk_fs_classes_fs_exports foreign key (fs_class) references fs_classes (fs_class) ON DELETE CASCADE ON UPDATE CASCADE ;
 alter table equipment add constraint fk_parent_equip_id foreign key (parent_equip_id) references equipment (equip_id) ON DELETE CASCADE ON UPDATE CASCADE ;
 alter table fs_automounts add constraint fk_automaps_automounts foreign key (automap) references fs_automaps (automap) ON DELETE CASCADE ON UPDATE CASCADE ;
+alter table grad_funding add constraint fk_grads_funding foreign key (person_id) references grads (person_id) ON DELETE CASCADE ON UPDATE CASCADE ;
+alter table enrollment add constraint fk_grad_enrollment foreign key (person_id) references grads (person_id) ON DELETE CASCADE ON UPDATE CASCADE ;
 
