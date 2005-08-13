@@ -9,7 +9,7 @@
 --                      See http://tedia2sql.tigris.org/AUTHORS.html for tedia2sql author information
 -- 
 --   Target Database:   postgres
---   Generated at:      Thu Jun  2 12:08:12 2005
+--   Generated at:      Sat Aug 13 19:09:50 2005
 --   Input File:        schema.dia
 -- 
 -- ================================================================================
@@ -20,9 +20,11 @@
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.9
---     Generated at:      Thu Jun  2 12:08:11 2005
+--     Generated at:      Sat Aug 13 19:09:49 2005
 --     Input File:        schema.dia
 
+drop index idx_accounts_personid;
+drop index idx_people_lastname;
 -- alter table class_list drop constraint fk_os_class_list --(is implicitly done)
 -- alter table switchport drop constraint fk_switch_switchport --(is implicitly done)
 -- alter table surplus drop constraint fk_equip_surplus --(is implicitly done)
@@ -56,20 +58,25 @@
 -- alter table fs_automounts drop constraint fk_automaps_automounts --(is implicitly done)
 -- alter table grad_funding drop constraint fk_grads_funding --(is implicitly done)
 -- alter table enrollment drop constraint fk_grad_enrollment --(is implicitly done)
+-- alter table grad_standing drop constraint fk_grads_funding --(is implicitly done)
 
 
 -- Generated Permissions Drops
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.9
---     Generated at:      Thu Jun  2 12:08:11 2005
+--     Generated at:      Sat Aug 13 19:09:49 2005
 --     Input File:        schema.dia
 
+revoke select on accounts from GROUP graddb ;
 revoke all on people from GROUP graddb ;
 revoke all on grads from GROUP graddb ;
 revoke all on courses from GROUP graddb ;
 revoke all on enrollment from GROUP graddb ;
 revoke all on grad_funding from GROUP graddb ;
+revoke select on grad_reports from GROUP graddb ;
+revoke insert,update on grad_reports from GROUP graddb_admin ;
+revoke all on grad_standing from GROUP graddb ;
 
 
 -- Special statements for postgres:pre databases
@@ -117,12 +124,6 @@ VALUE = 'ilab' OR
 VALUE = 'wan' OR
 VALUE = 'dmz');
 
-DROP DOMAIN DIRTYSTATE CASCADE;
-CREATE DOMAIN DIRTYSTATE TEXT NOT NULL CHECK(
-VALUE = 'unchanged' OR
-VALUE = 'changed' OR
-VALUE = 'deleted');
-
 DROP DOMAIN EQUIPSTATUS CASCADE;
 CREATE DOMAIN EQUIPSTATUS TEXT NOT NULL CHECK(
 VALUE = 'deployed' OR
@@ -148,7 +149,7 @@ create FUNCTION check_vlan(INT)
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.9
---     Generated at:      Thu Jun  2 12:08:11 2005
+--     Generated at:      Sat Aug 13 19:09:49 2005
 --     Input File:        schema.dia
 
 
@@ -157,7 +158,7 @@ create FUNCTION check_vlan(INT)
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.9
---     Generated at:      Thu Jun  2 12:08:11 2005
+--     Generated at:      Sat Aug 13 19:09:49 2005
 --     Input File:        schema.dia
 
 drop table equipment cascade ;
@@ -172,7 +173,7 @@ drop table class_list cascade ;
 drop table os cascade ;
 drop table dhcp_log cascade ;
 drop table macaddr_log cascade ;
-drop table dirty_files cascade ;
+drop table files_changed cascade ;
 drop table accounts cascade ;
 drop table group_list cascade ;
 drop table identity_list cascade ;
@@ -197,13 +198,15 @@ drop table grads cascade ;
 drop table courses cascade ;
 drop table enrollment cascade ;
 drop table grad_funding cascade ;
+drop table grad_reports cascade ;
+drop table grad_standing cascade ;
 
 
 -- Generated SQL Schema
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.9
---     Generated at:      Thu Jun  2 12:08:11 2005
+--     Generated at:      Sat Aug 13 19:09:49 2005
 --     Input File:        schema.dia
 
 
@@ -239,9 +242,9 @@ create table netobj (
   ssh_hostkey               text,
   status                    netstatus not null,
   comments                  text,
-  mxhost                    text default 'mx.cs.brown.edu',
+  mxhost                    text,
   netboot                   text,
-  dirty                     dirtystate,
+  last_changed              timestamp,
   constraint pk_netobj primary key (dns_name,domain)
 ) ;
 
@@ -263,7 +266,7 @@ create table switchport (
   port_num                  int check (port_num >= 0 and port_num <= num_ports(switch_name)) not null,
   wall_plate                text unique not null,
   vlan                      int4 check(check_vlan(vlan) notnull) default 36,
-  dirty                     dirtystate not null,
+  last_changed              timestamp,
   constraint pk_switchport primary key (switch_name,port_num)
 ) ;
 
@@ -322,9 +325,9 @@ create table aliases (
   dns_name                  text not null,
   domain                    text not null,
   comments                  text,
-  mxhost                    text default 'mx.cs.brown.edu',
+  mxhost                    text,
   status                    netstatus not null,
-  dirty                     dirtystate not null,
+  last_changed              timestamp,
   constraint pk_aliases primary key (alias,dns_name,domain)
 ) ;
 
@@ -362,11 +365,11 @@ create table macaddr_log (
   constraint pk_macaddr_log primary key (switch_name,port)
 ) ;
 
--- dirty_files
-create table dirty_files (
+-- files_changed
+create table files_changed (
   filename                  text not null,
-  dirty                     bool default true,
-  constraint pk_dirty_files primary key (filename)
+  last_changed              timestamp,
+  constraint pk_files_changed primary key (filename)
 ) ;
 
 -- accounts
@@ -380,7 +383,7 @@ create table accounts (
   created                   date,
   expiration                date,
   comments                  text,
-  dirty                     dirtystate not null,
+  last_changed              timestamp,
   constraint pk_accounts primary key (uid)
 ) ;
 
@@ -449,7 +452,7 @@ create table passwords (
   passwd                    text not null,
   sslpasswd                 text,
   pptppasswd                text,
-  dirty                     dirtystate not null,
+  last_changed              timestamp,
   constraint pk_passwords primary key (login)
 ) ;
 
@@ -460,9 +463,13 @@ create table people (
   first_name                text,
   middle_name               text,
   last_name                 text,
-  net_id                    text,
   brown_id                  text,
+  net_id                    text,
+  username                  text,
+  brown_card_id             text,
   gender                    text,
+  ethnicity                 text,
+  citizenship               text,
   office                    text,
   office_phone              text,
   home_phone                text,
@@ -546,11 +553,12 @@ create table fs_automaps (
 -- grads
 create table grads (
   person_id                 int4 not null,
-  status                    text,
+  program                   text,
   year_entered              text,
   advisor                   text,
-  citizenship               text,
-  minority                  text,
+  thesis_advisor1           text,
+  thesis_advisor2           text,
+  thesis_advisor3           text,
   prog_comp1                text,
   prog_comp2                text,
   res_prop                  text,
@@ -558,11 +566,9 @@ create table grads (
   res_pres                  text,
   res_pres_date             date,
   entered_candidacy         date,
-  thesis_prop               text,
   thesis_prop_date          date,
-  thesis_def                text,
   thesis_def_date           date,
-  standing                  text,
+  thesis_submit_date        date,
   comments                  text,
   constraint pk_grads primary key (person_id)
 ) ;
@@ -578,6 +584,7 @@ create table courses (
   scm_theory                text not null,
   scm_practice              text not null,
   scm_prog                  text not null,
+  scm_research              text not null,
   comments                  text,
   constraint pk_courses primary key (course,year)
 ) ;
@@ -601,9 +608,29 @@ create table enrollment (
 -- grad_funding
 create table grad_funding (
   person_id                 int4 not null,
+  year                      text not null,
   semester                  text not null,
   source                    text not null,
-  constraint pk_grad_funding primary key (person_id,semester,source)
+  comments                  text,
+  constraint pk_grad_funding primary key (person_id,year,semester,source)
+) ;
+
+-- grad_reports
+create table grad_reports (
+  name                      text not null,
+  description               text,
+  fields                    text,
+  query                     text,
+  constraint pk_grad_reports primary key (name)
+) ;
+
+-- grad_standing
+create table grad_standing (
+  person_id                 int4 not null,
+  date                      date not null,
+  standing                  text,
+  comments                  text,
+  constraint pk_grad_standing primary key (person_id,date)
 ) ;
 
 
@@ -611,7 +638,7 @@ create table grad_funding (
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.9
---     Generated at:      Thu Jun  2 12:08:11 2005
+--     Generated at:      Sat Aug 13 19:09:49 2005
 --     Input File:        schema.dia
 
 
@@ -623,26 +650,32 @@ CREATE OR REPLACE FUNCTION num_ports(TEXT)
   AS 'SELECT num_ports FROM switch WHERE switch_name = $1'
   LANGUAGE 'sql';
 
+GRANT UPDATE ON person_id_seq TO GROUP graddb;
+
 
 -- Generated Permissions
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.9
---     Generated at:      Thu Jun  2 12:08:11 2005
+--     Generated at:      Sat Aug 13 19:09:49 2005
 --     Input File:        schema.dia
 
+grant select on accounts to GROUP graddb ;
 grant all on people to GROUP graddb ;
 grant all on grads to GROUP graddb ;
 grant all on courses to GROUP graddb ;
 grant all on enrollment to GROUP graddb ;
 grant all on grad_funding to GROUP graddb ;
+grant select on grad_reports to GROUP graddb ;
+grant insert,update on grad_reports to GROUP graddb_admin ;
+grant all on grad_standing to GROUP graddb ;
 
 
 -- Generated SQL Insert statements
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.9
---     Generated at:      Thu Jun  2 12:08:11 2005
+--     Generated at:      Sat Aug 13 19:09:49 2005
 --     Input File:        schema.dia
 
 
@@ -664,9 +697,11 @@ insert into vlan_list values ( '898', '10.116.0.0/16', 'ilab' ) ;
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.9
---     Generated at:      Thu Jun  2 12:08:11 2005
+--     Generated at:      Sat Aug 13 19:09:49 2005
 --     Input File:        schema.dia
 
+create index idx_accounts_personid on accounts  (person_id) ;
+create index idx_people_lastname on people  (last_name) ;
 alter table class_list add constraint fk_os_class_list foreign key (machine_name,os_name) references os (machine_name,os_name) ON DELETE CASCADE ON UPDATE CASCADE ;
 alter table switchport add constraint fk_switch_switchport foreign key (switch_name) references switch (switch_name) ON DELETE CASCADE ON UPDATE CASCADE ;
 alter table surplus add constraint fk_equip_surplus foreign key (equip_id) references equipment (equip_id) ON DELETE CASCADE ON UPDATE CASCADE ;
@@ -699,5 +734,6 @@ alter table fs_exports add constraint fk_fs_classes_fs_exports foreign key (fs_c
 alter table equipment add constraint fk_parent_equip_id foreign key (parent_equip_id) references equipment (equip_id) ON DELETE CASCADE ON UPDATE CASCADE ;
 alter table fs_automounts add constraint fk_automaps_automounts foreign key (automap) references fs_automaps (automap) ON DELETE CASCADE ON UPDATE CASCADE ;
 alter table grad_funding add constraint fk_grads_funding foreign key (person_id) references grads (person_id) ON DELETE CASCADE ON UPDATE CASCADE ;
-alter table enrollment add constraint fk_grad_enrollment foreign key (person_id) references grads (person_id) ON DELETE CASCADE ON UPDATE CASCADE ;
+alter table enrollment add constraint fk_grad_enrollment foreign key (person_id) references people (person_id) ON DELETE CASCADE ON UPDATE CASCADE ;
+alter table grad_standing add constraint fk_grads_funding foreign key (person_id) references grads (person_id) ON DELETE CASCADE ON UPDATE CASCADE ;
 

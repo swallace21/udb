@@ -81,12 +81,12 @@ sub insert_host {
       $fields .= "comments, ";
       $values .= $dbh->quote($comment) . ", ";
     }
-    $fields .= "mxhost, ";
-    $values .= $dbh->quote($mxhost) . ", ";
+#    $fields .= "mxhost, ";
+#    $values .= $dbh->quote($mxhost) . ", ";
     $fields .= "netboot, ";
     $values .= $dbh->quote($netgroup) . ", ";
-    $fields .= "dirty";
-    $values .= $dbh->quote("changed");
+    $fields .= "last_changed";
+    $values .= "now()";
 
     if($opt_v) { print "importing cdb $hostname"; }
     my $sth = $dbh->prepare("INSERT INTO netobj ($fields) VALUES ($values)");
@@ -97,8 +97,8 @@ sub insert_host {
     if ( $#aliases != -1 ) {
     	foreach (@aliases) {
         if($opt_v) { print ", alias $_"; }
-	      $sth = $dbh->prepare("INSERT INTO aliases (alias, dns_name, domain, status, dirty) VALUES (?,?,?,?,?)");
-        $sth->execute($_, $hostname, "intranet", "trusted", "changed");
+	      $sth = $dbh->prepare("INSERT INTO aliases (alias, dns_name, domain, status, last_changed) VALUES (?,?,?,?,now())");
+        $sth->execute($_, $hostname, "intranet", "trusted");
         $sth->finish;
     	}
     }

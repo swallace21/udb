@@ -64,13 +64,24 @@ while(<INPUT>) {
 	$sth->execute;
 	my $row = $sth->fetchrow_hashref;
 	my $person_id = $row->{nextval};
-	$sth->finish;
+	$sth->finish;	
 
 	$sth = $dbh->prepare("INSERT INTO people (person_id, full_name, office, office_phone, home_phone) VALUES (?,?,?,?,?)");
 	$sth->execute($person_id, $info[0], $info[1], $info[2], $info[3]);
 	$sth->finish;
+	
+	if($info[0] =~ m/(\w+)\s(.*)\s(\w+)/) {
+		$sth = $dbh->prepare("UPDATE people SET first_name=?,middle_name=?,last_name=? WHERE person_id=?");
+		$sth->execute($1,$2,$3,$person_id);
+		$sth->finish;
+	}
+	elsif($info[0] =~ m/(\w+)\s(\w+)/) {
+		$sth = $dbh->prepare("UPDATE people SET first_name=?,last_name=? WHERE person_id=?");
+		$sth->execute($1,$2,$person_id);
+		$sth->finish;
+	}
 
-	$sth = $dbh->prepare("INSERT INTO accounts (uid, person_id, login, gid, shell, home_dir, dirty) VALUES (?, ?, ?, ?, ?, ?, 'changed')");
+	$sth = $dbh->prepare("INSERT INTO accounts (uid, person_id, login, gid, shell, home_dir, last_changed) VALUES (?, ?, ?, ?, ?, ?, now())");
 	$sth->execute($list[2], $person_id, $list[0], $list[3], $list[6], $list[5]);
 	$sth->finish;
 }

@@ -24,9 +24,9 @@ Schema File Generation
 
 The database schema is graphically designed using dia, which is used by the 
 program tedia2sql to autogenerate an sql input file for postgres.  Once
-the dia file is created, you can run:
+the dia file is created, you can run the following to generate the sql.  
+See http://tedia2sql.tigris.org for more information on how to use dia 
+so that it is compatible with tedia2sql. 
 
-tedia2sql -t postgres -d -i schema.dia -o schema.sql
+./tedia2sql -t postgres -d -i schema.dia -o schema.sql
 
-to generate the sql.  See http://tedia2sql.tigris.org for more information 
-on how to use dia so that it is compatible with tedia2sql. 
