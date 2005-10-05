@@ -1,32 +1,33 @@
-Background
+Infrastructure Database Schema
 
-We set out to design a flexible database schema that would replace our 
-current perl hash used to store host configurations.  This project grew 
-to include 
-
-Types of Machines
-
-The schema should be loosely enough defined to support future types of 
-machines.  It was desinged when we had the following types of systems:
-
-- departemntal workstations:  These are the most common type of machine 
-  we deploy.  It is the standard for every CS desktop and will be running
-  either linux or windows.  Every machine of this type gets a consistent
-  dhcp address, i.e. it is a "static" dhcp address, a corresponding DNS
-  entry, mx entry
-
-- internal servers
-
-Types of Network Objects
-
-
-Schema File Generation
+The DB schema for the infrastructure database was designed to incorporate
+and unify the disparate data sources previously used by the Department,
+including accounts (passwd, groups, identities), inventory, purchase
+orders, machine (server, workstation, laptop, etc.) configuration 
+(including hardware, software), network addresses, network switch
+configuration, file system layout, and personal information. It was
+designed to be exensible so that additional information can be added
+to the schema later.
 
 The database schema is graphically designed using dia, which is used by the 
 program tedia2sql to autogenerate an sql input file for postgres.  Once
 the dia file is created, you can run the following to generate the sql.  
 See http://tedia2sql.tigris.org for more information on how to use dia 
-so that it is compatible with tedia2sql. 
+so that it is compatible with tedia2sql. New versions ot tedia2sql stopped
+supporting non-primary-key foreign keys, even though postgresql allows
+them. As such, an older version of the script is checked into the CVS
+repository, and can be run with the following command.
 
 ./tedia2sql -t postgres -d -i schema.dia -o schema.sql
 
+After the dia file is converted into SQL, it needs to be imported into a 
+database. Login to a postgresql database with psql, and enter the command:
+
+\i path/to/schema.sql
+
+There should be a lot of messages, but all the error messages should
+be at the top (because the sql file deletes the tables before creating
+them, but of course they don't exist the first time).
+
+The last step is to run the import scripts -- import/import_all.sh
+pass a -d to specify the database name (default is udb).

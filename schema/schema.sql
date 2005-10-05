@@ -9,7 +9,7 @@
 --                      See http://tedia2sql.tigris.org/AUTHORS.html for tedia2sql author information
 -- 
 --   Target Database:   postgres
---   Generated at:      Sat Aug 13 19:09:50 2005
+--   Generated at:      Wed Oct  5 12:38:57 2005
 --   Input File:        schema.dia
 -- 
 -- ================================================================================
@@ -20,7 +20,7 @@
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.9
---     Generated at:      Sat Aug 13 19:09:49 2005
+--     Generated at:      Wed Oct  5 12:38:56 2005
 --     Input File:        schema.dia
 
 drop index idx_accounts_personid;
@@ -65,7 +65,7 @@ drop index idx_people_lastname;
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.9
---     Generated at:      Sat Aug 13 19:09:49 2005
+--     Generated at:      Wed Oct  5 12:38:56 2005
 --     Input File:        schema.dia
 
 revoke select on accounts from GROUP graddb ;
@@ -149,7 +149,7 @@ create FUNCTION check_vlan(INT)
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.9
---     Generated at:      Sat Aug 13 19:09:49 2005
+--     Generated at:      Wed Oct  5 12:38:56 2005
 --     Input File:        schema.dia
 
 
@@ -158,7 +158,7 @@ create FUNCTION check_vlan(INT)
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.9
---     Generated at:      Sat Aug 13 19:09:49 2005
+--     Generated at:      Wed Oct  5 12:38:56 2005
 --     Input File:        schema.dia
 
 drop table equipment cascade ;
@@ -206,7 +206,7 @@ drop table grad_standing cascade ;
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.9
---     Generated at:      Sat Aug 13 19:09:49 2005
+--     Generated at:      Wed Oct  5 12:38:56 2005
 --     Input File:        schema.dia
 
 
@@ -244,7 +244,7 @@ create table netobj (
   comments                  text,
   mxhost                    text,
   netboot                   text,
-  last_changed              timestamp,
+  last_changed              timestamp default now(),
   constraint pk_netobj primary key (dns_name,domain)
 ) ;
 
@@ -266,7 +266,7 @@ create table switchport (
   port_num                  int check (port_num >= 0 and port_num <= num_ports(switch_name)) not null,
   wall_plate                text unique not null,
   vlan                      int4 check(check_vlan(vlan) notnull) default 36,
-  last_changed              timestamp,
+  last_changed              timestamp default now(),
   constraint pk_switchport primary key (switch_name,port_num)
 ) ;
 
@@ -327,7 +327,7 @@ create table aliases (
   comments                  text,
   mxhost                    text,
   status                    netstatus not null,
-  last_changed              timestamp,
+  last_changed              timestamp default now(),
   constraint pk_aliases primary key (alias,dns_name,domain)
 ) ;
 
@@ -383,7 +383,7 @@ create table accounts (
   created                   date,
   expiration                date,
   comments                  text,
-  last_changed              timestamp,
+  last_changed              timestamp default now(),
   constraint pk_accounts primary key (uid)
 ) ;
 
@@ -452,7 +452,7 @@ create table passwords (
   passwd                    text not null,
   sslpasswd                 text,
   pptppasswd                text,
-  last_changed              timestamp,
+  last_changed              timestamp default now(),
   constraint pk_passwords primary key (login)
 ) ;
 
@@ -577,14 +577,18 @@ create table grads (
 create table courses (
   course                    text not null,
   year                      text not null,
-  instructor                text not null,
-  level_200                 text not null,
-  phd_area1                 text not null,
+  name                      text,
+  description               text,
+  instructor                text,
+  level_100                 text default 'N',
+  level_200                 text default 'N',
+  phd_area1                 text,
   phd_area2                 text,
-  scm_theory                text not null,
-  scm_practice              text not null,
-  scm_prog                  text not null,
-  scm_research              text not null,
+  ugrad_area                text,
+  scm_theory                text default 'N',
+  scm_practice              text default 'N',
+  scm_prog                  text default 'N',
+  scm_research              text default 'N',
   comments                  text,
   constraint pk_courses primary key (course,year)
 ) ;
@@ -595,12 +599,15 @@ create table enrollment (
   course                    text not null,
   year                      text not null,
   grade                     text,
+  level_100                 boolean,
+  level_200                 boolean,
   phd_seq                   text,
   phd_area                  text,
-  level_200                 boolean,
+  ugrad_area                text,
   scm_theory                boolean,
   scm_practice              boolean,
   scm_prog                  boolean,
+  scm_research              boolean,
   comments                  text,
   constraint pk_enrollment primary key (person_id,course,year)
 ) ;
@@ -638,7 +645,7 @@ create table grad_standing (
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.9
---     Generated at:      Sat Aug 13 19:09:49 2005
+--     Generated at:      Wed Oct  5 12:38:56 2005
 --     Input File:        schema.dia
 
 
@@ -657,7 +664,7 @@ GRANT UPDATE ON person_id_seq TO GROUP graddb;
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.9
---     Generated at:      Sat Aug 13 19:09:49 2005
+--     Generated at:      Wed Oct  5 12:38:56 2005
 --     Input File:        schema.dia
 
 grant select on accounts to GROUP graddb ;
@@ -675,7 +682,7 @@ grant all on grad_standing to GROUP graddb ;
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.9
---     Generated at:      Sat Aug 13 19:09:49 2005
+--     Generated at:      Wed Oct  5 12:38:56 2005
 --     Input File:        schema.dia
 
 
@@ -697,7 +704,7 @@ insert into vlan_list values ( '898', '10.116.0.0/16', 'ilab' ) ;
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.9
---     Generated at:      Sat Aug 13 19:09:49 2005
+--     Generated at:      Wed Oct  5 12:38:56 2005
 --     Input File:        schema.dia
 
 create index idx_accounts_personid on accounts  (person_id) ;
