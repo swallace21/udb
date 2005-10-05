@@ -1,0 +1,8 @@
+Infrastructure DB Import Scripts
+
+The following scripts import various data sources into the DB (e.g. the 
+passwd file for accounts).
+
+./import_all.sh is a wrapper to run the other scripts. It takes the 
+optional argument -d <db> to specify the db name to which you want to
+import data.
