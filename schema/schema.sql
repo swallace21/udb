@@ -9,7 +9,7 @@
 --                      See http://tedia2sql.tigris.org/AUTHORS.html for tedia2sql author information
 -- 
 --   Target Database:   postgres
---   Generated at:      Wed Oct  5 12:38:57 2005
+--   Generated at:      Thu Oct  6 14:57:24 2005
 --   Input File:        schema.dia
 -- 
 -- ================================================================================
@@ -20,7 +20,7 @@
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.9
---     Generated at:      Wed Oct  5 12:38:56 2005
+--     Generated at:      Thu Oct  6 14:57:24 2005
 --     Input File:        schema.dia
 
 drop index idx_accounts_personid;
@@ -65,7 +65,7 @@ drop index idx_people_lastname;
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.9
---     Generated at:      Wed Oct  5 12:38:56 2005
+--     Generated at:      Thu Oct  6 14:57:24 2005
 --     Input File:        schema.dia
 
 revoke select on accounts from GROUP graddb ;
@@ -149,7 +149,7 @@ create FUNCTION check_vlan(INT)
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.9
---     Generated at:      Wed Oct  5 12:38:56 2005
+--     Generated at:      Thu Oct  6 14:57:24 2005
 --     Input File:        schema.dia
 
 
@@ -158,7 +158,7 @@ create FUNCTION check_vlan(INT)
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.9
---     Generated at:      Wed Oct  5 12:38:56 2005
+--     Generated at:      Thu Oct  6 14:57:24 2005
 --     Input File:        schema.dia
 
 drop table equipment cascade ;
@@ -173,7 +173,7 @@ drop table class_list cascade ;
 drop table os cascade ;
 drop table dhcp_log cascade ;
 drop table macaddr_log cascade ;
-drop table files_changed cascade ;
+drop table output_scripts cascade ;
 drop table accounts cascade ;
 drop table group_list cascade ;
 drop table identity_list cascade ;
@@ -206,7 +206,7 @@ drop table grad_standing cascade ;
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.9
---     Generated at:      Wed Oct  5 12:38:56 2005
+--     Generated at:      Thu Oct  6 14:57:24 2005
 --     Input File:        schema.dia
 
 
@@ -365,11 +365,11 @@ create table macaddr_log (
   constraint pk_macaddr_log primary key (switch_name,port)
 ) ;
 
--- files_changed
-create table files_changed (
-  filename                  text not null,
-  last_changed              timestamp,
-  constraint pk_files_changed primary key (filename)
+-- output_scripts
+create table output_scripts (
+  script_name               text not null,
+  last_run                  timestamp default now(),
+  constraint pk_output_scripts primary key (script_name)
 ) ;
 
 -- accounts
@@ -645,7 +645,7 @@ create table grad_standing (
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.9
---     Generated at:      Wed Oct  5 12:38:56 2005
+--     Generated at:      Thu Oct  6 14:57:24 2005
 --     Input File:        schema.dia
 
 
@@ -664,7 +664,7 @@ GRANT UPDATE ON person_id_seq TO GROUP graddb;
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.9
---     Generated at:      Wed Oct  5 12:38:56 2005
+--     Generated at:      Thu Oct  6 14:57:24 2005
 --     Input File:        schema.dia
 
 grant select on accounts to GROUP graddb ;
@@ -682,7 +682,7 @@ grant all on grad_standing to GROUP graddb ;
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.9
---     Generated at:      Wed Oct  5 12:38:56 2005
+--     Generated at:      Thu Oct  6 14:57:24 2005
 --     Input File:        schema.dia
 
 
@@ -704,7 +704,7 @@ insert into vlan_list values ( '898', '10.116.0.0/16', 'ilab' ) ;
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.9
---     Generated at:      Wed Oct  5 12:38:56 2005
+--     Generated at:      Thu Oct  6 14:57:24 2005
 --     Input File:        schema.dia
 
 create index idx_accounts_personid on accounts  (person_id) ;
