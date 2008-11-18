@@ -1,5 +1,0 @@
-To checkout a copy from the CVS repository:
-
-   cvs -d /tstaff/projects/CVS co udb
-
-This will create a sub dir in the current directory called udb.

@@ -9,7 +9,7 @@
 --                      See http://tedia2sql.tigris.org/AUTHORS.html for tedia2sql author information
 -- 
 --   Target Database:   postgres
---   Generated at:      Mon Nov 17 23:10:44 2008
+--   Generated at:      Mon Nov 17 23:35:38 2008
 --   Input Files:       schema.dia
 -- 
 -- ================================================================================
@@ -20,7 +20,7 @@
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.12
---     Generated at:      Mon Nov 17 23:10:42 2008
+--     Generated at:      Mon Nov 17 23:35:37 2008
 --     Input Files:       schema.dia
 
 
@@ -29,7 +29,7 @@
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.12
---     Generated at:      Mon Nov 17 23:10:42 2008
+--     Generated at:      Mon Nov 17 23:35:37 2008
 --     Input Files:       schema.dia
 
 
@@ -97,7 +97,7 @@ create FUNCTION check_vlan(INT)
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.12
---     Generated at:      Mon Nov 17 23:10:42 2008
+--     Generated at:      Mon Nov 17 23:35:37 2008
 --     Input Files:       schema.dia
 
 
@@ -106,7 +106,7 @@ create FUNCTION check_vlan(INT)
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.12
---     Generated at:      Mon Nov 17 23:10:42 2008
+--     Generated at:      Mon Nov 17 23:35:37 2008
 --     Input Files:       schema.dia
 
 
@@ -115,7 +115,7 @@ create FUNCTION check_vlan(INT)
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.12
---     Generated at:      Mon Nov 17 23:10:42 2008
+--     Generated at:      Mon Nov 17 23:35:37 2008
 --     Input Files:       schema.dia
 
 
@@ -555,7 +555,7 @@ comment on column net_switches.type is 'type of switch';
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.12
---     Generated at:      Mon Nov 17 23:10:42 2008
+--     Generated at:      Mon Nov 17 23:35:37 2008
 --     Input Files:       schema.dia
 
 
@@ -574,7 +574,7 @@ GRANT UPDATE ON person_id_seq TO GROUP graddb;
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.12
---     Generated at:      Mon Nov 17 23:10:42 2008
+--     Generated at:      Mon Nov 17 23:35:37 2008
 --     Input Files:       schema.dia
 
 grant select on accounts to GROUP graddb ;
@@ -592,7 +592,7 @@ grant all on grad_standing to GROUP graddb ;
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.12
---     Generated at:      Mon Nov 17 23:10:42 2008
+--     Generated at:      Mon Nov 17 23:35:37 2008
 --     Input Files:       schema.dia
 
 
@@ -614,7 +614,7 @@ insert into vlan_list values ( '898', '10.116.0.0/16', 'ilab' ) ;
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.12
---     Generated at:      Mon Nov 17 23:10:42 2008
+--     Generated at:      Mon Nov 17 23:35:37 2008
 --     Input Files:       schema.dia
 
 create index idx_accounts_personid on accounts  (person_id) ;
