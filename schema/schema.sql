@@ -9,7 +9,7 @@
 --                      See http://tedia2sql.tigris.org/AUTHORS.html for tedia2sql author information
 -- 
 --   Target Database:   postgres
---   Generated at:      Wed Nov 19 16:18:45 2008
+--   Generated at:      Wed Nov 19 17:50:41 2008
 --   Input Files:       schema.dia
 -- 
 -- ================================================================================
@@ -20,7 +20,7 @@
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.12
---     Generated at:      Wed Nov 19 16:18:44 2008
+--     Generated at:      Wed Nov 19 17:50:39 2008
 --     Input Files:       schema.dia
 
 
@@ -29,26 +29,12 @@
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.12
---     Generated at:      Wed Nov 19 16:18:44 2008
+--     Generated at:      Wed Nov 19 17:50:39 2008
 --     Input Files:       schema.dia
 
 
 
 -- Special statements for postgres:pre databases
--- sequences
-drop SEQUENCE gid_seq;
-create SEQUENCE gid_seq;
-drop SEQUENCE uid_seq;
-create SEQUENCE uid_seq;
-
--- Special statements for postgres:pre databases
--- static tables and associated functions
-drop domain usage cascade;
-create domain usage text not null check(
-value = 'instructional' or
-value = 'research' or
-value = 'other');
-
 drop domain netstatus cascade;
 create domain netstatus text not null check(
 value = 'trusted' or
@@ -64,40 +50,44 @@ value = 'ilab' or
 value = 'wan' or
 value = 'dmz');
 
+drop domain vlan cascade;
+create domain vlan integer not null check(
+check_vlan(value) is not null);
+
+-- Special statements for postgres:pre databases
+-- custom types (domains)
+drop domain usage cascade;
+create domain usage text not null check(
+value = 'instructional' or
+value = 'research' or
+value = 'other');
+
 drop domain equipstatus cascade;
 create domain equipstatus text not null check(
 value = 'deployed' or
 value = 'spare' or
 value = 'surplus');
 
-drop function check_vlan(integer) cascade;
-drop table vlan_list;
-create table vlan_list (
-  vlan integer not null,
-  network cidr not null,
-  descr text not null,
-  constraint pk_vlan_list primary key (vlan)
-);
-
-create function check_vlan(integer)
-  returns integer
-  as 'select vlan from vlan_list where vlan = $1'
-  language 'sql';
+-- Special statements for postgres:pre databases
+drop sequence uid_seq;
+create sequence uid_seq;
+drop sequence gid_seq;
+create sequence gid_seq;
 
 -- Special statements for postgres:pre databases
--- dummy functions
+-- function declarations
 drop function num_ports(text) cascade;
-create function num_ports(text)
-  returns integer
-  as 'select 0'
-  language 'sql';
+create function num_ports(text) returns integer as 'select 0' language 'sql';
+
+drop function check_vlan(integer) cascade;
+create function check_vlan(integer) returns integer as 'select 0' language 'sql';
 
 
 -- Generated SQL View Drop Statements
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.12
---     Generated at:      Wed Nov 19 16:18:44 2008
+--     Generated at:      Wed Nov 19 17:50:39 2008
 --     Input Files:       schema.dia
 
 
@@ -106,7 +96,7 @@ create function num_ports(text)
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.12
---     Generated at:      Wed Nov 19 16:18:44 2008
+--     Generated at:      Wed Nov 19 17:50:39 2008
 --     Input Files:       schema.dia
 
 
@@ -115,7 +105,7 @@ create function num_ports(text)
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.12
---     Generated at:      Wed Nov 19 16:18:44 2008
+--     Generated at:      Wed Nov 19 17:50:39 2008
 --     Input Files:       schema.dia
 
 
@@ -172,27 +162,28 @@ create table equipment (
 -- net_hosts
 create table net_hosts (
   id                        serial not null,
-  dns_name                  text,
-  domain                    netdomain,
-  ipaddr                    inet check(ipaddr is null or masklen(ipaddr) = 32),
-  ethernet                  macaddr check (ethernet is not null or ipaddr is not null),
-  wall_plate                text,
+  dns_name                  text not null,
+  domain                    netdomain not null,
+  ipaddr                    inet,
+  ethernet                  macaddr,
   ssh_hostkey               text,
   status                    netstatus not null,
   comments                  text,
   netboot                   text,
-  monitored                 boolean,
-  last_changed              timestamp default now(),
+  monitored                 boolean not null,
+  last_changed              timestamp not null default now(),
   net_aliases_id            serial not null,
   net_ports_id              serial null,
   net_services_id           serial not null,
-  constraint pk_net_hosts primary key (id)
+  constraint pk_net_hosts primary key (id),
+  unique (dns_name, domain),
+  check (ethernet is not null or ipaddr is not null),
+  check (ipaddr is null or masklen(ipaddr) = 32)
 ) ;
 
 -- net_switches
 create table net_switches (
   id                        serial not null,
-  switch_name               text,
   type                      text not null,	-- type of switch
   port_prefix               text not null,
   connection                text not null default 'ssh',
@@ -205,8 +196,8 @@ create table net_switches (
 
 -- purchase_orders
 create table purchase_orders (
-  po_num                    text,
-  req_num                   text,
+  po_num                    numeric unique,
+  req_num                   numeric unique,
   date                      date,
   for_by                    text,
   vendor                    text,
@@ -236,12 +227,10 @@ create table surplus_equipment (
 -- net_aliases
 create table net_aliases (
   id                        serial not null,
-  alias                     text,
-  dns_name                  text,
-  domain                    text,
+  alias                     text not null,
   comments                  text,
   status                    netstatus not null,
-  last_changed              timestamp default now(),
+  last_changed              timestamp not null default now(),
   constraint pk_net_aliases primary key (id)
 ) ;
 
@@ -269,17 +258,16 @@ create table log_db_export (
 -- user_accounts
 create table user_accounts (
   id                        serial not null,
-  uid                       integer  default nextval('uid_seq'),
-  person_id                 integer not null,
+  uid                       integer unique not null default nextval('uid_seq'),
   login                     text unique not null,
-  gid                       integer,
-  shell                     text,
-  home_dir                  text,
-  created                   date,
+  gid                       integer default nextval('gid_seq'),
+  shell                     text not null,
+  home_dir                  text not null,
+  created                   date not null,
   expiration                date,
   comments                  text,
-  last_changed              timestamp default now(),
-  sponsor                   integer,
+  last_changed              timestamp not null default now(),
+  sponsor                   serial null,
   mail_aliases_id           serial not null,
   constraint pk_user_accounts primary key (id)
 ) ;
@@ -296,8 +284,8 @@ create table mail_aliases (
 -- user_groups
 create table user_groups (
   id                        serial not null,
-  gid                       integer,
-  group_name                text unique not null,
+  gid                       integer unique not null,
+  group_name                text unique not null default nextval('gid_seq'),
   created                   date,
   comments                  text,
   space                     integer not null,
@@ -312,8 +300,8 @@ create table people (
   family_name               text,
   alternate_email           text,
   auth_id                   text,
-  username                  text,
-  brown_card_id             text,
+  brown_card_id             text unique,
+  banner_id                 text unique,
   gender                    text,
   ethnicity                 text,
   citizenship               text,
@@ -322,7 +310,6 @@ create table people (
   home_phone                text,
   cell_phone                text,
   comments                  text,
-  banner_id                 text,
   user_accounts_id          serial not null,
   faculty_id                serial not null,
   staff_id                  serial not null,
@@ -477,9 +464,7 @@ create table grad_standing (
 -- net_services
 create table net_services (
   id                        serial not null,
-  dns_name                  text,
-  domain                    text,
-  service                   text,
+  service                   text not null,
   comments                  text,
   constraint pk_net_services primary key (id)
 ) ;
@@ -487,20 +472,19 @@ create table net_services (
 -- net_ports
 create table net_ports (
   id                        serial not null,
-  switch_name               text,
-  port_num                  integer,
+  port_num                  integer not null,
   wall_plate                text unique not null,
-  vlan                      integer,
-  last_changed              timestamp default now(),
+  vlan                      vlan not null,
+  last_changed              timestamp not null default now(),
   constraint pk_net_ports primary key (id),
-  check (port_num >= 0 and port_num <= num_ports(switch_name)),
-  check (check_vlan(vlan) is not null)
+  check (port_num >= 0 and port_num <= num_ports(switch_name))
+  -- check that port is unique in switch
 ) ;
 
 -- computers
 create table computers (
   id                        serial not null,
-  machine_name              text,
+  machine_name              text unique not null,
   system_model              text,
   num_cpus                  integer,
   cpu_type                  text,
@@ -530,9 +514,16 @@ create table os (
 -- comp_classes
 create table comp_classes (
   id                        serial not null,
-  class                     text not null,
+  class                     text unique not null,
   comments                  text,
   constraint pk_comp_classes primary key (id)
+) ;
+
+-- net_vlans
+create table net_vlans (
+  vlan                      integer unique not null,
+  network                   cidr not null,
+  comments                  text
 ) ;
 
 
@@ -567,22 +558,29 @@ comment on column net_switches.type is 'type of switch';
 
 
 
+
 -- Generated SQL Views
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.12
---     Generated at:      Wed Nov 19 16:18:44 2008
+--     Generated at:      Wed Nov 19 17:50:39 2008
 --     Input Files:       schema.dia
 
 
 
 -- Special statements for postgres:post databases
--- functions which need to be redeclared
+-- function definitions
 create or replace function num_ports(text)
   returns integer
   as 'select num_ports from switch where switch_name = $1'
   language 'sql';
 
+create or replace function check_vlan(integer)
+  returns integer
+  as 'select vlan from vlans where vlan = $1'
+  language 'sql';
+
+-- grants
 grant update on person_id_seq to group graddb;
 
 
@@ -590,7 +588,7 @@ grant update on person_id_seq to group graddb;
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.12
---     Generated at:      Wed Nov 19 16:18:44 2008
+--     Generated at:      Wed Nov 19 17:50:39 2008
 --     Input Files:       schema.dia
 
 grant select on user_accounts to group graddb ;
@@ -608,32 +606,18 @@ grant all on grad_standing to group graddb ;
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.12
---     Generated at:      Wed Nov 19 16:18:44 2008
+--     Generated at:      Wed Nov 19 17:50:39 2008
 --     Input Files:       schema.dia
 
-
--- inserts for vlan_list
-insert into vlan_list values ( '31','128.148.31.0/24', 'trusted' ) ;
-insert into vlan_list values ( '32','128.148.32.0/25', 'tstaff dmz' ) ;
-insert into vlan_list values ( '33','128.148.33.0/24', 'trusted' ) ;
-insert into vlan_list values ( '36','128.148.36.0/24', 'user managed' ) ;
-insert into vlan_list values ( '37','128.148.37.0/24', 'trusted' ) ;
-insert into vlan_list values ( '38','128.148.38.0/24', 'trusted' ) ;
-insert into vlan_list values ( '192', '192.168.1.0/24', 'private for switch' ) ;
-insert into vlan_list values ( '892', '128.148.32.128/25', 'user dmz' ) ;
-insert into vlan_list values ( '893', '192.168.100.0/24', 'ilab private' ) ;
-insert into vlan_list values ( '897', '192.168.10.0/24', 'ilab private for switches' ) ;
-insert into vlan_list values ( '898', '10.116.0.0/16', 'ilab' ) ;
 
 
 -- Generated SQL Constraints
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.12
---     Generated at:      Wed Nov 19 16:18:44 2008
+--     Generated at:      Wed Nov 19 17:50:39 2008
 --     Input Files:       schema.dia
 
-create index idx_accounts_personid on user_accounts  (person_id) ;
 create index idx_people_family_name on people  (family_name) ;
 alter table net_switches add constraint net_switches_fk_net_ports_id
   foreign key (net_ports_id)
