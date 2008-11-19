@@ -1912,7 +1912,7 @@ sub generateOneToAnyAssociation($$$$$$$) {
 			$constraintAction = 'on delete set NULL';
 			$defFKnull = 'null';
 		} elsif ($aggregation == 2) {	# Composition
-			$constraintAction = 'on delete cascade';
+			$constraintAction = 'on update cascade on delete cascade';
 		}
 	} else {
 		# ERD interpretation
