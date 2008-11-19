@@ -1,2 +1,2 @@
 all:
-	./tedia2sql -i schema.dia -o schema.sql -p id:SERIAL -f
+	./tedia2sql -i schema.dia -o schema.sql -p id:SERIAL -f -t postgres -u
