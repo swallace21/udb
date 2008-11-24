@@ -9,7 +9,7 @@
 --                      See http://tedia2sql.tigris.org/AUTHORS.html for tedia2sql author information
 -- 
 --   Target Database:   postgres
---   Generated at:      Wed Nov 19 17:50:41 2008
+--   Generated at:      Mon Nov 24 16:59:44 2008
 --   Input Files:       schema.dia
 -- 
 -- ================================================================================
@@ -20,7 +20,7 @@
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.12
---     Generated at:      Wed Nov 19 17:50:39 2008
+--     Generated at:      Mon Nov 24 16:59:43 2008
 --     Input Files:       schema.dia
 
 
@@ -29,44 +29,30 @@
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.12
---     Generated at:      Wed Nov 19 17:50:39 2008
+--     Generated at:      Mon Nov 24 16:59:43 2008
 --     Input Files:       schema.dia
 
 
 
 -- Special statements for postgres:pre databases
-drop domain netstatus cascade;
-create domain netstatus text not null check(
-value = 'trusted' or
-value = 'untrusted' or
-value = 'dynamic' or
-value = 'remote' or
-value = 'disabled');
-
-drop domain netdomain cascade;
-create domain netdomain text not null check(
-value = 'intranet' or
-value = 'ilab' or
-value = 'wan' or
-value = 'dmz');
-
-drop domain vlan cascade;
-create domain vlan integer not null check(
-check_vlan(value) is not null);
-
--- Special statements for postgres:pre databases
 -- custom types (domains)
 drop domain usage cascade;
 create domain usage text not null check(
-value = 'instructional' or
+value = 'tstaff' or
 value = 'research' or
-value = 'other');
+value = 'personal');
 
 drop domain equipstatus cascade;
 create domain equipstatus text not null check(
 value = 'deployed' or
 value = 'spare' or
 value = 'surplus');
+
+drop domain equipmanaged cascade;
+create domain equipmanaged text not null check(
+value = 'tstaff' or
+value = 'cis' or
+value = 'user');
 
 -- Special statements for postgres:pre databases
 drop sequence uid_seq;
@@ -82,12 +68,22 @@ create function num_ports(text) returns integer as 'select 0' language 'sql';
 drop function check_vlan(integer) cascade;
 create function check_vlan(integer) returns integer as 'select 0' language 'sql';
 
+-- Special statements for postgres:pre databases
+-- custom types (domains)
+drop domain userstatus cascade;
+create domain userstatus text not null check(
+value = 'ugrad' or
+value = 'grad' or
+value = 'fac' or
+value = 'staff' or
+value = 'guest');
+
 
 -- Generated SQL View Drop Statements
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.12
---     Generated at:      Wed Nov 19 17:50:39 2008
+--     Generated at:      Mon Nov 24 16:59:43 2008
 --     Input Files:       schema.dia
 
 
@@ -96,7 +92,7 @@ create function check_vlan(integer) returns integer as 'select 0' language 'sql'
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.12
---     Generated at:      Wed Nov 19 17:50:39 2008
+--     Generated at:      Mon Nov 24 16:59:43 2008
 --     Input Files:       schema.dia
 
 
@@ -105,7 +101,7 @@ create function check_vlan(integer) returns integer as 'select 0' language 'sql'
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.12
---     Generated at:      Wed Nov 19 17:50:39 2008
+--     Generated at:      Mon Nov 24 16:59:43 2008
 --     Input Files:       schema.dia
 
 
@@ -133,6 +129,14 @@ create table comp_classes_computers (
   constraint pk_comp_classes_computers primary key (comp_classes_id,computers_id)
 ) ;
 
+-- net_addresses_net_interfaces
+-- Association between net_addresses and net_interfaces
+create table net_addresses_net_interfaces (
+  net_addresses_id          serial not null,
+  net_interfaces_id         serial not null,
+  constraint pk_net_addresses_net_interfaces primary key (net_addresses_id,net_interfaces_id)
+) ;
+
 -- equipment
 create table equipment (
   id                        serial not null,
@@ -153,32 +157,19 @@ create table equipment (
   brown_inv_num             text,
   equip_status              equipstatus not null,
   surplus_equipment_id      serial not null,
-  net_hosts_id              serial not null,
+  net_interfaces_id         serial not null,
   net_switches_id           serial not null,
   computers_id              serial not null,
   constraint pk_equipment primary key (id)
 ) ;
 
--- net_hosts
-create table net_hosts (
+-- net_interfaces
+create table net_interfaces (
   id                        serial not null,
-  dns_name                  text not null,
-  domain                    netdomain not null,
-  ipaddr                    inet,
-  ethernet                  macaddr,
-  ssh_hostkey               text,
-  status                    netstatus not null,
+  ethernet                  macaddr not null,
   comments                  text,
-  netboot                   text,
-  monitored                 boolean not null,
   last_changed              timestamp not null default now(),
-  net_aliases_id            serial not null,
-  net_ports_id              serial null,
-  net_services_id           serial not null,
-  constraint pk_net_hosts primary key (id),
-  unique (dns_name, domain),
-  check (ethernet is not null or ipaddr is not null),
-  check (ipaddr is null or masklen(ipaddr) = 32)
+  constraint pk_net_interfaces primary key (id)
 ) ;
 
 -- net_switches
@@ -190,6 +181,8 @@ create table net_switches (
   username                  text not null,
   num_ports                 integer not null,
   pass                      text not null,
+  comments                  text,
+  num_blades                integer,
   net_ports_id              serial not null,
   constraint pk_net_switches primary key (id)
 ) ;
@@ -229,7 +222,6 @@ create table net_aliases (
   id                        serial not null,
   alias                     text not null,
   comments                  text,
-  status                    netstatus not null,
   last_changed              timestamp not null default now(),
   constraint pk_net_aliases primary key (id)
 ) ;
@@ -278,6 +270,7 @@ create table mail_aliases (
   alias                     text not null,
   target                    text not null,
   type                      text not null,
+  comments                  text,
   constraint pk_mail_aliases primary key (id)
 ) ;
 
@@ -288,7 +281,7 @@ create table user_groups (
   group_name                text unique not null default nextval('gid_seq'),
   created                   date,
   comments                  text,
-  space                     integer not null,
+  quota                     integer not null,
   constraint pk_user_groups primary key (id)
 ) ;
 
@@ -301,43 +294,16 @@ create table people (
   alternate_email           text,
   auth_id                   text,
   brown_card_id             text unique,
-  banner_id                 text unique,
   gender                    text,
-  ethnicity                 text,
-  citizenship               text,
   office                    text,
   office_phone              text,
   home_phone                text,
   cell_phone                text,
   comments                  text,
+  user_status               userstatus,
   user_accounts_id          serial not null,
-  faculty_id                serial not null,
-  staff_id                  serial not null,
-  ugrads_id                 serial not null,
   enrollment_id             serial not null,
-  grads_id                  serial not null,
   constraint pk_people primary key (id)
-) ;
-
--- faculty
-create table faculty (
-  id                        serial not null,
-  comments                  text,
-  constraint pk_faculty primary key (id)
-) ;
-
--- staff
-create table staff (
-  id                        serial not null,
-  comments                  text,
-  constraint pk_staff primary key (id)
-) ;
-
--- ugrads
-create table ugrads (
-  id                        serial not null,
-  comments                  text,
-  constraint pk_ugrads primary key (id)
 ) ;
 
 -- fs_exports
@@ -365,32 +331,6 @@ create table fs_automounts (
   server                    text,
   server_path               text,
   flags                     text
-) ;
-
--- grads
-create table grads (
-  id                        serial not null,
-  program                   text,
-  year_entered              text,
-  advisor                   text,
-  thesis_advisor1           text,
-  thesis_advisor2           text,
-  thesis_advisor3           text,
-  prog_comp1                text,
-  prog_comp2                text,
-  res_prop                  text,
-  res_prop_date             date,
-  res_pres                  text,
-  res_pres_date             date,
-  entered_candidacy         date,
-  thesis_prop_date          date,
-  thesis_def_date           date,
-  thesis_submit_date        date,
-  comments                  text,
-  grad_funding_id           serial not null,
-  grad_standing_id          serial not null,
-  grad_reports_id           serial not null,
-  constraint pk_grads primary key (id)
 ) ;
 
 -- courses
@@ -432,35 +372,6 @@ create table enrollment (
   constraint pk_enrollment primary key (id)
 ) ;
 
--- grad_funding
-create table grad_funding (
-  id                        serial not null,
-  year                      text,
-  semester                  text,
-  source                    text,
-  comments                  text,
-  constraint pk_grad_funding primary key (id)
-) ;
-
--- grad_reports
-create table grad_reports (
-  id                        serial not null,
-  name                      text,
-  description               text,
-  fields                    text,
-  query                     text,
-  constraint pk_grad_reports primary key (id)
-) ;
-
--- grad_standing
-create table grad_standing (
-  id                        serial not null,
-  date                      date,
-  standing                  text,
-  comments                  text,
-  constraint pk_grad_standing primary key (id)
-) ;
-
 -- net_services
 create table net_services (
   id                        serial not null,
@@ -474,8 +385,10 @@ create table net_ports (
   id                        serial not null,
   port_num                  integer not null,
   wall_plate                text unique not null,
-  vlan                      vlan not null,
   last_changed              timestamp not null default now(),
+  blade_num                 integer,
+  net_interfaces_id         serial null,
+  net_vlans_id              serial null,
   constraint pk_net_ports primary key (id),
   check (port_num >= 0 and port_num <= num_ports(switch_name))
   -- check that port is unique in switch
@@ -498,6 +411,7 @@ create table computers (
   info_time                 timestamp,
   boot_time                 timestamp,
   comments                  text,
+  pxelink                   text,
   os_id                     serial not null,
   constraint pk_computers primary key (id)
 ) ;
@@ -521,9 +435,36 @@ create table comp_classes (
 
 -- net_vlans
 create table net_vlans (
-  vlan                      integer unique not null,
+  id                        serial not null,
+  vlan_num                  integer unique not null,
   network                   cidr not null,
-  comments                  text
+  comments                  text,
+  constraint pk_net_vlans primary key (id)
+) ;
+
+-- net_addresses
+create table net_addresses (
+  id                        serial not null,
+  dns_name                  text not null,
+  ipaddr                    inet,
+  comments                  text,
+  enabled                   boolean not null default true,
+  monitored                 boolean not null,
+  last_changed              timestamp not null default now(),
+  net_aliases_id            serial not null,
+  net_services_id           serial not null,
+  net_zones_id              serial null,
+  constraint pk_net_addresses primary key (id),
+  unique (dns_name, zone),
+  check (ipaddr is null or masklen(ipaddr) = 32)
+) ;
+
+-- net_zones
+create table net_zones (
+  id                        serial not null,
+  comments                  text,
+  net_vlans_id              serial not null,
+  constraint pk_net_zones primary key (id)
 ) ;
 
 
@@ -554,16 +495,11 @@ comment on column net_switches.type is 'type of switch';
 
 
 
-
-
-
-
-
 -- Generated SQL Views
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.12
---     Generated at:      Wed Nov 19 17:50:39 2008
+--     Generated at:      Mon Nov 24 16:59:43 2008
 --     Input Files:       schema.dia
 
 
@@ -575,38 +511,21 @@ create or replace function num_ports(text)
   as 'select num_ports from switch where switch_name = $1'
   language 'sql';
 
-create or replace function check_vlan(integer)
-  returns integer
-  as 'select vlan from vlans where vlan = $1'
-  language 'sql';
-
--- grants
-grant update on person_id_seq to group graddb;
-
 
 -- Generated Permissions
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.12
---     Generated at:      Wed Nov 19 17:50:39 2008
+--     Generated at:      Mon Nov 24 16:59:43 2008
 --     Input Files:       schema.dia
 
-grant select on user_accounts to group graddb ;
-grant all on people to group graddb ;
-grant all on grads to group graddb ;
-grant all on courses to group graddb ;
-grant all on enrollment to group graddb ;
-grant all on grad_funding to group graddb ;
-grant select on grad_reports to group graddb ;
-grant insert,update on grad_reports to group graddb_admin ;
-grant all on grad_standing to group graddb ;
 
 
 -- Generated SQL Insert statements
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.12
---     Generated at:      Wed Nov 19 17:50:39 2008
+--     Generated at:      Mon Nov 24 16:59:43 2008
 --     Input Files:       schema.dia
 
 
@@ -615,7 +534,7 @@ grant all on grad_standing to group graddb ;
 -- --------------------------------------------------------------------
 --     Target Database:   postgres
 --     SQL Generator:     tedia2sql -- v1.2.12
---     Generated at:      Wed Nov 19 17:50:39 2008
+--     Generated at:      Mon Nov 24 16:59:43 2008
 --     Input Files:       schema.dia
 
 create index idx_people_family_name on people  (family_name) ;
@@ -628,15 +547,15 @@ alter table equipment add constraint equipment_fk_surplus_equipment_id
 alter table purchase_orders add constraint purchase_orders_fk_equipment_id
   foreign key (equipment_id)
   references equipment (id) on update cascade on delete cascade ;
-alter table net_hosts add constraint net_hosts_fk_net_aliases_id
+alter table net_addresses add constraint net_addresses_fk_net_aliases_id
   foreign key (net_aliases_id)
   references net_aliases (id) on update cascade on delete cascade ;
 alter table user_accounts add constraint user_accounts_fk_sponsor
   foreign key (sponsor)
   references people (id) on delete set NULL ;
-alter table equipment add constraint equipment_fk_net_hosts_id
-  foreign key (net_hosts_id)
-  references net_hosts (id) on update cascade on delete cascade ;
+alter table equipment add constraint equipment_fk_net_interfaces_id
+  foreign key (net_interfaces_id)
+  references net_interfaces (id) on update cascade on delete cascade ;
 alter table equipment_people add constraint equipment_people_fk_equipment_id
   foreign key (equipment_id)
   references equipment (id) on delete cascade ;
@@ -649,34 +568,19 @@ alter table people add constraint people_fk_user_accounts_id
 alter table equipment add constraint equipment_fk_net_switches_id
   foreign key (net_switches_id)
   references net_switches (id) on update cascade on delete cascade ;
-alter table net_hosts add constraint net_hosts_fk_net_ports_id
-  foreign key (net_ports_id)
-  references net_ports (id) on delete set NULL ;
-alter table people add constraint people_fk_faculty_id
-  foreign key (faculty_id)
-  references faculty (id) on update cascade on delete cascade ;
-alter table people add constraint people_fk_staff_id
-  foreign key (staff_id)
-  references staff (id) on update cascade on delete cascade ;
-alter table people add constraint people_fk_ugrads_id
-  foreign key (ugrads_id)
-  references ugrads (id) on update cascade on delete cascade ;
+alter table net_ports add constraint net_ports_fk_net_interfaces_id
+  foreign key (net_interfaces_id)
+  references net_interfaces (id) on delete set NULL ;
 alter table fs_classes add constraint fs_classes_fk_fs_exports_id
   foreign key (fs_exports_id)
   references fs_exports (id) on update cascade on delete cascade ;
 alter table equipment add constraint equipment_fk_parent_equip_id
   foreign key (parent_equip_id)
   references equipment (id) on update cascade on delete cascade ;
-alter table grads add constraint grads_fk_grad_funding_id
-  foreign key (grad_funding_id)
-  references grad_funding (id) on update cascade on delete cascade ;
 alter table people add constraint people_fk_enrollment_id
   foreign key (enrollment_id)
   references enrollment (id) on update cascade on delete cascade ;
-alter table grads add constraint grads_fk_grad_standing_id
-  foreign key (grad_standing_id)
-  references grad_standing (id) on update cascade on delete cascade ;
-alter table net_hosts add constraint net_hosts_fk_net_services_id
+alter table net_addresses add constraint net_addresses_fk_net_services_id
   foreign key (net_services_id)
   references net_services (id) on update cascade on delete cascade ;
 alter table user_groups_user_accounts add constraint user_groups_user_accounts_fk_user_groups_id
@@ -685,18 +589,12 @@ alter table user_groups_user_accounts add constraint user_groups_user_accounts_f
 alter table user_groups_user_accounts add constraint user_groups_user_accounts_fk_user_accounts_id
   foreign key (user_accounts_id)
   references user_accounts (id) on delete cascade ;
-alter table grads add constraint grads_fk_grad_reports_id
-  foreign key (grad_reports_id)
-  references grad_reports (id) on update cascade on delete cascade ;
 alter table courses add constraint courses_fk_enrollment_id
   foreign key (enrollment_id)
   references enrollment (id) on update cascade on delete cascade ;
 alter table user_accounts add constraint user_accounts_fk_mail_aliases_id
   foreign key (mail_aliases_id)
   references mail_aliases (id) on update cascade on delete cascade ;
-alter table people add constraint people_fk_grads_id
-  foreign key (grads_id)
-  references grads (id) on update cascade on delete cascade ;
 alter table computers add constraint computers_fk_os_id
   foreign key (os_id)
   references os (id) on update cascade on delete cascade ;
@@ -709,4 +607,19 @@ alter table comp_classes_computers add constraint comp_classes_computers_fk_comp
 alter table equipment add constraint equipment_fk_computers_id
   foreign key (computers_id)
   references computers (id) on update cascade on delete cascade ;
+alter table net_zones add constraint net_zones_fk_net_vlans_id
+  foreign key (net_vlans_id)
+  references net_vlans (id) on update cascade on delete cascade ;
+alter table net_ports add constraint net_ports_fk_net_vlans_id
+  foreign key (net_vlans_id)
+  references net_vlans (id) on delete set NULL ;
+alter table net_addresses add constraint net_addresses_fk_net_zones_id
+  foreign key (net_zones_id)
+  references net_zones (id) on delete set NULL ;
+alter table net_addresses_net_interfaces add constraint net_addresses_net_interfaces_fk_net_addresses_id
+  foreign key (net_addresses_id)
+  references net_addresses (id) on delete cascade ;
+alter table net_addresses_net_interfaces add constraint net_addresses_net_interfaces_fk_net_interfaces_id
+  foreign key (net_interfaces_id)
+  references net_interfaces (id) on delete cascade ;
 
