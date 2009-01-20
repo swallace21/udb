@@ -4,6 +4,8 @@
 
 -- {{{
 
+create language plpgsql;
+
 create table log_db_export (
   script_name               text,
   last_run                  timestamp default now()
@@ -58,7 +60,7 @@ create table equipment (
   parent_equip_id           integer references equipment
                               on update cascade
                               on delete cascade,
-  po_num                    integer references purchase_orders
+  po_id                     integer references purchase_orders
                               on update cascade
                               on delete cascade,
   cs_id                     integer unique default nextval('cs_id_seq'),
@@ -67,7 +69,6 @@ create table equipment (
   usage                     usage,
   installed_on              date,
   descr                     text not null,
-  po_num                    text,
   owner                     text,
   contact                   text,
   building                  text,
@@ -98,6 +99,7 @@ create table surplus_equipment (
 -- {{{
 
 create or replace function num_ports(integer) returns integer as 'select 0' language 'sql';
+create or replace function vlan_zone(integer) returns integer as 'select 0' language 'sql';
 
 create table net_switches (
   id                        serial primary key,
@@ -111,7 +113,7 @@ create table net_switches (
   connection                text not null default 'ssh',
   username                  text not null,
   pass                      text not null,
-  comments                  text,
+  comments                  text
 ) ;
 
 create table net_ports (
@@ -124,7 +126,7 @@ create table net_ports (
   last_changed              timestamp not null default now(),
   blade_num                 integer,
   -- check that port is unique in switch
-  check (port_num >= 0 and port_num <= num_ports(net_switches_id))
+  check (port_num >= 0 and port_num <= num_ports(switch_id))
 ) ;
 
 create table net_interfaces (
@@ -132,7 +134,7 @@ create table net_interfaces (
   equipment_id              integer references equipment
                               on update cascade
                               on delete cascade,
-  net_ports_id              integer references net_ports
+  port_id                   integer references net_ports
                               on update cascade
                               on delete set null,
   ethernet                  macaddr not null,
@@ -143,17 +145,17 @@ create table net_interfaces (
 create table net_services (
   id                        serial primary key,
   service                   text not null,
-  comments                  text,
+  comments                  text
 ) ;
 
 create table net_zones (
   id                        serial primary key,
-  comments                  text,
+  comments                  text
 ) ;
 
 create table net_vlans (
   id                        serial primary key,
-  net_zones_id              integer references net_zones
+  zone_id                   integer references net_zones
                               on update cascade
                               on delete cascade,
   vlan_num                  integer unique not null,
@@ -164,27 +166,44 @@ create table net_vlans (
 -- net_addresses
 create table net_addresses (
   id                        serial primary key,
-  net_vlans_id              integer references net_vlans
+  vlan_id                   integer references net_vlans
+                              on update cascade
+                              on delete cascade,
+  zone_id                   integer references net_zones
                               on update cascade
                               on delete cascade,
   dns_name                  text not null,
-  ipaddr                    inet,
+  ipaddr                    inet not null,
   enabled                   boolean not null default true,
   monitored                 boolean not null,
   last_changed              timestamp not null default now(),
   comments                  text,
   -- each dns name should be unique in a zone
-  unique (dns_name, zone),
+  unique (dns_name, zone_id),
   check (ipaddr is null or masklen(ipaddr) = 32)
 ) ;
 
+create function update_zone_by_vlan() returns trigger as $update_zone_by_vlan$
+declare
+  new_vlan_zone_id          integer;
+begin
+  select (zone_id) into strict new_vlan_zone_id from net_vlans
+    where id = new.vlan_id;
+  new.zone_id := new_vlan_zone_id;
+  return new;
+end;
+$update_zone_by_vlan$ language plpgsql;
+
+create trigger vlan_zone_trigger before insert or update on net_addresses
+  for each row execute procedure update_zone_by_vlan();
+
 create table net_aliases (
   alias                     text primary key,
-  net_addresses_id          integer references net_addresses
+  net_address_id            integer references net_addresses
                               on update cascade
                               on delete cascade,
   last_changed              timestamp not null default now(),
-  comments                  text,
+  comments                  text
 ) ;
 
 -- join tables {{{
@@ -219,9 +238,14 @@ create table net_addresses_net_services (
 ) ;
 -- }}}
 
+create or replace function vlan_zone(integer)
+  returns integer
+  as 'select zone_id from net_vlans where id = $1'
+  language 'sql';
+
 create or replace function num_ports(integer)
   returns integer
-  as 'select num_ports from switch where id = $1'
+  as 'select num_ports from net_switches where id = $1'
   language 'sql';
 
 create table log_dhcp (
@@ -273,7 +297,7 @@ create table people (
   office_phone              text,
   home_phone                text,
   cell_phone                text,
-  comments                  text,
+  comments                  text
 ) ;
 
 create index idx_people_family_name on people  (family_name) ;
@@ -290,8 +314,8 @@ create table user_accounts (
   home_dir                  text not null,
   created                   date not null,
   expiration                date,
-  comments                  text,
-  last_changed              timestamp not null default now()
+  last_changed              timestamp not null default now(),
+  comments                  text
 ) ;
 
 create table mail_aliases (
@@ -395,19 +419,24 @@ create table fs_exports (
   quota                     integer,
   flags                     text,
   backup_policy             text,
+  comments                  text
 ) ;
 
 create table fs_classes (
+  id                        serial primary key,
+  fs_exports_id             integer references fs_exports,
   fs_class                  text,
   perms                     text,
-  fs_exports_id             serial not null
+  comments                  text
 ) ;
 
 create table fs_automounts (
+  id                        serial primary key,
   client_path               text,
   server                    text,
   server_path               text,
-  flags                     text
+  flags                     text,
+  comments                  text
 ) ;
 
 -- }}}
@@ -454,12 +483,12 @@ create table comp_os (
 create table comp_classes (
   id                        serial primary key,
   class                     text unique not null,
-  comments                  text,
+  comments                  text
 ) ;
 
 -- join tables {{{
 create table comp_classes_computers (
-  comp_classes_id           integer references comp_classes,
+  comp_classes_id           integer references comp_classes
                               on update cascade
                               on delete cascade,
   computers_id              integer references computers
