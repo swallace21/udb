@@ -81,7 +81,7 @@ create table equipment (
 
 create table surplus_equipment (
   id                        serial primary key,
-  equipment_id              integer references equipment
+  equipment_id              integer not null references equipment
                               on update cascade
                               on delete cascade,
   surplus_date              date,
@@ -103,7 +103,7 @@ create or replace function vlan_zone(integer) returns integer as 'select 0' lang
 
 create table net_switches (
   id                        serial primary key,
-  equipment_id              integer references equipment
+  equipment_id              integer not null references equipment
                               on update cascade
                               on delete cascade,
   num_ports                 integer not null,
@@ -118,7 +118,7 @@ create table net_switches (
 
 create table net_ports (
   id                        serial primary key,
-  switch_id                 integer references net_switches
+  switch_id                 integer not null references net_switches
                               on update cascade
                               on delete cascade,
   port_num                  integer not null,
@@ -131,7 +131,7 @@ create table net_ports (
 
 create table net_interfaces (
   id                        serial primary key,
-  equipment_id              integer references equipment
+  equipment_id              integer not null references equipment
                               on update cascade
                               on delete cascade,
   port_id                   integer references net_ports
@@ -155,7 +155,7 @@ create table net_zones (
 
 create table net_vlans (
   id                        serial primary key,
-  zone_id                   integer references net_zones
+  zone_id                   integer not null references net_zones
                               on update cascade
                               on delete cascade,
   vlan_num                  integer unique not null,
@@ -166,10 +166,10 @@ create table net_vlans (
 -- net_addresses
 create table net_addresses (
   id                        serial primary key,
-  vlan_id                   integer references net_vlans
+  vlan_id                   integer not null references net_vlans
                               on update cascade
                               on delete cascade,
-  zone_id                   integer references net_zones
+  zone_id                   integer not null references net_zones
                               on update cascade
                               on delete cascade,
   dns_name                  text not null,
@@ -199,7 +199,7 @@ create trigger vlan_zone_trigger before insert or update on net_addresses
 
 create table net_aliases (
   alias                     text primary key,
-  net_address_id            integer references net_addresses
+  net_address_id            integer not null references net_addresses
                               on update cascade
                               on delete cascade,
   last_changed              timestamp not null default now(),
@@ -208,30 +208,30 @@ create table net_aliases (
 
 -- join tables {{{
 create table net_ports_net_vlans (
-  net_ports_id              integer references net_ports
+  net_ports_id              integer not null references net_ports
                               on update cascade
                               on delete cascade,
-  net_vlans_id              integer references net_vlans
+  net_vlans_id              integer not null references net_vlans
                               on update cascade
                               on delete cascade,
   primary key               (net_ports_id, net_vlans_id)
 ) ;
 
 create table net_addresses_net_interfaces (
-  net_addresses_id          integer references net_addresses
+  net_addresses_id          integer not null references net_addresses
                               on update cascade
                               on delete cascade,
-  net_interfaces_id         integer references net_interfaces
+  net_interfaces_id         integer not null references net_interfaces
                               on update cascade
                               on delete cascade,
   primary key               (net_addresses_id, net_interfaces_id)
 ) ;
 
 create table net_addresses_net_services (
-  net_addresses_id          integer references net_addresses
+  net_addresses_id          integer not null references net_addresses
                               on update cascade
                               on delete cascade,
-  net_services_id           integer references net_services
+  net_services_id           integer not null references net_services
                               on update cascade
                               on delete cascade,
   primary key               (net_addresses_id, net_services_id)
@@ -304,7 +304,7 @@ create index idx_people_family_name on people  (family_name) ;
 
 create table user_accounts (
   id                        serial primary key,
-  people_id                 integer references people
+  people_id                 integer not null references people
                               on update cascade
                               on delete cascade,
   uid                       integer unique not null default nextval('uid_seq'),
@@ -320,7 +320,7 @@ create table user_accounts (
 
 create table mail_aliases (
   id                        serial primary key,
-  user_accounts_id          integer references user_accounts
+  user_accounts_id          integer not null references user_accounts
                               on update cascade
                               on delete cascade,
   alias                     text not null,
@@ -359,10 +359,10 @@ create table courses (
 
 create table enrollment (
   id                        serial primary key,
-  student_id                integer references people
+  student_id                integer not null references people
                               on update cascade
                               on delete cascade,
-  course_id                 integer references courses
+  course_id                 integer not null references courses
                               on update cascade
                               on delete cascade,
   year                      text,
@@ -382,10 +382,10 @@ create table enrollment (
 -- user_accounts_people
 -- association between user_accounts and people
 create table user_accounts_people (
-  user_accounts_id          integer references user_accounts
+  user_accounts_id          integer not null references user_accounts
                               on update cascade
                               on delete cascade,
-  sponsor_id                integer references people
+  sponsor_id                integer not null references people
                               on update cascade
                               on delete cascade,
   primary key               (user_accounts_id, sponsor_id)
@@ -394,10 +394,10 @@ create table user_accounts_people (
 -- user_groups_user_accounts
 -- association between user_groups and user_accounts
 create table user_groups_user_accounts (
-  user_groups_id            integer references user_groups
+  user_groups_id            integer not null references user_groups
                               on update cascade
                               on delete cascade,
-  user_accounts_id          integer references user_accounts
+  user_accounts_id          integer not null references user_accounts
                               on update cascade
                               on delete cascade,
   primary key               (user_groups_id, user_accounts_id)
@@ -411,24 +411,24 @@ create table user_groups_user_accounts (
 
 -- {{{
 
-create table fs_exports (
-  id                        serial primary key,
-  server                    text,
-  path                      text,
-  fs_class                  text not null,
-  quota                     integer,
-  flags                     text,
-  backup_policy             text,
-  comments                  text
-) ;
-
-create table fs_classes (
-  id                        serial primary key,
-  fs_exports_id             integer references fs_exports,
-  fs_class                  text,
-  perms                     text,
-  comments                  text
-) ;
+-- create table fs_exports (
+--   id                        serial primary key,
+--   server                    text,
+--   path                      text,
+--   fs_class                  text not null,
+--   quota                     integer,
+--   flags                     text,
+--   backup_policy             text,
+--   comments                  text
+-- ) ;
+-- 
+-- create table fs_classes (
+--   id                        serial primary key,
+--   fs_exports_id             integer not null references fs_exports,
+--   fs_class                  text,
+--   perms                     text,
+--   comments                  text
+-- ) ;
 
 create table fs_automounts (
   id                        serial primary key,
@@ -449,7 +449,7 @@ create table fs_automounts (
 
 create table computers (
   id                        serial primary key,
-  equipment_id              integer references equipment
+  equipment_id              integer not null references equipment
                               on update cascade
                               on delete cascade,
   machine_name              text unique not null,
@@ -471,7 +471,7 @@ create table computers (
 
 create table comp_os (
   id                        serial primary key,
-  computer_id               integer references computers
+  computer_id               integer not null references computers
                               on update cascade
                               on delete cascade,
   os_name                   text,
@@ -488,10 +488,10 @@ create table comp_classes (
 
 -- join tables {{{
 create table comp_classes_computers (
-  comp_classes_id           integer references comp_classes
+  comp_classes_id           integer not null references comp_classes
                               on update cascade
                               on delete cascade,
-  computers_id              integer references computers
+  computers_id              integer not null references computers
                               on update cascade
                               on delete cascade,
   primary key               (comp_classes_id, computers_id)
@@ -508,10 +508,10 @@ create table comp_classes_computers (
 
 -- association between equipment and people
 create table equipment_people (
-  equipment_id              integer references equipment
+  equipment_id              integer not null references equipment
                               on update cascade
                               on delete cascade,
-  equip_user_id             integer references people
+  equip_user_id             integer not null references people
                               on update cascade
                               on delete cascade,
   primary key               (equipment_id, equip_user_id)
