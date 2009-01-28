@@ -13,6 +13,22 @@ create table log_db_export (
 
 -- }}}
 
+------------
+-- Places --
+------------
+
+-- {{{
+
+create table places (
+  id                        serial primary key,
+  city                      text,
+  building                  text,
+  room                      text,
+  comments                  text
+) ;
+
+-- }}}
+
 -----------------------------
 -- Equipment documentation --
 -----------------------------
@@ -21,7 +37,7 @@ create table log_db_export (
 
 create domain usage text not null check (
 value = 'tstaff' or
-value = 'research' or
+value = 'academic' or
 value = 'personal');
 
 create domain equipstatus text not null check (
@@ -63,20 +79,20 @@ create table equipment (
   po_id                     integer references purchase_orders
                               on update cascade
                               on delete cascade,
+  place_id                  integer references places
+                              on update cascade
+                              on delete cascade,
   cs_id                     integer unique default nextval('cs_id_seq'),
   equip_status              equipstatus not null,
   equip_name                text unique,
   usage                     usage,
   installed_on              date,
-  descr                     text not null,
+  descr                     text,
   owner                     text,
   contact                   text,
-  building                  text,
-  floor                     text,
-  room                      text,
-  comments                  text,
   serial_num                text,
-  brown_inv_num             text
+  brown_inv_num             text,
+  comments                  text
 ) ;
 
 create table surplus_equipment (
@@ -97,6 +113,12 @@ create table surplus_equipment (
 -------------
 
 -- {{{
+
+create domain routing_type text not null check (
+value = 'standard' or
+value = 'private' or
+value = 'DMZ' or
+value = 'special');
 
 create or replace function num_ports(integer) returns integer as 'select 0' language 'sql';
 create or replace function vlan_zone(integer) returns integer as 'select 0' language 'sql';
@@ -150,6 +172,8 @@ create table net_services (
 
 create table net_zones (
   id                        serial primary key,
+  owner                     equipmanaged,
+  routing                   routing_type,
   comments                  text
 ) ;
 
@@ -173,7 +197,7 @@ create table net_addresses (
                               on update cascade
                               on delete cascade,
   dns_name                  text not null,
-  ipaddr                    inet not null,
+  ipaddr                    inet,
   enabled                   boolean not null default true,
   monitored                 boolean not null,
   last_changed              timestamp not null default now(),
@@ -197,13 +221,15 @@ $update_zone_by_vlan$ language plpgsql;
 create trigger vlan_zone_trigger before insert or update on net_addresses
   for each row execute procedure update_zone_by_vlan();
 
-create table net_aliases (
-  alias                     text primary key,
+create table net_dns_entries (
+  name                      text,
+  domain                    text,
   net_address_id            integer not null references net_addresses
                               on update cascade
                               on delete cascade,
   last_changed              timestamp not null default now(),
-  comments                  text
+  comments                  text,
+  primary key               (name, domain)
 ) ;
 
 -- join tables {{{
@@ -447,12 +473,33 @@ create table fs_automounts (
 
 -- {{{
 
+create domain hw_arch_type text check (
+value = 'amd64' or
+value = 'linksys' or
+value = 'mac' or
+value = 'mac-ppc' or
+value = 'sun4u' or
+value = 'x86' or
+value = 'xen');
+
+create domain os_type text check (
+value = 'dualboot' or
+value = 'linux' or
+value = 'linux-server' or
+value = 'linux-xen' or
+value = 'osx' or
+value = 'solaris' or
+value = 'vista' or
+value = 'winxp');
+
 create table computers (
   id                        serial primary key,
   equipment_id              integer not null references equipment
                               on update cascade
                               on delete cascade,
   machine_name              text unique not null,
+  hw_arch                   hw_arch_type,
+  os                        os_type,
   system_model              text,
   num_cpus                  integer,
   cpu_type                  text,
@@ -463,20 +510,10 @@ create table computers (
   other_drives              text,
   network_cards             text,
   video_cards               text,
+  os_version                text,
   info_time                 timestamp,
   boot_time                 timestamp,
   pxelink                   text,
-  comments                  text
-) ;
-
-create table comp_os (
-  id                        serial primary key,
-  computer_id               integer not null references computers
-                              on update cascade
-                              on delete cascade,
-  os_name                   text,
-  version                   text,
-  dist                      text,
   comments                  text
 ) ;
 
