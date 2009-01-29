@@ -11,6 +11,24 @@ create table log_db_export (
   last_run                  timestamp default now()
 ) ;
 
+CREATE FUNCTION commacat(acc text, instr text) RETURNS text AS
+$$                                                                                        
+BEGIN                  
+  IF acc IS NULL OR acc = '' THEN
+    RETURN instr;
+  ELSE
+    RETURN acc || ', ' || instr;
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE AGGREGATE textcat_all (
+  basetype    = text,
+  sfunc       = commacat,
+  stype       = text,
+  initcond    = ''
+);
+
 -- }}}
 
 ------------
