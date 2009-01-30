@@ -1,0 +1,92 @@
+#!/usr/bin/perl -w
+
+use Getopt::Long;
+use Pod::Usage;
+
+use lib "/home/aleks/pro/udb/lib";
+use BrownCS::UDB;
+
+# Print a simple help message.
+sub usage {
+  my ($exit_status) = @_;
+  pod2usage({ -exitval => $exit_status, -verbose => 99, -sections => "SYNOPSIS|DESCRIPTION|OPTIONS"});
+}
+
+sub sort_fieldnames {
+  return -1 if($a eq 'hostname');
+  return 1 if($b eq 'hostname');
+  return $a cmp $b;
+}
+
+my $help = 0;
+my $username = $ENV{'USER'};
+my $udb = BrownCS::UDB->new;
+
+GetOptions ('help|h|?' => \$help, 
+            'u' => \$username) or usage(2);
+usage(1) if $help;
+
+if (@ARGV == 0) {
+  usage(2);
+}
+
+my $hostname = $ARGV[0];
+my $password = BrownCS::UDB->get_pass;
+
+$udb->start($username, $password);
+
+my %host = $udb->host($hostname);
+
+$host{aliases} = join(',',@{$host{aliases}});
+$host{classes} = join(',',@{$host{classes}});
+
+foreach $field (sort sort_fieldnames keys(%host)) {
+  if (not $host{$field}) {
+    $host{$field} = '';
+  }
+  print $field, ' = ', $host{$field}, "\n";
+}
+
+$udb->finish;
+
+__END__
+
+=head1 NAME
+
+cdb-show - Print out a summary of a host
+
+=head1 SYNOPSIS
+
+cdb-show [-u username] hostname
+
+=head1 DESCRIPTION
+
+cdb-show queries the UDB database for information about a host, and
+prints it out to the console. It is designed to resemble the old I<cdb
+profile> command.
+
+=head1 OPTIONS
+
+=over
+
+=item B<-h>, B<--help>
+
+Print a help message and exit.
+
+=item B<-u>, B<--username>=user
+
+Logs onto the database server as the specified username, instead of as
+the current user.
+
+=back
+
+=head1 AUTHORS
+
+Aleks Bromfield.
+
+=head1 SEE ALSO
+
+B<udb>
+
+=cut
+
