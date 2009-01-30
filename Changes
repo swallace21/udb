@@ -1,0 +1,6 @@
+Revision history for Perl extension BrownCS::UDB.
+
+0.01  Fri Jan 30 11:23:30 2009
+	- original version; created by h2xs 1.23 with options
+		-Xn BrownCS::UDB
+

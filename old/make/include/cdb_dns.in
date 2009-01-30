@@ -1,5 +1,0 @@
-$ttl 1d
-@ IN  SOA ns.cs.brown.edu. root.cs.brown.edu. ( %d 10800 3600 604800 86400 )
-  IN  NS  knot.brown.edu.
-  IN  NS  ns1.ucsb.edu.
-  IN  NS  dns.cs.brown.edu.

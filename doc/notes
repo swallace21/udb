@@ -1,0 +1,12 @@
+schema:
+
+VERIFY:
+
+- comments are required for hosts with dynamic addresses
+
+- aliases are 256 chars or shorter
+
+- alias must match [a-z][a-z0-9_\-]* format
+
+DEFAULTS:
+
