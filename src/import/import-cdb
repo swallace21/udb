@@ -98,31 +98,6 @@ print "done.\n";
 
 print "importing cdb... ";
 
-$udb->prepare("equip_insert", "INSERT INTO equipment (equip_status, usage, name, contact) VALUES ('deployed', 'academic', ?, ?) RETURNING id");
-
-$udb->prepare("comp_insert", "INSERT INTO computers (equipment_id, hw_arch, os, pxelink) VALUES (?, ?, ?, ?) RETURNING id");
-$udb->{sths}->{comp_insert}->bind_param(1, undef, SQL_INTEGER);
-
-$udb->prepare("interface_insert", "INSERT INTO net_interfaces (equipment_id, ethernet) VALUES (?, ?) RETURNING id");
-$udb->{sths}->{interface_insert}->bind_param(1, undef, SQL_INTEGER);
-$udb->{sths}->{interface_insert}->bind_param(2, undef, {pg_type => PG_MACADDR});
-
-$udb->prepare("address_insert", "INSERT INTO net_addresses (vlan_id, ipaddr, monitored) VALUES (?, ?, ?) RETURNING id");
-$udb->{sths}->{address_insert}->bind_param(1, undef, SQL_INTEGER);
-$udb->{sths}->{address_insert}->bind_param(2, undef, {pg_type => PG_INET});
-$udb->{sths}->{address_insert}->bind_param(3, undef, {pg_type => PG_BOOL});
-
-$udb->prepare("addr_iface_insert", "INSERT INTO net_addresses_net_interfaces (net_addresses_id, net_interfaces_id) VALUES (?, ?)");
-$udb->{sths}->{addr_iface_insert}->bind_param(1, undef, SQL_INTEGER);
-$udb->{sths}->{addr_iface_insert}->bind_param(2, undef, SQL_INTEGER);
-
-$udb->prepare("dns_insert", "INSERT INTO net_dns_entries (name, domain, zone, net_address_id) VALUES (?, 'cs.brown.edu', 'both', ?)");
-$udb->{sths}->{dns_insert}->bind_param(2, undef, SQL_INTEGER);
-
-$udb->prepare("class_comp_insert", "INSERT INTO comp_classes_computers (comp_classes_id, computers_id) VALUES (?,?)");
-$udb->{sths}->{class_comp_insert}->bind_param(1, undef, SQL_INTEGER);
-$udb->{sths}->{class_comp_insert}->bind_param(2, undef, SQL_INTEGER);
-
 $udb->{dbh}->do("DELETE FROM equipment;");
 $udb->{dbh}->do("DELETE FROM computers;");
 $udb->{dbh}->do("DELETE FROM net_interfaces;");
@@ -135,104 +110,13 @@ $udb->{dbh}->do("DELETE FROM comp_classes_computers;");
 my($key, $data);
 while ( ($key, $data) = each(%$cdb_by_hostname) ) {
   if (( $data->{'status'} ne 'disabled' ) and ($data->{'ethernet'} ne '' )) {
-    &insert_host($data);
+    $udb->insert_host($data);
   }
 }
 
 print "done.\n";
 
 $udb->finish;
-
-sub insert_host {
-  my($host) = @_;
-
-  my $machine_name = $host->{'hostname'};
-
-  print "importing cdb $machine_name";
-
-  my $contact = $host->{'contact'};
-
-  my $prim_grp = $host->{'prim_grp'};
-  $host->{'aliases'} =~ s/\s//g;
-  my @aliases = split(/,/, $host->{'aliases'});
-  $host->{'classes'} =~ s/\s//g;
-  my @classes = split(/,/, $host->{'classes'});
-
-  my $ethernet = $host->{'ethernet'};
-
-  my $ipaddr = $host->{'ip_addr'};
-  my $vlan_id;
-  if ((!$ipaddr) or ($ipaddr eq "")) {
-    $ipaddr = undef;
-    $vlan_id = $udb->get_vlan("128.148.36.1");
-  } else {
-    $vlan_id = $udb->get_vlan($ipaddr);
-  }
-
-  my $status = $host->{'status'};
-
-  my $monitored = 0;
-  if ($status eq "monitored") {
-    $monitored = 1;
-  }
-
-  # create an equipment entry...
-
-  $udb->{sths}->{equip_insert}->execute($machine_name, $contact);
-  my $equip_id = $udb->{sths}->{equip_insert}->fetch()->[0];
-
-  # fill in equip_status
-
-  my $hw_arch = $host->{'hw_arch'};
-  if ($hw_arch eq "") {
-    $hw_arch = undef;
-  } elsif ($hw_arch eq "x64") {
-    $hw_arch = "amd64";
-  }
-
-  my $os = $host->{'os_type'};
-  if (($os eq "other") or ($os eq "") or ($os eq "windows")) {
-    $os = undef;
-  }
-
-  # a bunch of stuff from the comp database that we don't care
-  # about...
-
-  my $pxelink = $host->{'pxelink'};
-  if ($pxelink eq "") {
-    $pxelink = undef;
-  }
-
-  $udb->{sths}->{comp_insert}->execute($equip_id, $hw_arch, $os, $pxelink);
-  my $comp_id = $udb->{sths}->{comp_insert}->fetch()->[0];
-
-  $udb->{sths}->{interface_insert}->execute($equip_id, $ethernet);
-  my $interface_id = $udb->{sths}->{interface_insert}->fetch()->[0];
-
-  $udb->{sths}->{address_insert}->execute($vlan_id, $ipaddr, $monitored);
-  my $address_id = $udb->{sths}->{address_insert}->fetch()->[0];
-
-  $udb->{sths}->{addr_iface_insert}->execute($address_id, $interface_id);
-
-  $udb->{sths}->{dns_insert}->execute($machine_name, $address_id);
-
-  if ( $#aliases != -1 ) {
-    foreach (@aliases) {
-      print ", alias $_";
-      $udb->{sths}->{dns_insert}->execute($_, $address_id);
-    }
-  }
-
-  if ( $#classes != -1 ) {
-    foreach (@classes) {
-      print ", class $_";
-      my $class_id = $udb->get_class($_);
-      $udb->{sths}->{class_comp_insert}->execute($class_id, $comp_id);
-    }
-  }
-
-  print "\n";
-}
 
 __END__
 

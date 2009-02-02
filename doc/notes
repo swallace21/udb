@@ -15,15 +15,3 @@ CLEAN:
 
 
 
-DEFAULTS:
-
-
-cdb-add kai
-
-ask for:
-
-- contact
-- comment
-- ethernet
-- ip
--

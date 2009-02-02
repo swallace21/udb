@@ -1,0 +1,93 @@
+#!/usr/bin/perl -w
+
+use Getopt::Long;
+use Pod::Usage;
+
+use lib "/home/aleks/pro/udb/lib";
+use BrownCS::UDB;
+
+use DBI qw(:sql_types);
+use DBD::Pg qw(:pg_types);
+
+# Print a simple help message.
+sub usage {
+  my ($exit_status) = @_;
+  pod2usage({ -exitval => $exit_status, -verbose => 99, -sections => "SYNOPSIS|DESCRIPTION|OPTIONS"});
+}
+
+my $help = 0;
+my $username = $ENV{'USER'};
+my $udb = BrownCS::UDB->new;
+
+GetOptions ('help|h|?' => \$help, 
+            'u' => \$username) or usage(2);
+usage(1) if $help;
+
+if (@ARGV == 0) {
+  usage(2);
+}
+
+my $hostname = shift;
+
+my $password = BrownCS::UDB->get_pass;
+
+$udb->start($username, $password);
+
+my $host = {};
+
+$host->{managed_by} = BrownCS::UDB::textquery("Who will manage this computer [tstaff, cis, user]? ", 0);
+$host->{usage} = BrownCS::UDB::textquery("How will this computer be used [tstaff, academic, personal]? ", 0);
+$host->{contact} = BrownCS::UDB::textquery("Who is the primary user of this computer? ", undef);
+$host->{ethernet} = BrownCS::UDB::textquery("What is the computer's MAC address?\nIf you don't know (e.g. for a xen machine), leave this blank. ", '');
+$host->{ip_addr} = BrownCS::UDB::textquery("What is the computer's primary IP address?\nIf you would like a random address assigned, leave this blank. ", '');
+$host->{hw_arch} = BrownCS::UDB::textquery("What is the computer's hardware architecture [e.g. x86, amd64]? ", 'x86');
+$host->{os_type} = BrownCS::UDB::textquery("What is the computer's primary OS [e.g. linux, vista]? ", undef);
+
+$host->{aliases} = "";
+$host->{classes} = "";
+
+if(BrownCS::UDB::ynquery("Insert new record? [Y/n] ")) {
+  $udb->insert_host($host);
+}
+
+$udb->finish;
+
+__END__
+
+=head1 NAME
+
+cdb-add - Add a host to UDB
+
+=head1 SYNOPSIS
+
+cdb-add [-u username] hostname
+
+=head1 DESCRIPTION
+
+adds one or more hosts to the database
+
+=head1 OPTIONS
+
+=over
+
+=item B<-h>, B<--help>
+
+Print a help message and exit.
+
+=item B<-u>, B<--username>=user
+
+Logs onto the database server as the specified username, instead of as
+the current user.
+
+=back
+
+=head1 AUTHORS
+
+Aleks Bromfield.
+
+=head1 SEE ALSO
+
+B<udb>
+
+=cut
+
