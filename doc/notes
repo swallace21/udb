@@ -13,5 +13,3 @@ CLEAN:
 - convert hostname to lowercase and remove whitespace
 - convert aliases to lowercase and remove whitespace
 
-
-
