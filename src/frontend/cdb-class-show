@@ -29,16 +29,9 @@ my $password = BrownCS::UDB->get_pass;
 
 $udb->start($username, $password);
 
-printf "%-15s%-40s%-10s\n\n", "MACHINE", "SERVICES", "CONTACTS";
-
 my @hosts = $udb->all_hosts_in_class($class);
 
-foreach my $hostname (@hosts) {
-  my %host = $udb->host($hostname);
-  $services = ($host{host_comments} or '');
-  $contact = ($host{contact} or '');
-  printf "%-15s%-40s%-10s\n", $hostname, $services, $contact;
-}
+print join(" ", @hosts) . "\n";
 
 $udb->finish;
 
@@ -46,17 +39,16 @@ __END__
 
 =head1 NAME
 
-cdb-contact-list - Print out a contact list for all hosts in a class
+cdb-class-show - Print out a list of all hosts in a class
 
 =head1 SYNOPSIS
 
-cdb-contact-list [-u username] classname
+cdb-class-show [-u username] class
 
 =head1 DESCRIPTION
 
-cdb-contact-list queries the UDB database for all hosts in a class, and
-prints out a contact list which is designed to be posted in the machine
-rooms. It is designed to resemble the old I<contact-list> command.
+cdb-class-show queries the UDB database for all members of a given host
+class. It is designed to resemble the old I<cdb classlist> command.
 
 =head1 OPTIONS
 

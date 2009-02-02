@@ -46,12 +46,6 @@ my %g_cdb_commands = (
     'usage' => "$PNAME help",
     'common' => 1,
   },
-  'profile' => {
-    'fn' => \&cdb_profile,
-    'desc' => ["print a summary of a host"],
-    'usage' => "$PNAME profile HOST",
-    'common' => 1,
-  },
   'modify' => {
     'fn' => \&cdb_modify,
     'desc' => ["modify a host record"],
@@ -101,23 +95,6 @@ my %g_cdb_fields = (
   'pxelink' => 'Image to use for net installs',
 );
 
-# Declare hash of active database fields and map dependency rules
-
-my %g_cdb_map_dependencies = (
-  'hostname' => [ 'ethers', 'netgroup', 'dns',
-                  'bootparams', 'tftpboot', 'dhcp', 'wpkg-hosts' ],
-  'aliases' => [ 'dns' ],
-  'ip_addr' => [ 'dns', 'bootparams', 'tftpboot', 'dhcp' ],
-  'ethernet' => [ 'ethers', 'dhcp' ],
-  'dhcp' => [ 'ethers', 'dhcp' ],
-  'os_type' => [ 'bootparams', 'tftpboot', 'wpkg-hosts' ],
-  'hw_arch' => [ 'bootparams', 'tftpboot', 'wpkg-hosts' ],
-  'comment' => [ ],
-  'mxhost' => [ 'dns' ],
-  'classes' => [ 'wpkg-hosts', 'netgroup' ],
-  'status' => [ 'ethers', 'dns', 'dhcp' ],
-);
-
 # Declare hash of active database fields and corresponding help functions
 
 my %g_cdb_help = (
@@ -132,181 +109,12 @@ my %g_cdb_help = (
   'status' => \&help_status,
 );
 
-# Declare hash of fields which require custom canonicalization subroutines
-
-my %g_cdb_canons = (
-  'hostname' => \&canon_hostname,       # Convert to lowercase
-  'aliases' => \&canon_aliases,         # Convert each alias to lowercase
-  'ip_addr' => \&canon_ip_addr,         # Strip leading zeroes
-  'ethernet' => \&canon_ethernet,       # Strip leading zeroes
-  'mxhost' => \&canon_hostname,         # Convert to lowercase
-);
-
-# Declare hash of maps we build from the database and their subroutines
-
-my %g_cdb_maps = (
-  'ethers' => \&build_ethers,                   # Construct /etc/ethers NIS map
-  'bootparams' => \&build_bootparams,           # Construct /etc/bootparams NIS map
-  'netgroup' => \&build_netgroup,               # Construct /etc/netgroup NIS map
-  'tftpboot' => \&build_tftpboot,               # Construct /tftpboot directory
-  'dhcp' => \&build_dhcp,                       # Construct dhcpd.conf directory
-  'dns' => \&build_dns,                         # Construct named data files
-  'nagios-hosts' => \&build_nagios_hosts,       # Construct nagios hosts.cfg file
-  'nagios-services' => \&build_nagios_services, # Construct nagios services.cfg file
-  'wpkg-hosts' => \&build_wpkg_hosts,           # Construct wpkg hosts.xml file
-);
-
-# Declare hash tables of include keys for extra error checking
-
-my %g_cdb_include_ethers = ();
-my %g_cdb_include_ip_addrs = ();
-my %g_cdb_include_hosts = ();
-
-# Declare array of temporary files, to be deleted upon exit
-my @g_tmpfiles = ();
-
-# Print a simple help message.
-sub usage {
-  my ($exit_status) = @_;
-  print $USAGE;
-  print "basic commands:\n\n";
-  foreach $k (sort(keys(%g_cdb_commands))) {
-    next if $g_cdb_commands{$k}{'common'} == 0;
-    print "  $k\t" . $g_cdb_commands{$k}{'desc'}[0] . "\n";
-  }
-  print "\nuse \"$PNAME help\" for details\n";
-  exit($exit_status);
-}
-
-# Print a simple help message for a specific command.
-sub command_help {
-  my ($cmd) = @_;
-  print "Usage: ";
-  print $g_cdb_commands{$cmd}{"usage"} , "\n\n";
-  my $lines = $g_cdb_commands{$cmd}{"desc"};
-  foreach $line (@$lines) {
-    $line =~ s/^\s+//;
-    print "  \u$line.\n";
-  }
-  print "\n";
-}
-
-#
-# FUNCTION: get_date
-#    DESCR: Return current date using nice format
-#
-
-sub get_date {
-  my(@elems);
-  my($raw);
-
-  chop($raw = ctime(time));
-  @elems = split(/\s+/, $raw);
-  return $elems[2] . $elems[1] . substr($elems[4], -2);
-}
-
-#
-# FUNCTION: fmt_time
-#    DESCR: Return specified time using nice format
-#
-
-sub fmt_time {
-  my($time) = @_;
-  my($sec, $min, $hour, $mday, $mon, $year) = localtime($time);
-
-  my(@moname) = ( 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec' );
-
-  return "${mday}${moname[$mon]}${year} ${hour}:${min}:${sec}";
-}
-
-#
-# FUNCTION: sighandler
-#    DESCR: Clean up and quit if we receive a signal
-#
-
+# sighandler :: void -> void
+# Clean up and quit if we receive a signal.
 sub sighandler {
   print "\n*** Termination signal received\n";
   $udb->finish;
-  foreach (@g_tmpfiles) {
-    unlink($_);
-  }
   exit(0);
-}
-
-#
-# FUNCTION: END
-#    DESCR: Exit handler to clean things up in case we die.
-#
-
-END {
-  foreach (@g_tmpfiles) {
-    unlink($_);
-  }
-}
-
-#
-# FUNCTION: parse_ethernet_includes
-#    DESCR: Build hash of ethernet address keys from include file for ethers
-#           NIS map.
-#
-
-sub parse_ethernet_includes {
-  my($include) = $cdb_map_includes{'ethers'};
-  my($line);
-
-  return if(!defined($cdb_map_includes{'ethers'}) || ! -f("$include"));
-
-  open(ETHERS, "<$include") ||
-    die "$PNAME: ERROR: Failed to open $include: $!\n";
-
-  while(<ETHERS>) {
-    ($line = $_) =~ s/#.*//;
-    next if($line =~ /^\s*$/);
-    
-    if($line !~ /^\s*([a-fA-F0-9:]+)\s+(\w+)\s*$/) {
-      warn "$PNAME: WARNING: \"$include\", line ${.}: Invalid ethers syntax\n";
-      next;
-    }
-
-    $g_cdb_include_ethers{$1} = $2;
-  }
-
-  close(ETHERS);
-}
-
-#
-# FUNCTION: parse_host_includes
-#    DESCR: Build hash of host names, aliases, and IP addresses from include
-#           file for NIS hosts map.
-#
-
-sub parse_host_includes {
-  my($include) = $cdb_map_includes{'hosts'};
-  my($line);
-
-  return if(!defined($cdb_map_includes{'hosts'}) || ! -f ("$include"));
-
-  open(HOSTS, "<$include") ||
-    die "$PNAME: ERROR: Failed to open $include: $!\n";
-
-  while(<HOSTS>) {
-    ($line = $_) =~ s/#.*//;
-    next if($line =~ /^\s*$/);
-
-    if($line !~ /^\s*([0-9\.]+)\s+(\S.+)$/) {
-      warn "$PNAME: WARNING: \"$include\", line ${.}: Invalid hosts syntax\n";
-      next;
-    }
-
-    foreach $name (split(/\s+/, $2)) {
-      $g_cdb_include_ip_addrs{$1} = $2
-        if(!defined($g_cdb_include_ip_addrs{$1}));
-      $g_cdb_include_hosts{$name} = $1;
-    }
-  }
-
-  close(HOSTS);
 }
 
 #
@@ -321,39 +129,7 @@ sub sort_fieldnames {
   return $a cmp $b;
 }
 
-#
-# FUNCTION: canon_hostname
-#    DESCR: Convert hostname to lowercase and remove whitespace
-#
-
-sub canon_hostname {
-  my($hostname) = @_;
-  $hostname =~ tr/A-Z/a-z/;
-  $hostname =~ s/\s+//g;
-  return $hostname;
-}
-
-#
-# FUNCTION: canon_aliases
-#    DESCR: Convert aliases to lowercase and remove whitespace
-#
-
-sub canon_aliases {
-  my($aliases) = @_;
-  my(@alist) = split(/,/, $aliases);
-  foreach $i (0 .. $#alist) {
-    $alist[$i] =~ tr/A-Z/a-z/;
-    $alist[$i] =~ s/\s+//g;
-  }
-  return join(',', @alist);
-}
-
-#
-# FUNCTION: canon_ip_addr
-#    DESCR: Strip leading zeroes and whitespace from IP address string
-#
-
-sub canon_ip_addr {
+sub find_unused_ip {
   my($ip_addr) = @_;
   my(%ip_addrs) = ();
   my(@nibbles, $addr);
@@ -384,26 +160,6 @@ sub canon_ip_addr {
 
   die "$PNAME ERROR: No addresses are available for the $nibbles[2] subnet\n";
 }
-
-#
-# FUNCTION: canon_ethernet
-#    DESCR: Strip leading zeroes from Ethernet address string and convert
-#           uppercase hex characters to lowercase and remove whitespace
-#
-
-sub canon_ethernet {
-  my($ether) = @_;
-  my(@nibbles);
-
-  $ether =~ s/\s+//g;
-  @nibbles = split(/:/, $ether);
-  foreach $i (0 .. $#nibbles) {
-    $nibbles[$i] =~ s/^0(.+)$/$1/;
-    $nibbles[$i] =~ tr/A-F/a-f/;
-  }
-  return join(':', @nibbles);
-}
-
 
 #
 # FUNCTION: help_hostname
@@ -563,21 +319,6 @@ sub help_status {
   print "\n";
 }
 
-
-#
-# FUNCTION: ynquery
-#    DESCR: Prompt the user for yes or no and return appropriate value.
-#
-
-sub ynquery {
-  my($prompt) = @_;
-  my($answer);
-
-  printflush('STDOUT', $prompt);
-  chop($answer = <STDIN>);
-  return ($answer eq '') || ($answer eq 'Y') || ($answer eq 'y');
-}
-
 #
 # FUNCTION: modify_record
 #    DESCR: Interactively modify a record
@@ -626,7 +367,7 @@ sub modify_record {
     }
   }
 
-  $modified = ynquery("Save modifications (y/n)[y]? ") if($modified);
+  $modified = BrownCS::UDB::ynquery("Save modifications (y/n)[y]? ") if($modified);
   return $modified;
 }
 
@@ -1012,7 +753,7 @@ sub cdb_insert {
     $cdb_by_hostname->{$key}{$field} = $value;
   }
 
-  if(ynquery("Insert new record (y/n)[y]? ")) {
+  if(BrownCS::UDB::ynquery("Insert new record (y/n)[y]? ")) {
     printflush('STDOUT', "Writing database file ... ");
     write_db($cdb_by_hostname);
     printflush('STDOUT', "done\n");
@@ -1023,36 +764,6 @@ sub cdb_insert {
 
   } else {
     print "Insert cancelled.\n";
-  }
-
-  return 0;
-}
-
-#
-# FUNCTION: cdb_profile
-#    DESCR: Print out a summary of all data for a given record.
-#
-
-sub cdb_profile {
-  my(@args) = @_;
-
-  if(@args != 1) {
-    command_help("profile");
-    return 2;
-  }
-
-  my $hostname = $args[0];
-
-  my %host = $udb->host($hostname);
-
-  $host{aliases} = join(',',@{$host{aliases}});
-  $host{classes} = join(',',@{$host{classes}});
-
-  foreach $field (sort sort_fieldnames keys(%g_cdb_fields)) {
-    if (not $host{$field}) {
-      $host{$field} = '';
-    }
-    print $field, ' = ', $host{$field}, "\n";
   }
 
   return 0;

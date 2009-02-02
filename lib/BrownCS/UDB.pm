@@ -13,6 +13,38 @@ use Data::Dumper;
 our $PNAME = 'UDB';
 our $VERSION = '0.01';
 
+#
+# static methods
+#
+
+# get_pass :: void -> string
+# Prompt the user for a password and return it.
+sub get_pass {
+  print "Password: ";
+  ReadMode 'noecho';
+  my $password = ReadLine 0;
+  chomp $password;
+  ReadMode 'normal';
+  print "\n";
+
+  return $password;
+}
+
+# ynquery :: string -> boolean
+# Prompt the user for yes or no and return appropriate value.
+sub ynquery {
+  my($prompt) = @_;
+  my($answer);
+
+  printflush('STDOUT', $prompt);
+  chop($answer = <STDIN>);
+  return ($answer eq '') || ($answer eq 'Y') || ($answer eq 'y');
+}
+
+#
+# object methods
+#
+
 sub new {
   my $proto = shift;
   my $class = ref($proto) || $proto;
@@ -26,15 +58,12 @@ sub new {
   return $self;
 }
 
-sub get_pass {
-  print "Password: ";
-  ReadMode 'noecho';
-  my $password = ReadLine 0;
-  chomp $password;
-  ReadMode 'normal';
-  print "\n";
-
-  return $password;
+sub prepare {
+  my $self = shift;
+  my ($name, $st) = @_;
+  if (not $self->{sths}->{$name}) {
+    $self->{sths}->{$name} = $self->{dbh}->prepare($st);
+  }
 }
 
 sub start {
@@ -42,27 +71,12 @@ sub start {
   my ($username, $password) = @_;
   $self->{dbh} = DBI->connect("dbi:Pg:dbname=udb;host=db", $username, $password, {AutoCommit=>0, pg_errorlevel=>2}) or die "Couldn't connect to database: " . DBI->errstr;
 
-  $self->{sths}->{all_ips_select} = $self->{dbh}->prepare("select ipaddr from net_addresses");
-  $self->{sths}->{all_equip_select} = $self->{dbh}->prepare("select comments, contact, equip_status from equipment");
-  $self->{sths}->{all_comps_select} = $self->{dbh}->prepare("select hw_arch, os, pxelink from computers");
-  $self->{sths}->{all_ethernet_select} = $self->{dbh}->prepare("select ethernet from net_interfaces");
-  $self->{sths}->{all_aliases_select} = $self->{dbh}->prepare("select name from net_dns_entries");
-  $self->{sths}->{all_classes_select} = $self->{dbh}->prepare("select cc.class from comp_classes cc");
-  
-  $self->{sths}->{equip_select} = $self->{dbh}->prepare("select e.comments, e.contact, e.equip_status from equipment e where e.equip_name = ?");
-  
-  $self->{sths}->{comp_select} = $self->{dbh}->prepare("select c.hw_arch, c.os, c.pxelink, c.comments from equipment e, computers c where e.equip_name = ? and c.equipment_id = e.id");
-  
-  $self->{sths}->{ethernet_select} = $self->{dbh}->prepare("select ni.ethernet from equipment e, net_interfaces ni where e.equip_name = ? and e.id = ni.equipment_id");
-  
-  $self->{sths}->{ip_addr_select} = $self->{dbh}->prepare("select na.ipaddr from equipment e, net_addresses_net_interfaces nani, net_interfaces ni, net_addresses na where e.equip_name = ? and e.id = ni.equipment_id and nani.net_interfaces_id = ni.id and nani.net_addresses_id = na.id");
-  
-  $self->{sths}->{aliases_select} = $self->{dbh}->prepare("select nde.name from net_dns_entries nde, equipment e, net_addresses_net_interfaces nani, net_interfaces ni, net_addresses na where e.equip_name = ? and e.id = ni.equipment_id and nani.net_interfaces_id = ni.id and nani.net_addresses_id = na.id and na.id = nde.net_address_id");
-  
-  $self->{sths}->{classes_select} = $self->{dbh}->prepare("select cc.class from comp_classes cc, computers c, comp_classes_computers ccc, equipment e where e.equip_name = ? and e.id = c.equipment_id and ccc.comp_classes_id = cc.id and ccc.computers_id = c.id");
-  
-  $self->{sths}->{all_hosts_in_class_select} = $self->{dbh}->prepare("select e.equip_name from comp_classes cc, computers c, comp_classes_computers ccc, equipment e where e.id = c.equipment_id and ccc.comp_classes_id = cc.id and ccc.computers_id = c.id and cc.class = ?");
-
+  $self->prepare("all_aliases_select", "select name from net_dns_entries");
+  $self->prepare("all_classes_select", "select cc.class from comp_classes cc");
+  $self->prepare("all_comps_select", "select hw_arch, os, pxelink from computers");
+  $self->prepare("all_equip_select", "select comments, contact, equip_status from equipment");
+  $self->prepare("all_ethernet_select", "select ethernet from net_interfaces");
+  $self->prepare("all_ips_select", "select ipaddr from net_addresses");
 }
 
 sub all_ips {
@@ -86,6 +100,8 @@ sub all_hosts_in_class {
   my @hosts_in_class = ();
   my $host;
 
+  $self->prepare("all_hosts_in_class_select", "select e.equip_name from comp_classes cc, computers c, comp_classes_computers ccc, equipment e where e.id = c.equipment_id and ccc.comp_classes_id = cc.id and ccc.computers_id = c.id and cc.class = ?");
+
   $self->{sths}->{all_hosts_in_class_select}->execute($class);
   $self->{sths}->{all_hosts_in_class_select}->bind_columns(\$host);
   
@@ -100,6 +116,13 @@ sub host {
   my $self = shift;
   my ($hostname) = @_;
   my %host = ();
+
+  $self->prepare("aliases_select", "select nde.name from net_dns_entries nde, equipment e, net_addresses_net_interfaces nani, net_interfaces ni, net_addresses na where e.equip_name = ? and e.id = ni.equipment_id and nani.net_interfaces_id = ni.id and nani.net_addresses_id = na.id and na.id = nde.net_address_id");
+  $self->prepare("classes_select", "select cc.class from comp_classes cc, computers c, comp_classes_computers ccc, equipment e where e.equip_name = ? and e.id = c.equipment_id and ccc.comp_classes_id = cc.id and ccc.computers_id = c.id");
+  $self->prepare("comp_select", "select c.hw_arch, c.os, c.pxelink, c.comments from equipment e, computers c where e.equip_name = ? and c.equipment_id = e.id");
+  $self->prepare("equip_select", "select e.comments, e.contact, e.equip_status from equipment e where e.equip_name = ?");
+  $self->prepare("ethernet_select", "select ni.ethernet from equipment e, net_interfaces ni where e.equip_name = ? and e.id = ni.equipment_id");
+  $self->prepare("ip_addr_select", "select na.ipaddr from equipment e, net_addresses_net_interfaces nani, net_interfaces ni, net_addresses na where e.equip_name = ? and e.id = ni.equipment_id and nani.net_interfaces_id = ni.id and nani.net_addresses_id = na.id");
 
   $host{hostname} = $hostname;
   $host{mxhost} = "mx.cs.brown.edu";
@@ -154,6 +177,46 @@ sub finish {
     $self->{dbh}->disconnect;
   }
 }
+
+sub get_class {
+  my $self = shift;
+  my ($class) = @_;
+  my $class_id;
+
+  $self->prepare("class_insert", "insert into comp_classes (class) values (?) returning id");
+  $self->prepare("class_select", "select id from comp_classes where class = ?");
+
+  $self->{sths}->{class_select}->execute($class);
+
+  if ($self->{sths}->{class_select}->rows == 0) {
+    $self->{sths}->{class_insert}->execute($_);
+    $class_id = $self->{sths}->{class_insert}->fetch()->[0];
+  } else {
+    $class_id = $self->{sths}->{class_select}->fetchrow_arrayref()->[0];
+  }
+
+  return $class_id;
+}
+
+sub get_vlan {
+  my $self = shift;
+  my ($ip) = @_;
+
+  $self->prepare("vlan_select", "select id from net_vlans v where ? << v.network");
+
+  $self->{sths}->{vlan_select}->execute($ip);
+
+  my $vlan_id;
+
+  if ($self->{sths}->{vlan_select}->rows == 0) {
+    die "Can't find vlan for $ip!\n";
+  } else {
+    $vlan_id = $self->{sths}->{vlan_select}->fetchrow_arrayref()->[0];
+  }
+
+  return $vlan_id;
+}
+
 
 1;
 __END__

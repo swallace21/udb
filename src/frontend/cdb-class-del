@@ -12,6 +12,12 @@ sub usage {
   pod2usage({ -exitval => $exit_status, -verbose => 99, -sections => "SYNOPSIS|DESCRIPTION|OPTIONS"});
 }
 
+sub sort_fieldnames {
+  return -1 if($a eq 'hostname');
+  return 1 if($b eq 'hostname');
+  return $a cmp $b;
+}
+
 my $help = 0;
 my $username = $ENV{'USER'};
 my $udb = BrownCS::UDB->new;
@@ -24,20 +30,21 @@ if (@ARGV == 0) {
   usage(2);
 }
 
-my $class = $ARGV[0];
+my $hostname = $ARGV[0];
 my $password = BrownCS::UDB->get_pass;
 
 $udb->start($username, $password);
 
-printf "%-15s%-40s%-10s\n\n", "MACHINE", "SERVICES", "CONTACTS";
+my %host = $udb->host($hostname);
 
-my @hosts = $udb->all_hosts_in_class($class);
+$host{aliases} = join(',',@{$host{aliases}});
+$host{classes} = join(',',@{$host{classes}});
 
-foreach my $hostname (@hosts) {
-  my %host = $udb->host($hostname);
-  $services = ($host{host_comments} or '');
-  $contact = ($host{contact} or '');
-  printf "%-15s%-40s%-10s\n", $hostname, $services, $contact;
+foreach $field (sort sort_fieldnames keys(%host)) {
+  if (not $host{$field}) {
+    $host{$field} = '';
+  }
+  print $field, ' = ', $host{$field}, "\n";
 }
 
 $udb->finish;
@@ -46,17 +53,17 @@ __END__
 
 =head1 NAME
 
-cdb-contact-list - Print out a contact list for all hosts in a class
+cdb-show - Print out a summary of a host
 
 =head1 SYNOPSIS
 
-cdb-contact-list [-u username] classname
+cdb-show [-u username] hostname
 
 =head1 DESCRIPTION
 
-cdb-contact-list queries the UDB database for all hosts in a class, and
-prints out a contact list which is designed to be posted in the machine
-rooms. It is designed to resemble the old I<contact-list> command.
+cdb-show queries the UDB database for information about a host, and
+prints it out to the console. It is designed to resemble the old I<cdb
+profile> command.
 
 =head1 OPTIONS
 

@@ -1,0 +1,280 @@
+#!/usr/bin/perl
+
+use Getopt::Long;
+use Pod::Usage;
+
+use DBI qw(:sql_types);
+use DBD::Pg qw(:pg_types);
+
+eval('require "/tstaff/share/cdb/db.pl";');
+
+use lib "/home/aleks/pro/udb/lib";
+use BrownCS::UDB;
+
+# Print a simple help message.
+sub usage {
+  my ($exit_status) = @_;
+  pod2usage({ -exitval => $exit_status, -verbose => 99, -sections => "SYNOPSIS|DESCRIPTION|OPTIONS"});
+}
+
+my $help = 0;
+my $username = $ENV{'USER'};
+my $udb = BrownCS::UDB->new;
+
+GetOptions ('help|h|?' => \$help,
+            'u' => \$username) or usage(2);
+usage(1) if $help;
+
+my $password = BrownCS::UDB->get_pass;
+
+$udb->start($username, $password);
+
+#
+# vlans and zones
+#
+
+print "creating vlans and zones... ";
+
+$udb->{dbh}->do("DELETE FROM net_zones; DELETE FROM net_vlans;");
+
+my $zone_insert = $udb->{dbh}->prepare("INSERT INTO net_zones (owner, routing, comments) VALUES (?, ?, ?)");
+
+my $vlan_insert = $udb->{dbh}->prepare("INSERT INTO net_vlans (zone_id, vlan_num, network, comments) VALUES (?, ?, ?, ?)");
+$vlan_insert->bind_param(1, undef, SQL_INTEGER);
+$vlan_insert->bind_param(2, undef, SQL_INTEGER);
+$vlan_insert->bind_param(3, undef, {pg_type => PG_CIDR});
+
+$zone_insert->execute("tstaff", "DMZ", undef);
+my $tstaff_DMZ_id = $udb->{dbh}->last_insert_id(undef, undef, "net_zones", undef);
+
+$zone_insert->execute("tstaff", "private", undef);
+my $tstaff_private_id = $udb->{dbh}->last_insert_id(undef, undef, "net_zones", undef);
+
+$zone_insert->execute("tstaff", "standard", undef);
+my $tstaff_standard_id = $udb->{dbh}->last_insert_id(undef, undef, "net_zones", undef);
+
+$zone_insert->execute("user", "DMZ", undef);
+my $user_DMZ_id = $udb->{dbh}->last_insert_id(undef, undef, "net_zones", undef);
+
+$zone_insert->execute("user", "private", "cs166 (security course)");
+my $cs166_id = $udb->{dbh}->last_insert_id(undef, undef, "net_zones", undef);
+
+$zone_insert->execute("user", "special", "completely outside the department");
+my $outside_id = $udb->{dbh}->last_insert_id(undef, undef, "net_zones", undef);
+
+$zone_insert->execute("user", "special", "OSHEAN subnet (for jj)");
+my $jj_id = $udb->{dbh}->last_insert_id(undef, undef, "net_zones", undef);
+
+$zone_insert->execute("user", "special", "techhouse");
+my $techhouse_id = $udb->{dbh}->last_insert_id(undef, undef, "net_zones", undef);
+
+$zone_insert->execute("user", "special", "ipsec");
+my $ipsec_id = $udb->{dbh}->last_insert_id(undef, undef, "net_zones", undef);
+
+$zone_insert->execute("user", "standard", undef);
+my $user_standard_id = $udb->{dbh}->last_insert_id(undef, undef, "net_zones", undef);
+
+$vlan_insert->execute($tstaff_DMZ_id, 32, "128.148.32.0/25", undef);
+$vlan_insert->execute($tstaff_private_id, 192, "192.168.1.0/24", undef);
+$vlan_insert->execute($tstaff_private_id, 898, "10.116.0.0/16", "ilab network");
+$vlan_insert->execute($tstaff_private_id, 897, "192.168.10.0/24", "bounty and pbcup");
+$vlan_insert->execute($tstaff_standard_id, 31, "128.148.31.0/24", undef);
+$vlan_insert->execute($tstaff_standard_id, 33, "128.148.33.0/24", undef);
+$vlan_insert->execute($tstaff_standard_id, 37, "128.148.37.0/24", undef);
+$vlan_insert->execute($tstaff_standard_id, 38, "128.148.38.0/24", undef);
+$vlan_insert->execute($user_DMZ_id, 892, "128.148.32.128/25", undef);
+$vlan_insert->execute($cs166_id, 893, "192.168.100.0/24", undef);
+$vlan_insert->execute($outside_id, 34, "128.148.34.0/24", undef);
+$vlan_insert->execute($jj_id, 698, "198.7.242.32/28", undef);
+$vlan_insert->execute($techhouse_id, 360, "138.16.60.0/24", undef);
+$vlan_insert->execute($user_standard_id, 36, "128.148.36.0/24", undef);
+$vlan_insert->execute($ipsec_id, 885, "10.117.0.0/16", undef);
+
+print "done.\n";
+
+#
+# cdb
+# 
+
+print "importing cdb... ";
+
+$udb->prepare("equip_insert", "INSERT INTO equipment (equip_status, usage, equip_name, contact) VALUES ('deployed', 'academic', ?, ?) RETURNING id");
+
+$udb->prepare("comp_insert", "INSERT INTO computers (equipment_id, machine_name, hw_arch, os, pxelink, comments) VALUES (?, ?, ?, ?, ?, ?) RETURNING id");
+$udb->{sths}->{comp_insert}->bind_param(1, undef, SQL_INTEGER);
+
+$udb->prepare("interface_insert", "INSERT INTO net_interfaces (equipment_id, ethernet) VALUES (?, ?) RETURNING id");
+$udb->{sths}->{interface_insert}->bind_param(1, undef, SQL_INTEGER);
+$udb->{sths}->{interface_insert}->bind_param(2, undef, {pg_type => PG_MACADDR});
+
+$udb->prepare("address_insert", "INSERT INTO net_addresses (vlan_id, dns_name, ipaddr, monitored) VALUES (?, ?, ?, ?) RETURNING id");
+$udb->{sths}->{address_insert}->bind_param(1, undef, SQL_INTEGER);
+$udb->{sths}->{address_insert}->bind_param(3, undef, {pg_type => PG_INET});
+$udb->{sths}->{address_insert}->bind_param(4, undef, {pg_type => PG_BOOL});
+
+$udb->prepare("addr_iface_insert", "INSERT INTO net_addresses_net_interfaces (net_addresses_id, net_interfaces_id) VALUES (?, ?)");
+$udb->{sths}->{addr_iface_insert}->bind_param(1, undef, SQL_INTEGER);
+$udb->{sths}->{addr_iface_insert}->bind_param(2, undef, SQL_INTEGER);
+
+$udb->prepare("dns_insert", "INSERT INTO net_dns_entries (name, domain, net_address_id) VALUES (?, 'cs.brown.edu', ?)");
+$udb->{sths}->{dns_insert}->bind_param(2, undef, SQL_INTEGER);
+
+$udb->prepare("class_comp_insert", "INSERT INTO comp_classes_computers (comp_classes_id, computers_id) VALUES (?,?)");
+$udb->{sths}->{class_comp_insert}->bind_param(1, undef, SQL_INTEGER);
+$udb->{sths}->{class_comp_insert}->bind_param(2, undef, SQL_INTEGER);
+
+$udb->{dbh}->do("DELETE FROM equipment;");
+$udb->{dbh}->do("DELETE FROM computers;");
+$udb->{dbh}->do("DELETE FROM net_interfaces;");
+$udb->{dbh}->do("DELETE FROM net_addresses;");
+$udb->{dbh}->do("DELETE FROM net_addresses_net_interfaces;");
+$udb->{dbh}->do("DELETE FROM net_dns_entries;");
+$udb->{dbh}->do("DELETE FROM comp_classes;");
+$udb->{dbh}->do("DELETE FROM comp_classes_computers;");
+
+my($key, $data);
+while ( ($key, $data) = each(%$cdb_by_hostname) ) {
+  if (( $data->{'status'} ne 'disabled' ) and ($data->{'ethernet'} ne '' )) {
+    &insert_host($data);
+  }
+}
+
+print "done.\n";
+
+$udb->finish;
+
+sub insert_host {
+  my($host) = @_;
+
+  my $machine_name = $host->{'hostname'};
+
+  print "importing cdb $machine_name";
+
+  my $contact = $host->{'contact'};
+
+  my $prim_grp = $host->{'prim_grp'};
+  $host->{'aliases'} =~ s/\s//g;
+  my @aliases = split(/,/, $host->{'aliases'});
+  $host->{'classes'} =~ s/\s//g;
+  my @classes = split(/,/, $host->{'classes'});
+
+  my $ethernet = $host->{'ethernet'};
+
+  my $ipaddr = $host->{'ip_addr'};
+  my $vlan_id;
+  if ((!$ipaddr) or ($ipaddr eq "")) {
+    $ipaddr = undef;
+    $vlan_id = $udb->get_vlan("128.148.36.1");
+  } else {
+    $vlan_id = $udb->get_vlan($ipaddr);
+  }
+
+  my $status = $host->{'status'};
+
+  my $monitored = 0;
+  if ($status eq "monitored") {
+    $monitored = 1;
+  }
+
+  # create an equipment entry...
+
+  $udb->{sths}->{equip_insert}->execute($machine_name, $contact);
+  my $equip_id = $udb->{sths}->{equip_insert}->fetch()->[0];
+
+  # fill in equip_status
+
+  my $hw_arch = $host->{'hw_arch'};
+  if ($hw_arch eq "") {
+    $hw_arch = undef;
+  } elsif ($hw_arch eq "x64") {
+    $hw_arch = "amd64";
+  }
+
+  my $os = $host->{'os_type'};
+  if (($os eq "other") or ($os eq "") or ($os eq "windows")) {
+    $os = undef;
+  }
+
+  # a bunch of stuff from the comp database that we don't care
+  # about...
+
+  my $pxelink = $host->{'pxelink'};
+  if ($pxelink eq "") {
+    $pxelink = undef;
+  }
+
+  my $comments = $host->{'comment'};
+  if ($comments eq "") {
+    $comments = undef;
+  }
+
+  $udb->{sths}->{comp_insert}->execute($equip_id, $machine_name, $hw_arch, $os, $pxelink, $comments);
+  my $comp_id = $udb->{sths}->{comp_insert}->fetch()->[0];
+
+  $udb->{sths}->{interface_insert}->execute($equip_id, $ethernet);
+  my $interface_id = $udb->{sths}->{interface_insert}->fetch()->[0];
+
+  $udb->{sths}->{address_insert}->execute($vlan_id, $machine_name, $ipaddr, $monitored);
+  my $address_id = $udb->{sths}->{address_insert}->fetch()->[0];
+
+  $udb->{sths}->{addr_iface_insert}->execute($address_id, $interface_id);
+
+  $udb->{sths}->{dns_insert}->execute($machine_name, $address_id);
+
+  if ( $#aliases != -1 ) {
+    foreach (@aliases) {
+      print ", alias $_";
+      $udb->{sths}->{dns_insert}->execute($_, $address_id);
+    }
+  }
+
+  if ( $#classes != -1 ) {
+    foreach (@classes) {
+      print ", class $_";
+      my $class_id = $udb->get_class($_);
+      $udb->{sths}->{class_comp_insert}->execute($class_id, $comp_id);
+    }
+  }
+
+  print "\n";
+}
+
+__END__
+
+=head1 NAME
+
+import-cdb - import from cdb
+
+=head1 SYNOPSIS
+
+import-cdb [-u username]
+
+=head1 DESCRIPTION
+
+imports from cdb
+
+=head1 OPTIONS
+
+=over
+
+=item B<-h>, B<--help>
+
+Print a help message and exit.
+
+=item B<-u>, B<--username>=user
+
+Logs onto the database server as the specified username, instead of as
+the current user.
+
+=back
+
+=head1 AUTHORS
+
+Aleks Bromfield.
+
+=head1 SEE ALSO
+
+B<udb>
+
+=cut
+
