@@ -35,7 +35,7 @@ my $password = BrownCS::UDB->get_pass;
 
 $udb->start($username, $password);
 
-my %host = $udb->host($hostname);
+my %host = $udb->get_host($hostname);
 
 $host{aliases} = join(',',@{$host{aliases}});
 $host{classes} = join(',',@{$host{classes}});

@@ -14,5 +14,16 @@ CLEAN:
 - convert aliases to lowercase and remove whitespace
 
 
+
 DEFAULTS:
 
+
+cdb-add kai
+
+ask for:
+
+- contact
+- comment
+- ethernet
+- ip
+-

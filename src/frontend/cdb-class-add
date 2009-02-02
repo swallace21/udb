@@ -6,12 +6,8 @@ use Pod::Usage;
 use lib "/home/aleks/pro/udb/lib";
 use BrownCS::UDB;
 
-
-my $class_select = $dbh->prepare("SELECT id from comp_classes where class = ?");
-my $class_insert = $dbh->prepare("INSERT INTO comp_classes (class) VALUES (?) RETURNING id");
-my $class_comp_insert = $dbh->prepare("INSERT INTO comp_classes_computers (comp_classes_id, computers_id) VALUES (?,?)");
-$class_comp_insert->bind_param(1, undef, SQL_INTEGER);
-$class_comp_insert->bind_param(2, undef, SQL_INTEGER);
+use DBI qw(:sql_types);
+use DBD::Pg qw(:pg_types);
 
 # Print a simple help message.
 sub usage {
@@ -45,10 +41,16 @@ my $password = BrownCS::UDB->get_pass;
 
 $udb->start($username, $password);
 
-# my %host = $udb->host($hostname);
+$udb->prepare("class_comp_insert", "INSERT INTO comp_classes_computers (comp_classes_id, computers_id) VALUES (?,?)");
+$udb->{sths}->{class_comp_insert}->bind_param(1, undef, SQL_INTEGER);
+$udb->{sths}->{class_comp_insert}->bind_param(2, undef, SQL_INTEGER);
+
+my $class_id = $udb->get_class($class);
 
 foreach $hostname (@hostnames) {
-  print "adding $hostname to $class\n";
+  print "adding host $hostname to class $class\n";
+  my %host = $udb->get_host($hostname);
+  $udb->{sths}->{class_comp_insert}->execute($class_id, $host{comp_id});
 }
 
 $udb->finish;
@@ -65,9 +67,7 @@ cdb-class-add [-u username] classname hostname [hostname ...]
 
 =head1 DESCRIPTION
 
-cdb-class-add queries the UDB database for information about a host, and
-prints it out to the console. It is designed to resemble the old I<cdb
-profile> command.
+adds one or more hosts to a class
 
 =head1 OPTIONS
 

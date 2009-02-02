@@ -34,10 +34,9 @@ printf "%-15s%-40s%-10s\n\n", "MACHINE", "SERVICES", "CONTACTS";
 my @hosts = $udb->all_hosts_in_class($class);
 
 foreach my $hostname (@hosts) {
-  my %host = $udb->host($hostname);
-  $services = ($host{host_comments} or '');
+  my %host = $udb->get_host($hostname);
   $contact = ($host{contact} or '');
-  printf "%-15s%-40s%-10s\n", $hostname, $services, $contact;
+  printf "%-15s%-40s%-10s\n", $hostname, "who knows", $contact;
 }
 
 $udb->finish;

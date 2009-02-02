@@ -11,18 +11,18 @@ create table log_db_export (
   last_run                  timestamp default now()
 ) ;
 
-CREATE FUNCTION commacat(acc text, instr text) RETURNS text AS
+create or replace function commacat(acc text, instr text) returns text as
 $$                                                                                        
-BEGIN                  
-  IF acc IS NULL OR acc = '' THEN
-    RETURN instr;
-  ELSE
-    RETURN acc || ', ' || instr;
-  END IF;
-END;
-$$ LANGUAGE plpgsql;
+begin                  
+  if acc is null or acc = '' then
+    return instr;
+  else
+    return acc || ', ' || instr;
+  end if;
+end;
+$$ language plpgsql;
 
-CREATE AGGREGATE textcat_all (
+create aggregate textcat_all (
   basetype    = text,
   sfunc       = commacat,
   stype       = text,
@@ -41,8 +41,7 @@ create table places (
   id                        serial primary key,
   city                      text,
   building                  text,
-  room                      text,
-  comments                  text
+  room                      text
 ) ;
 
 -- }}}
@@ -85,8 +84,7 @@ create table purchase_orders (
   cost1                     numeric,
   cost2                     numeric,
   cost3                     numeric,
-  cost4                     numeric,
-  comments                  text
+  cost4                     numeric
 ) ;
 
 create table equipment (
@@ -101,16 +99,15 @@ create table equipment (
                               on update cascade
                               on delete cascade,
   cs_id                     integer unique default nextval('cs_id_seq'),
+  name                      text unique,
   equip_status              equipstatus not null,
-  equip_name                text unique,
   usage                     usage,
   installed_on              date,
   descr                     text,
   owner                     text,
   contact                   text,
   serial_num                text,
-  brown_inv_num             text,
-  comments                  text
+  brown_inv_num             text
 ) ;
 
 create table surplus_equipment (
@@ -138,6 +135,11 @@ value = 'private' or
 value = 'DMZ' or
 value = 'special');
 
+create domain dns_type text not null check (
+value = 'internal' or
+value = 'external' or
+value = 'both');
+
 create or replace function num_ports(integer) returns integer as 'select 0' language 'sql';
 create or replace function vlan_zone(integer) returns integer as 'select 0' language 'sql';
 
@@ -152,8 +154,7 @@ create table net_switches (
   port_prefix               text not null,
   connection                text not null default 'ssh',
   username                  text not null,
-  pass                      text not null,
-  comments                  text
+  pass                      text not null
 ) ;
 
 create table net_ports (
@@ -178,21 +179,19 @@ create table net_interfaces (
                               on update cascade
                               on delete set null,
   ethernet                  macaddr not null,
-  last_changed              timestamp not null default now(),
-  comments                  text
+  last_changed              timestamp not null default now()
 ) ;
 
 create table net_services (
   id                        serial primary key,
-  service                   text not null,
-  comments                  text
+  service                   text not null
 ) ;
 
 create table net_zones (
   id                        serial primary key,
+  name                      text not null,
   owner                     equipmanaged,
-  routing                   routing_type,
-  comments                  text
+  routing                   routing_type
 ) ;
 
 create table net_vlans (
@@ -201,8 +200,7 @@ create table net_vlans (
                               on update cascade
                               on delete cascade,
   vlan_num                  integer unique not null,
-  network                   cidr not null,
-  comments                  text
+  network                   cidr not null
 ) ;
 
 -- net_addresses
@@ -214,18 +212,14 @@ create table net_addresses (
   zone_id                   integer not null references net_zones
                               on update cascade
                               on delete cascade,
-  dns_name                  text not null,
   ipaddr                    inet,
   enabled                   boolean not null default true,
   monitored                 boolean not null,
   last_changed              timestamp not null default now(),
-  comments                  text,
-  -- each dns name should be unique in a zone
-  unique (dns_name, zone_id),
   check (ipaddr is null or masklen(ipaddr) = 32)
 ) ;
 
-create function update_zone_by_vlan() returns trigger as $update_zone_by_vlan$
+create or replace function update_zone_by_vlan() returns trigger as $update_zone_by_vlan$
 declare
   new_vlan_zone_id          integer;
 begin
@@ -242,12 +236,12 @@ create trigger vlan_zone_trigger before insert or update on net_addresses
 create table net_dns_entries (
   name                      text,
   domain                    text,
+  zone                      dns_type,
   net_address_id            integer not null references net_addresses
                               on update cascade
                               on delete cascade,
   last_changed              timestamp not null default now(),
-  comments                  text,
-  primary key               (name, domain)
+  primary key               (name, domain, zone)
 ) ;
 
 -- join tables {{{
@@ -325,6 +319,7 @@ value = 'staff' or
 value = 'guest');
 
 create sequence uid_seq;
+
 create sequence gid_seq;
 
 create table people (
@@ -340,8 +335,7 @@ create table people (
   office                    text,
   office_phone              text,
   home_phone                text,
-  cell_phone                text,
-  comments                  text
+  cell_phone                text
 ) ;
 
 create index idx_people_family_name on people  (family_name) ;
@@ -358,8 +352,7 @@ create table user_accounts (
   home_dir                  text not null,
   created                   date not null,
   expiration                date,
-  last_changed              timestamp not null default now(),
-  comments                  text
+  last_changed              timestamp not null default now()
 ) ;
 
 create table mail_aliases (
@@ -369,8 +362,7 @@ create table mail_aliases (
                               on delete cascade,
   alias                     text not null,
   target                    text not null,
-  alias_type                text not null,
-  comments                  text
+  alias_type                text not null
 ) ;
 
 create table user_groups (
@@ -378,8 +370,7 @@ create table user_groups (
   gid                       integer unique not null,
   group_name                text unique not null default nextval('gid_seq'),
   created                   date,
-  quota                     integer not null,
-  comments                  text
+  quota                     integer not null
 ) ;
 
 create table courses (
@@ -397,8 +388,7 @@ create table courses (
   scm_theory                boolean,
   scm_practice              boolean,
   scm_prog                  boolean,
-  scm_research              boolean,
-  comments                  text
+  scm_research              boolean
 ) ;
 
 create table enrollment (
@@ -419,8 +409,7 @@ create table enrollment (
   scm_theory                boolean,
   scm_practice              boolean,
   scm_prog                  boolean,
-  scm_research              boolean,
-  comments                  text
+  scm_research              boolean
 ) ;
 
 -- user_accounts_people
@@ -462,16 +451,14 @@ create table user_groups_user_accounts (
 --   fs_class                  text not null,
 --   quota                     integer,
 --   flags                     text,
---   backup_policy             text,
---   comments                  text
+--   backup_policy             text
 -- ) ;
 -- 
 -- create table fs_classes (
 --   id                        serial primary key,
 --   fs_exports_id             integer not null references fs_exports,
 --   fs_class                  text,
---   perms                     text,
---   comments                  text
+--   perms                     text
 -- ) ;
 
 create table fs_automounts (
@@ -479,8 +466,7 @@ create table fs_automounts (
   client_path               text,
   server                    text,
   server_path               text,
-  flags                     text,
-  comments                  text
+  flags                     text
 ) ;
 
 -- }}}
@@ -515,7 +501,6 @@ create table computers (
   equipment_id              integer not null references equipment
                               on update cascade
                               on delete cascade,
-  machine_name              text unique not null,
   hw_arch                   hw_arch_type,
   os                        os_type,
   system_model              text,
@@ -531,14 +516,12 @@ create table computers (
   os_version                text,
   info_time                 timestamp,
   boot_time                 timestamp,
-  pxelink                   text,
-  comments                  text
+  pxelink                   text
 ) ;
 
 create table comp_classes (
   id                        serial primary key,
-  class                     text unique not null,
-  comments                  text
+  class                     text unique not null
 ) ;
 
 -- join tables {{{

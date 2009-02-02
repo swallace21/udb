@@ -6,6 +6,9 @@ use Pod::Usage;
 use lib "/home/aleks/pro/udb/lib";
 use BrownCS::UDB;
 
+use DBI qw(:sql_types);
+use DBD::Pg qw(:pg_types);
+
 # Print a simple help message.
 sub usage {
   my ($exit_status) = @_;
@@ -30,21 +33,19 @@ if (@ARGV == 0) {
   usage(2);
 }
 
-my $hostname = $ARGV[0];
+my $class = shift;
+
+my @hostnames = @ARGV;
+
 my $password = BrownCS::UDB->get_pass;
 
 $udb->start($username, $password);
 
-my %host = $udb->host($hostname);
+$udb->prepare("class_comp_delete", "delete from comp_classes_computers ccc using comp_classes cc, computers c where ccc.comp_classes_id = cc.id and ccc.computers_id = c.id and cc.class = ? and c.machine_name = ?");
 
-$host{aliases} = join(',',@{$host{aliases}});
-$host{classes} = join(',',@{$host{classes}});
-
-foreach $field (sort sort_fieldnames keys(%host)) {
-  if (not $host{$field}) {
-    $host{$field} = '';
-  }
-  print $field, ' = ', $host{$field}, "\n";
+foreach $hostname (@hostnames) {
+  print "removing host $hostname from class $class\n";
+  $udb->{sths}->{class_comp_delete}->execute($class, $hostname);
 }
 
 $udb->finish;
@@ -53,17 +54,15 @@ __END__
 
 =head1 NAME
 
-cdb-show - Print out a summary of a host
+cdb-class-del - Delete one or more hosts from a class
 
 =head1 SYNOPSIS
 
-cdb-show [-u username] hostname
+cdb-class-del [-u username] classname hostname [hostname ...]
 
 =head1 DESCRIPTION
 
-cdb-show queries the UDB database for information about a host, and
-prints it out to the console. It is designed to resemble the old I<cdb
-profile> command.
+deletes one or more hosts from a class
 
 =head1 OPTIONS
 

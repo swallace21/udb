@@ -40,40 +40,10 @@ my %g_cdb_commands = (
     'usage' => "$PNAME delete HOST...",
     'common' => 1,
   },
-  'help' => {
-    'fn' => \&cdb_help,
-    'desc' => ["\tget extended usage info"],
-    'usage' => "$PNAME help",
-    'common' => 1,
-  },
   'modify' => {
     'fn' => \&cdb_modify,
     'desc' => ["modify a host record"],
     'usage' => "$PNAME modify HOST [FIELD=VALUE]...",
-    'common' => 1,
-  },
-  'classes' => {
-    'fn' => \&cdb_classes,
-    'desc' => ["list the classes to which the host belongs"],
-    'usage' => "$PNAME classes HOST",
-    'common' => 1,
-  },
-  'classlist' => {
-    'fn' => \&cdb_classlist,
-    'desc' => ["list the members of a class"],
-    'usage' => "$PNAME classlist CLASS",
-    'common' => 1,
-  },
-  'classadd' => {
-    'fn' => \&cdb_classadd,
-    'desc' => ["add one or more hosts to a class"],
-    'usage' => "$PNAME classadd CLASS HOST...",
-    'common' => 1,
-  },
-  'classdel' => {
-    'fn' => \&cdb_classdel,
-    'desc' => ["remove one or more hosts from a class"],
-    'usage' => "$PNAME classdel CLASS HOST...",
     'common' => 1,
   },
 );
@@ -82,31 +52,14 @@ my %g_cdb_commands = (
 
 my %g_cdb_fields = (
   'hostname' => 'Canonical host name',
-  'aliases' => 'List of host aliases',
   'ip_addr' => 'IP address',
   'ethernet' => 'Ethernet address',
   'os_type' => 'Operating system type',
   'hw_arch' => 'Hardware architecture',
   'comment' => 'Comments',
   'contact' => 'Primary contact for this host',
-  'mxhost' => 'Mail-exchanger for this host',
   'classes' => 'Classes for unattended installation',
-  'status' => 'Machine status',
   'pxelink' => 'Image to use for net installs',
-);
-
-# Declare hash of active database fields and corresponding help functions
-
-my %g_cdb_help = (
-  'hostname' => \&help_hostname,
-  'aliases' => \&help_aliases,
-  'ip_addr' => \&help_ip_addr,
-  'ethernet' => \&help_ethernet,
-  'os_type' => \&help_os_type,
-  'hw_arch' => \&help_hw_arch,
-  'comment' => \&help_comment,
-  'mxhost' => \&help_mxhost,
-  'status' => \&help_status,
 );
 
 # sighandler :: void -> void
@@ -115,208 +68,6 @@ sub sighandler {
   print "\n*** Termination signal received\n";
   $udb->finish;
   exit(0);
-}
-
-#
-# FUNCTION: sort_fieldnames
-#    DESCR: Sort field names alphabetically, except put hostname, prim_grp
-#           first.
-#
-
-sub sort_fieldnames {
-  return -1 if($a eq 'hostname');
-  return 1 if($b eq 'hostname');
-  return $a cmp $b;
-}
-
-sub find_unused_ip {
-  my($ip_addr) = @_;
-  my(%ip_addrs) = ();
-  my(@nibbles, $addr);
-
-  $ip_addr =~ s/\s+//g;
-  @nibbles = split(/\./, $ip_addr);
-  foreach $i (0 .. $#nibbles) { $nibbles[$i] =~ s/^0(.+)$/$1/; }
-  return join('.', @nibbles) if($nibbles[3] ne '*');
-
-  # Build hash of used IP addresses to avoid for '*' replacement
-  %ip_addrs = Common::get_ips;
-  
-  # Strip trailing nibble, which is '*'
-
-  pop(@nibbles);
-
-  # Try all values for $nibbles[3] in ascending order from 2 to 254.
-  # 255 is the broadcast address, 0 is the network address, and 1 we reserve
-  # so it can be manually assigned by sysadmins to routers.
-
-  for($i = 2; $i < 255; $i++) {
-    $addr = join('.', @nibbles) . ".$i";
-    print "Trying $addr ...\n" if($opt_v);
-    next if(defined($ip_addrs{$addr}));
-    next if(defined($g_cdb_include_ip_addrs{$addr}));
-    return $addr;
-  }
-
-  die "$PNAME ERROR: No addresses are available for the $nibbles[2] subnet\n";
-}
-
-#
-# FUNCTION: help_hostname
-#    DESCR: Print out some information about the hostname field
-#
-
-sub help_hostname {
-  print "The hostname field determines the canonical name for the host.\n",
-        "The name should consist of letters, digits, and underscores and\n",
-        "must not begin with a digit.  cdb will automatically verify that\n",
-        "the name you have chosen is unique, and will remove whitespace and\n",
-        "convert uppercase characters to their lowercase equivalents.  The\n",
-        "name should not be longer than $MAXHOSTNAMELEN characters.\n";
-}
-
-#
-# FUNCTION: help_prim_grp
-#    DESCR: Print out some information about the primary netgroup field
-#
-
-sub help_prim_grp {
-  my($attrs);
-
-  print "The prim_grp field determines the primary netgroup for the host.\n",
-        "The name should consist of letters, digits, and underscores.  This\n",
-        "table shows the valid primary groups and their attributes:\n\n";
-
-  foreach $grp (sort(keys(%cdb_primary_groups))) {
-    $attrs = $cdb_primary_groups{$grp};
-    print "  $grp\n";
-    print "    Add host to NIS ethers map\n" if($attrs & $NG_ETHERS);
-    print "    Add host to NIS bootparams map\n" if($attrs & $NG_BOOTP);
-    print "    Add host to NIS netgroup map\n" if($attrs & $NG_NETGR);
-    print "    Add network boot image to /tftpboot\n" if($attrs & $NG_TFTP);
-    print "    Allow host to get a dynamic IP address\n" if($attrs & $NG_DHCP);
-    print "    Add DNS record for host\n" if ($attrs & $NG_DNS);
-  }
-
-  print "\n";
-}
-
-#
-# FUNCTION: help_aliases
-#    DESCR: Print out some information about the host aliases field
-#
-
-sub help_aliases {
-  print "The aliases field is a comma-separated list of NIS and DNS host\n",
-        "aliases.  Each name should consist of letters, digits, and\n",
-        "underscores and must not begin with a digit.  cdb will verify that\n",
-        "each name you enter is unique, and will remove whitespace and\n",
-        "convert uppercase characters to their lowercase equivalents.  Each\n",
-        "alias should not be longer than $MAXHOSTNAMELEN characters.\n";
-}
-
-#
-# FUNCTION: help_comment
-#    DESCR: Print out some information about the comment field
-#
-
-sub help_comment {
-  print "The comment field contains a single line of text allowing the\n",
-        "administrator to record comments or notes about each host.\n";
-}
-
-#
-# FUNCTION: help_os_type
-#    DESCR: Print out some information about the OS type field
-#
-
-sub help_os_type {
-  print "The OS specifier field matches an entry in the cdb os specifier\n",
-        "database, which is currently: $PATH_CFFILE\n",
-        "You may leave this field blank if no appropriate value exists.\n",
-        "Valid os_types are:";
-
-  foreach $os (sort(keys(%$cdb_os_types))) { print ' ', $os; }
-  print "\n";
-}
-
-#
-# FUNCTION: help_hw_arch
-#    DESCR: Print out some information about the hardware architecture field
-#
-
-sub help_hw_arch {
-  print "The hw_arch field contains a hardware architecture description\n",
-        "string.  This is typically obtained using the 'uname -n' or\n",
-        "'arch' command on the given host.\n  Leave this field blank for\n",
-        "unsupported machines or non-workstation hardware.";
-}
-
-#
-# FUNCTION: help_ip_addr
-#    DESCR: Print out some information about the IP address field
-#
-
-sub help_ip_addr {
-  my($tmp) = $";
-  $" = '.';
-
-  print "The IP address field contains the Internet address for the host\n",
-        "in dotted-decimal format.  cdb will automatically strip leading\n",
-        "zeroes from each address component.  If the final address\n",
-        "component is specified as '*', cdb will automatically select an\n",
-        "unused IP address in the given subnetwork for you.  If you specify\n",
-        "the complete address, cdb will verify that this address is unique.\n",
-
-  $" = $tmp;
-}
-
-#
-# FUNCTION: help_ethernet
-#    DESCR: Print out some information about the Ethernet address field
-#
-
-sub help_ethernet {
-  print "The Ethernet address field contains the 48-bit Ethernet address\n",
-        "for the host in colon-separated format.  cdb will automatically\n",
-        "strip leading zeroes and convert uppercase hexadecimal characters\n",
-        "to their lowercase equivalents, as well as verify that the address\n",
-        "is unique within the database.  If this host's primary netgroup is\n",
-        "not one which is meant for installation via JumpStart, you may opt\n",
-        "to leave the ethernet field blank.\n";
-}
-
-#
-# FUNCTION: help_mxhost
-#    DESCR: Print out some information about the mxhost field
-#
-
-sub help_mxhost {
-  print "The mxhost is the host who exchanges email for this host.\n",
-        "The name should consist of letters, digits, and underscores and\n",
-        "must not begin with a digit.  cdb will automatically remove\n",
-        "whitespace and convert uppercase characters to lowercase ones.\n",
-        "The name should not be longer than $MAXHOSTNAMELEN characters.\n";
-}
-
-#
-# FUNCTION: help_status
-#    DESCR: Print out info about the status field.
-#
-
-sub help_status {
-  print "The status is the current machine status of this host.\n",
-        "For example, some machines appear in the database but \n",
-        "are not active for some reason (posterity, saving the name\n",
-        "for future use, machine is being repaired, or is a home\n",
-        "machine not usually connected to the network).  Current\n",
-        "status flags are: ";
-
-  for ($[ .. $#cdb_status_strings) {
-    print "$cdb_status_strings[$_]", " ";
-  }
-
-  print "\n";
 }
 
 #
@@ -401,112 +152,6 @@ sub cdb_delete {
 
     $mkstate = load_make_state($PATH_MKFILE);
     foreach $map (keys(%g_cdb_maps)) { touch_make_state($mkstate, $map); }
-    write_make_state($mkstate, $PATH_MKFILE);
-  }
-
-  return 0;
-}
-
-#
-# FUNCTION: cdb_classadd
-#    DESCR: Add specified hosts to a class.
-#
-
-sub cdb_classadd {
-  my(@args) = @_;
-  my(@classlist);
-  my($mods) = 0;
-  my($class, $mkstate);
-
-  if(@args < 2) {
-    warn "Usage: cdb classadd classname hostname ...\n";
-    return 2;
-  }
-
-  $class = shift(@args);
-
- host_loop:
-  foreach $host (@args) {
-    if(defined($cdb_by_hostname->{$host})) {
-      @classlist = split(/,/, $cdb_by_hostname->{$host}{'classes'});
-      
-      foreach $inclass (@classlist) {
-        if($inclass eq $class) {
-          warn "$PNAME: Host \"$host\" is already a member of class $class\n";
-          next host_loop;
-        }
-      }
-
-      push(@classlist, $class);
-      $cdb_by_hostname->{$host}{'classes'} = join(',', @classlist);
-      $mods++;
-
-    } else {
-      warn "$PNAME: No database record for host \"$host\"\n";
-    }
-  }
-
-  print $mods, ($mods != 1) ? ' records ' : ' record ', "modified.\n";
-
-  if($mods > 0) {
-    printflush('STDOUT', "Writing database file ... ");
-    write_db($cdb_by_hostname);
-    printflush('STDOUT', "done\n");
-
-    $mkstate = load_make_state($PATH_MKFILE);
-    touch_make_state($mkstate, 'netgroup');
-    write_make_state($mkstate, $PATH_MKFILE);
-  }
-
-  return 0;
-}
-
-#
-# FUNCTION: cdb_classdel
-#    DESCR: Remove a class from the database or from specified records.
-#
-
-sub cdb_classdel {
-  my(@args) = @_;
-  my($matches) = 0;
-  my(@classlist, @hostlist);
-  my($classname, $mkstate);
-
-  if(@args == 0) {
-    warn "Usage: cdb classdel classname [hostname ...]\n";
-    return 2;
-  }
-
-  $classname = shift(@args);
-  @hostlist = (scalar(@args) == 0) ? keys(%$cdb_by_hostname) : @args;
-
-  foreach $host (@hostlist) {
-    if(!defined($cdb_by_hostname->{$host})) {
-      warn "$PNAME: WARNING: No host record found for \"$host\"\n";
-      next;
-    }
-
-    @classlist = split(/,/, $cdb_by_hostname->{$host}{'classes'});
-
-    foreach $i (0 .. $#classlist) {
-      if($classlist[$i] eq $classname) {
-        splice(@classlist, $i, 1);
-        $matches++;
-      }
-    }
-
-    $cdb_by_hostname->{$host}{'classes'} = join(',', @classlist);
-  }
-
-  print $matches, ($matches != 1) ? ' matches ' : ' match ', "found.\n";
-
-  if($matches > 0) {
-    printflush('STDOUT', "Writing database file ... ");
-    write_db($cdb_by_hostname);
-    printflush('STDOUT', "done\n");
-
-    $mkstate = load_make_state($PATH_MKFILE);
-    touch_make_state($mkstate, 'netgroup');
     write_make_state($mkstate, $PATH_MKFILE);
   }
 
@@ -603,93 +248,6 @@ sub cdb_modify {
   write_make_state($mkstate, $PATH_MKFILE);
   printflush('STDOUT', "done\n");
   return 0;
-}
-
-#
-# FUNCTION: cdb_classes
-#    DESCR: List all classes to which a specified host belongs, or
-#           list all classes in the database.
-#
-
-sub cdb_classes {
-  my(@args) = @_;
-  my(%classes) = ();
-  my(@classes) = ();
-  my($delim, $data);
-
-  if(@args > 1) {
-    command_help("classes");
-    return 2;
-  }
-
-  if(@args == 1) {
-    die "$PNAME: No record found for host $args[0]\n"
-      unless(defined($cdb_by_hostname->{$args[0]}));
-
-    $delim = ' ';
-    $data = $cdb_by_hostname->{$args[0]};
-
-    print join($delim,(split(/,/, $data->{'classes'})));
-
-    print "\n";
-
-  } else {
-    $delim = $";
-    $" = "\n";
-
-    foreach $host (keys(%$cdb_by_hostname)) {
-      $data = $cdb_by_hostname->{$host};
-      foreach $class (split(/,/, $data->{'classes'})) {
-        $classes{$class} = 1;
-      }
-    }
-
-    @classes = sort(keys(%classes));
-    print "@classes\n";
-    $" = $delim;
-  }
-
-  return 0;
-}
-
-#
-# FUNCTION: cdb_classlist
-#    DESCR: List all hosts which belong to the specified class.
-#
-
-sub cdb_classlist {
-  my(@args) = @_;
-  my($delim) = "\n";
-  my($matches) = 0;
-  my($first) = 1;
-  my($data);
-
-  if(@args != 1) {
-    command_help("classlist");
-    return 2;
-  }
-
-  foreach $host (sort(keys(%$cdb_by_hostname))) {
-    if(scalar(grep(($_ eq $args[0]),split(/,/,$cdb_by_hostname->{$host}{'classes'}))) > 0){
-
-      if($first) {
-        $first = 0;
-      } else {
-        print $delim;
-      }
-
-      print $host;
-      $matches++;
-    }
-  }
-
-  if($matches) {
-    print "\n";
-    return 0;
-  }
-
-  warn "$PNAME: class $args[0] does not appear in database\n";
-  return 1;
 }
 
 #
@@ -818,20 +376,6 @@ die "$PNAME: $PATH_CFFILE: $!\n" unless(-f("$PATH_CFFILE"));
 eval('require("$PATH_CFFILE");');
 die "$PNAME: Failed to load $PATH_CFFILE: $@\n" if($@);
 
-die "$PNAME: $PATH_CFFILE must define CDB_BOOT_TYPE\n"     unless(defined($CDB_BOOT_TYPE));
-die "$PNAME: $PATH_CFFILE must define CDB_DBF_GROUP\n"     unless(defined($CDB_DBF_GROUP));
-die "$PNAME: $PATH_CFFILE must define CDB_DBF_PERMS\n"     unless(defined($CDB_DBF_PERMS));
-die "$PNAME: $PATH_CFFILE must define CDB_DHCP_SERVERS\n"  unless(defined(@CDB_DHCP_SERVERS));
-die "$PNAME: $PATH_CFFILE must define CDB_DNS_MXPREF\n"    unless(defined($CDB_DNS_MXPREF));
-die "$PNAME: $PATH_CFFILE must define CDB_DNS_FWD_DBS\n"   unless(defined(@CDB_DNS_FWD_DBS));
-die "$PNAME: $PATH_CFFILE must define CDB_DNS_SERVERS\n"   unless(defined(@CDB_DNS_SERVERS));
-die "$PNAME: $PATH_CFFILE must define CDB_MAP_GROUP\n"     unless(defined($CDB_MAP_GROUP));
-die "$PNAME: $PATH_CFFILE must define CDB_MAP_GROUP\n"     unless(defined($CDB_MAP_OWNER));
-die "$PNAME: $PATH_CFFILE must define CDB_MAP_PERMS\n"     unless(defined($CDB_MAP_PERMS));
-die "$PNAME: $PATH_CFFILE must define CDB_NETGROUP_DIRS\n" unless(defined(@CDB_NETGROUP_DIRS));
-die "$PNAME: $PATH_CFFILE must define NG_DHCP\n"           unless(defined($NG_DHCP));
-die "$PNAME: $PATH_CFFILE must define NG_WPKG\n"           unless(defined($NG_WPKG));
-
 # Install signal handlers
 
 $SIG{'INT'} = \&sighandler;
@@ -863,17 +407,6 @@ cdb [-hv] command [args ...]
 
 =head1 DESCRIPTION
 
-The client database is a simple database of network clients which can be used
-to automatically generate system-wide configuration files, such as NIS maps,
-DNS zone files, and network boot information.  Each record in the database
-corresponds to a network connection, i.e. a unique IP address.  In most cases,
-each record also corresponds to a single machine connected to the network, but
-this is not always the case.  A single logical machine may have multiple
-network interfaces, and will therefore have multiple database entries.
-Additionally, some network devices with names and IP addresses may not
-correspond to a workstation; there may be entries for networked printers,
-dialup multiplexors, and other devices.
-
 The B<cdb> database front-end program reads in the latest copy of the database
 and a configuration file describing various parameters for the domain, and then
 allows the user to add, remove, or modify records, or to perform simple
@@ -902,541 +435,81 @@ Other fields are optional, and may be left blank.  The front-end software
 enforces these policies so that the user cannot insert an invalid record.
 The fields associated with each record are:
 
-.SS "hostname"
+=over
+
+=item I<"hostname">
+
 The client's unqualified Internet hostname.  This field is guaranteed to be
 unique in the database.
-.SS "aliases"
+
+=item I<"aliases">
+
 A comma-separated list of Internet host aliases.  Each alias is guaranteed to
 be unique to both the aliases and hostname fields across all database records.
-.SS "prim_grp"
+
+=item I<"prim_grp">
+
 The client's primary netgroup.  This field is verified to be a valid primary
 group in the database configuration file.
-.SS "supp_grps"
-A comma-separated list of supplementary netgroups.  This field may be left
-blank, or set to a list of arbitrary netgroup names, which must not be the
-names of any known primary group.  When the
-.BR netgroup(4)
-map is generated, entries for all known supplementary netgroup names will be
+
+=item I<"supp_grps">
+
+A comma-separated list of supplementary netgroups.  This field may be
+left blank, or set to a list of arbitrary netgroup names, which must not
+be the names of any known primary group.  When the B<netgroup>(4) map is
+generated, entries for all known supplementary netgroup names will be
 created.
-.SS "ip_addr"
+
+=item I<"ip_addr">
+
 The client's IP address in dotted-decimal format.  This field is always required
 and it guaranteed to be unique across all database records.
-.SS "ethernet"
-The client's 48-bit ethernet address.  This field is guaranteed to be unique
-across all database records.  The field may be left blank, unless the record's
-primary group is used to generate the
-.BR ethers(4)
-map, in which case it is required.
-.SS "hw_arch"
-The client's hardware architecture.  This field is typically set to the output
-of the
-.BR uname(1) \-m
-command run on the client machine.  This field may be left blank, unless the
-record's primary group is used to generate a
-.BR tftp(1)
-network boot image, in which case it is required.
-.SS "os_type"
-The client's operating system type string.  This field may be left blank, unless
-the client's primary group is used to generate the
-.BR bootparams(4)
-map, it which case it is required and must be set to one of the valid operating
-system types defined in the database configuration file.
-.SS "mxhost"
+
+=item I<"ethernet">
+
+The client's 48-bit ethernet address.  This field is guaranteed to be
+unique across all database records.  The field may be left blank, unless
+the record's primary group is used to generate the B<ethers>(4) map, in
+which case it is required.
+
+=item I<"hw_arch">
+
+The client's hardware architecture.  This field is typically set to the
+output of the B<uname>(1) B<-m> command run on the client machine.  This
+field may be left blank, unless the record's primary group is used to
+generate a B<tftp>(1) network boot image, in which case it is required.
+
+=item I<"os_type">
+
+The client's operating system type string.  This field may be left
+blank, unless the client's primary group is used to generate the
+B<bootparams>(4) map, it which case it is required and must be set to
+one of the valid operating system types defined in the database
+configuration file.
+
+=item I<"mxhost">
+
 The fully-qualified Internet name of another host which exchanges electronic
 mail for the client.  If not blank, this field is used to generate MX records
 in the DNS zone files created by the front-end.
-.SS "port"
+
+=item I<"port">
+
 The client's network port.  This field is entirely optional, and is meant to
 be used to record the network jack number to which the client is connected.
-.SS "comment"
+
+=item I<"comment">
+
 An arbitrary comment describing the host.  This field may be left blank.
-.SS "status"
+
+=item I<"status">
+
 The current machine status, selected from the legal status strings set
 in the configuration file.
 
-=head1 OPTIONS
-
-=over
-
-.TP
-.BI "\-h"
-Display a list of commands and options.
-.TP
-.BI "\-V"
-Display version information.
-.TP
-.BI "\-v"
-Set verbose mode.
-.TP
-.BI "\-f"
-Force creation of a new empty database if specified database is not found.
-.TP
-.BI "\-s field"
-Sort output by specified field name.  Use ``cdb print'' for a list of fields.
-Output is unsorted if no -s option is specified.
-.TP
-.BI "\-d delim"
-Specify output delimeter.  Fields are delimited by tabs or newlines where
-appropriate if no -d option is specified.
-.TP
-.BI "\-b dbfile"
-Specify pathname of an alternate database file.  The database
-/u/system/lib/cdb_data.pl is used if no -b option is specified.
-.TP
-.BI "\-c configfile"
-Specify pathname of an alternate configuration file.  The configuration file
-/u/system/lib/cdb_config.pl is used if no -c option is specified.
-.TP
-.BI "cdb print [field ...]"
-Print specified fields of all records.
-.TP
-.BI "cdb query [field[=regexp] ...]"
-Print records matching criteria.
-.TP
-.BI "cdb insert"
-Interactively insert a new client record.
-.TP
-.BI "cdb modify [hostname [field=value ...]]"
-Modify specified client record.
-.TP
-.BI "cdb delete [hostname ...]"
-Delete specified records.
-.TP
-.BI "cdb joingrp grpname hostname ..."
-Add hosts to supplementary netgroup.
-.TP
-.BI "cdb rmgrp grpname [hostname ...]"
-Remove some or all hosts from specified supplementary netgroup.
-.TP
-.BI "cdb groups [hostname]"
-List netgroups to which a given host belongs, or list all netgroups.
-.TP
-.BI "cdb grplist grpname"
-List members of specified netgroup.
-.TP
-.BI "cdb profile hostname"
-Print summary of specified client record.
-.TP
-.BI "cdb build [map ...]"
-Force rebuild of one or all system maps.
-.TP
-.BI "cdb make [-P] [-n] [map ...]"
-Rebuild maps which need to be updated based on changes since last build.
-.TP
-.BI "cdb search hostname [dir1...]"
-Search jumpstart tree for host.xxx and netgroup.xxx files.
-.TP
-.BI "cdb find hostname pathname"
-Search a host's jumpstart tree for a specific pathname.
-=item B<-h>, B<--help>
-
-Print a help message and exit.
-
-=item B<-n>
-
-Do nothing.  Runs rsync in dry-run mode - does not actually update
-anything, but reports which files would be updated.
-
-=item B<-v>
-
-Verbose.  The normal webupdate output shows only files updated.  This
-option shows links and directories updated, and deletions, too.  The
-format differs, as this turns on rsync's verbose option.
-
-=item B<-x>
-
-Print the exclude file that would be given to rsync.
-
 =back
-
-=head1 COMMANDS
-
-.SS "cdb print [field ...]"
-.TP
-.B "DESCRIPTION"
-Print the specified fields from each database record.  Field names are printed
-in order and separated by tabs, or the delimiter specified with the
-.B \-d
-option.  The output is unsorted unless a sort order is specified with the
-.B \-s
-option.  If no options are specified, a list of the valid field names is
-printed.
-.TP
-.B "OPTIONS"
-.TP 5
-.I "field"
-The name of a field whose value should be printed.
-.SS "cdb query [field[=regexp] ...]"
-.TP
-.B "DESCRIPTION"
-Query the database for fields whose values match the specified regular
-expressions, and then print the specified fields corresponding to each record.
-Each argument to this command is interpreted as either matching criteria or
-the name of a field to print in the output.  Field names are printed in order
-and separated by tabs, or the delimiter specified with the
-.B \-d
-option.  The output is unsorted unless a sort order is specified with the
-.B \-s
-option.
-.TP
-.B "OPTIONS"
-.TP 5
-.I "field"
-The name of a field whose value should be printed in the output.
-.TP 5
-.I "field=regexp"
-The name of a field which should be used as matching criteria.  The field will
-not be printed in the output unless it is also specified alone without the
-.I =regexp
-suffix on the command line.  The
-.I regexp
-argument is expected to be in Perl regular expression format (see
-.BR perlre(l)
-for the complete syntax), and may require quoting to prevent regular expression
-meta-characters from being interpreted as shell meta-characters.  Records are
-matched if they match the logical 
-.B and
-of the selection criteria.
-.SS "cdb insert"
-.TP
-.B "DESCRIPTION"
-Interactively insert a new database record.  The user will be prompted for the
-value of each field, which will be converted to an appropriate canonical format
-if possible, and verified to be valid and unique where appropriate.  At any
-time, the user may type a question-mark (``?'') and press return to view help
-information on the current field.  The administrator should execute
-.B cdb make
-after inserting a new database record.
-.SS "cdb modify [hostname [field=value ...]]"
-.TP
-.B "DESCRIPTION"
-Modify one or more fields of an existing database record.  If no hostname
-is specified, the user is interactively prompted for the hostname of the record
-to modify.  If only a hostname is specified, the user is interactively prompted
-for which fields to modify and their new values.  If a hostname and one or more
-.I "field=value"
-arguments are specified, the specified values are set to the given values and
-the front-end immediately exits and saves the modifications.  In all cases,
-each new field value is converted to a canonical format if appropriate and
-validated using the previously described requirements for each field.  The
-front-end will not save invalid modifications to the database.  In interactive
-mode, the user will be prompted to save changes at the end of the modifications.
-The administrator should execute
-.B cdb make
-after modifying a database record.
-.TP
-.B "OPTIONS"
-.TP 5
-.I "hostname"
-The value of the hostname field identifying the record to be modified.
-.TP 5
-.I "field=value"
-Set the specified field to the specified value.  Any number of these arguments
-may be present on the command line.  If the new value contains whitespace or
-shell meta-characters, it may be necessary to use appropriate shell quoting
-syntax to surround the argument on the command line.
-.SS "cdb delete [hostname ...]"
-.TP
-.B "DESCRIPTION"
-Delete one or more client records, identified by their hostnames, from the
-database.  The administrator should execute
-.B cdb make
-after deleting database records.
-.TP
-.B "OPTIONS"
-.TP 5
-.I "hostname"
-The value of the hostname field identifying the record to be deleted.  One or
-more hostnames may be specified on the command line.
-.SS "cdb joingrp grpname hostname ..."
-.TP
-.B "DESCRIPTION"
-Add one or more hosts to a supplementary netgroup.  If the group does not exist,
-it will be automatically created the next time the netgroup map is rebuilt.
-The administrator should execute
-.B cdb make
-after machines join new groups.
-.TP
-.B "OPTIONS"
-.TP 5
-.I "grpname"
-The name of the supplementary group to join.  This must be a string of
-alphanumeric characters which is not the name of an existing primary netgroup.
-.TP 5
-.I "hostname"
-The value of the hostname field identifying a record whose
-.B supp_grps
-field should be modified to include the specified
-.I grpname
-.
-.SS "cdb rmgrp grpname [hostname ...]"
-.TP
-.B "DESCRIPTION"
-Remove one or more or all hosts from a supplementary netgroup.  If one or more
-hostnames are specified on the command line, the specified netgroup is removed
-from the
-.B supp_grps
-field of each record.  If only a netgroup name is given on the command line,
-the specified netgroup is removed from all client records, effectively removing
-the netgroup.  The administrator should execute
-.B cdb make
-after removing a supplementary netgroup from client records.
-.TP
-.B "OPTIONS"
-.TP 5
-.I "grpname"
-The name of the supplementary group to remove.  This must be a string of
-alphanumeric characters which is not the name of an existing primary netgroup.
-.TP 5
-.I "hostname"
-The value of the hostname field identifying a record whose
-.B supp_grps
-field should be modified to not include the specified
-.I grpname
-.
-.SS "cdb groups [hostname]"
-.TP
-.B "DESCRIPTION"
-Print the list of netgroups (including both primary and supplementary groups)
-to which the specified host belongs, or print the complete list of netgroups
-in the database (if no hostname argument is specified on the command line).
-The names are delimited by tabs or newlines, or by the delimiter specified by
-the
-.B \-d
-option.
-.TP
-.B "OPTIONS"
-.TP 5
-.I "hostname"
-The value of the hostname field identifying a record whose
-.B prim_grp
-and
-.B supp_grps
-fields should be printed.
-.SS "cdb grplist grpname"
-.TP
-.B "DESCRIPTION"
-List the members of the specified netgroup, which may be either a primary
-netgroup name or supplementary netgroup name.  The
-.B hostname
-field of each matched record is printed, separated by newlines, or by the
-delimiter specified by the
-.B \-d
-option.
-.TP
-.B "OPTIONS"
-.TP 5
-.I "grpname"
-The name of the primary or supplementary netgroup whose members will be
-printed.
-.SS "cdb profile hostname"
-.TP
-.B "DESCRIPTION"
-Print a formatted listing of the values of each field of the client record for
-the specified hostname.
-.TP
-.B "OPTIONS"
-.TP 5
-.I "hostname"
-The value of the hostname field identifying a record whose fields should be
-printed.
-.SS "cdb build [map ...]"
-.TP
-.B "DESCRIPTION"
-Force the rebuild of one or more or all system maps.  In our terminology, a
-map is a file or set of files providing some system-wide information which is
-automatically built by the front-end from the current contents of the database,
-and an optional set of include files.  Typically the administrator does not
-need to use this command; instead the
-.B cdb make
-command is used, which automatically rebuilds on those maps which need to be
-built based on the changes made to the database since the last build or make.
-However, this command is provided for completeness, and because there may be
-some extenuating circumstances where a manual rebuild is necessary.  If no
-arguments are given on the command line, all maps are built; otherwise only
-those maps whose names are specified are built.
-.TP
-.B "OPTIONS"
-.TP 5
-.B "ethers"
-The
-.B /etc/ethers
-file on the NIS master will be rebuilt and pushed out to the clients.  If an
-include file is defined for this map in the
-.I %cdb_map_includes
-hash in the configuration file, it will be included in the output file.
-.TP 5
-.B "hosts"
-The
-.B /etc/hosts
-file on the NIS master will be rebuilt and pushed out to the clients.  If an
-include file is defined for this map in the
-.I %cdb_map_includes
-hash in the configuration file, it will be included in the output file.
-.TP 5
-.B "bootparams"
-The
-.B /etc/bootparams
-file on the NIS master will be rebuilt and pushed out to the clients.  If an
-include file is defined for this map in the
-.I %cdb_map_includes
-hash in the configuration file, it will be included in the output file.
-.TP 5
-.B "netgroup"
-The
-.B /etc/netgroup
-file on the NIS master will be rebuilt and pushed out to the clients.  If an
-include file is defined for this map in the
-.I %cdb_map_includes
-hash in the configuration file, it will be included in the output file.
-.TP 5
-.B "tftpboot"
-The network boot images for client machines, stored in the directory
-.B /tftpboot
-on the boot server (assumed to be the same machine as the NIS master), will be
-recreated.  Using the location of the network boot images specified in the
-.I $cdb_os_types
-hash in the configuration file, the front-end copies the boot images for each
-active operating system type and hardware architecture to files named
-.B inetboot.hw_arch.os_type
-, where
-.I hw_arch
-and
-.I os_type
-correspond to the values of these fields in the corresponding client records.
-For each client record of a given hardware architecture and operating system
-type, two symbolic links are then created in the
-.B /tftpboot
-directory to the appropriate inetboot binary.  The first symbolic link is
-named by converting each byte of the client record's 4-byte IP address to two
-hexadecimal digits (e.g. IP address 128.148.33.114 is converted to link name
-80942172).  The second link has the same name as the first, except that a
-.I .hw_arch
-suffix is added, where the suffix is formed by converting the value of the
-client record's
-.B hw_arch
-field to uppercase letters.  This is needed for compatibility with older
-revisions of the OpenBoot PROM software.
-.TP 5
-.B "dns"
-The DNS zone files stored in the
-.B /var/named
-directory on the primary DNS server for the zone (assumed to be the same machine
-as the NIS master) are rebuilt, and the name service daemon is signaled to
-re-read the new zone files.  The location of the DNS zone files may be
-configured using the
-.I $CDB_DNS_DIR
-tunable.  The DNS domain name for the site may be configured using the
-.I $CDB_DNS_DOMAIN
-tunable.  The preference value for DNS MX records generated from the value
-of the
-.B mxhost
-field associated with client records may be configured using the
-.I $CDB_DNS_MXPREF
-tunable.  Each of these options is stored in the database configuration file.
-The DNS serial number is read from the existing files, and is incremented in
-the new output files.
-.SS "cdb make [-P] [-n] [map ...]"
-.TP
-.B "DESCRIPTION"
-Rebuild system maps exactly as with the
-.B cdb build
-command described previously, but only rebuild a map if modifications to the
-database since the previous
-.B cdb build
-or
-.B cdb make
-require that the map be regenerated.  If no map names are specified on the
-command line, all maps are checked and rebuilt if necessary.  If one or more
-map names are specified, only those maps are checked and rebuilt.
-.TP
-.B "OPTIONS"
-.TP 5
-.B \-P
-Print detailed dependency information regarding which maps need to be rebuilt
-and why, but do not actually rebuild them.  This option is used primarily for
-debugging purposes.
-.TP 5
-.B \-n
-Print the names of the maps which need to be rebuilt, but do not actually
-rebuild them.  Useful for determining what the result of a
-.B cdb make
-would be without actually changing the current state of the system.
-.TP 5
-.I map
-Specify the name of a map to be checked and rebuilt if necessary.  The valid
-map names are described in the previous section on options to the
-.B cdb build
-command.
-
-=head1 FILES
-
-.TP
-.B /etc/bootparams
-.TP
-.B /etc/ethers
-.TP
-.B /etc/named.pid
-.TP
-.B /etc/netgroup
-.TP
-.B /u/system/lib/.cdb_make.state
-.TP
-.B /u/system/lib/cdb_config.pl
-.TP
-.B /u/system/lib/cdb_data.pl
-.TP
-.B /var/yp/Makefile
 
 =head1 AUTHORS
 
-Mike Shapiro. DNS database build routines written by Stephanie Schaaf. UDB port
-written by Aleks Bromfield.
-
-=head1 SEE ALSO
-
-B<rsync>(1), B<ssh>(1)
-
-.PP
-Application programs:
-.BR rcp (1)
-.BR uname (1)
-.BR ypcat (1)
-.BR ypmatch (1)
-.BR ypwhich (1)
-.PP
-Maintenance commands:
-.BR in.named (1m)
-.BR in.rarpd (1m)
-.BR in.tftpd (1m)
-.BR ypserv (1m)
-.PP
-File formats:
-.BR bootparams (4)
-.BR ethers (4)
-.BR netgroup (4)
-.BR ypfiles (4)
-.PP
-Local reference:
-.BR perl (l)
-.BR perlre (l)
-.PP
-
-=head1 NOTES
-
-Access to read and write the cdb database file and configuration file is
-determined by the UNIX file permissions on these files.  UNIX file locking,
-across NFS if necessary, is used to read or write-lock the database file
-depending on the type of operation being performed.
-
-The B<cdb> system assumes that all master maps are kept on a single Sun NIS
-server, which also serves as the boot server for Solaris network installation.
-No provisions have been made for NIS+ at this time.
-
-=head1 BUGS
-
-Doesn't report the removal of files and directories except those
-excluded by a .private file.  This is a feature of rsync.
-
-=cut
+=item =item =cut
 
