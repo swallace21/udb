@@ -53,7 +53,9 @@ foreach $hostname (@hostnames) {
   $udb->{sths}->{class_comp_insert}->execute($class_id, $host{comp_id});
 }
 
-$udb->finish;
+END {
+  $udb->finish;
+}
 
 __END__
 

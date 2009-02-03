@@ -33,7 +33,9 @@ my @hosts = $udb->all_hosts_in_class($class);
 
 print join(" ", @hosts) . "\n";
 
-$udb->finish;
+END {
+  $udb->finish;
+}
 
 __END__
 

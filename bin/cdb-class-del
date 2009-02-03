@@ -48,7 +48,9 @@ foreach $hostname (@hostnames) {
   $udb->{sths}->{class_comp_delete}->execute($class, $hostname);
 }
 
-$udb->finish;
+END {
+  $udb->finish;
+}
 
 __END__
 

@@ -47,7 +47,9 @@ foreach $field (sort sort_fieldnames keys(%host)) {
   print $field, ' = ', $host{$field}, "\n";
 }
 
-$udb->finish;
+END {
+  $udb->finish;
+}
 
 __END__
 

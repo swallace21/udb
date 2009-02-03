@@ -35,22 +35,27 @@ $udb->start($username, $password);
 
 my $host = {};
 
+$host->{hostname} = $hostname;
 $host->{managed_by} = BrownCS::UDB::textquery("Who will manage this computer [tstaff, cis, user]? ", 0);
 $host->{usage} = BrownCS::UDB::textquery("How will this computer be used [tstaff, academic, personal]? ", 0);
 $host->{contact} = BrownCS::UDB::textquery("Who is the primary user of this computer? ", undef);
-$host->{ethernet} = BrownCS::UDB::textquery("What is the computer's MAC address?\nIf you don't know (e.g. for a xen machine), leave this blank. ", '');
-$host->{ip_addr} = BrownCS::UDB::textquery("What is the computer's primary IP address?\nIf you would like a random address assigned, leave this blank. ", '');
+$host->{ethernet} = BrownCS::UDB::textquery("What is the computer's MAC address?\nIf you don't know (e.g. for a xen machine), leave this blank.\n> ", '');
+$host->{ip_addr} = BrownCS::UDB::textquery("What is the computer's primary IP address?\nIf you would like a random address assigned, leave this blank.\n> ", '');
 $host->{hw_arch} = BrownCS::UDB::textquery("What is the computer's hardware architecture [e.g. x86, amd64]? ", 'x86');
 $host->{os_type} = BrownCS::UDB::textquery("What is the computer's primary OS [e.g. linux, vista]? ", undef);
 
 $host->{aliases} = "";
 $host->{classes} = "";
+$host->{pxelink} = undef;
+$host->{status} = "deployed";
 
-if(BrownCS::UDB::ynquery("Insert new record? [Y/n] ")) {
+if(BrownCS::UDB::ynquery("Insert new record? [Y/n] ", 1)) {
   $udb->insert_host($host);
 }
 
-$udb->finish;
+END {
+  $udb->finish;
+}
 
 __END__
 

@@ -1,10 +1,17 @@
 #!/usr/bin/perl -w
 
+#
+# Prologue
+#
+
 use Getopt::Long;
 use Pod::Usage;
 
 use lib "/home/aleks/pro/udb/lib";
 use BrownCS::UDB;
+
+use DBI qw(:sql_types);
+use DBD::Pg qw(:pg_types);
 
 # Print a simple help message.
 sub usage {
@@ -16,6 +23,10 @@ my $help = 0;
 my $username = $ENV{'USER'};
 my $udb = BrownCS::UDB->new;
 
+#
+# argument gathering
+#
+
 GetOptions ('help|h|?' => \$help, 
             'u' => \$username) or usage(2);
 usage(1) if $help;
@@ -24,20 +35,21 @@ if (@ARGV == 0) {
   usage(2);
 }
 
-my $class = $ARGV[0];
+my $hostname = shift;
+
 my $password = BrownCS::UDB->get_pass;
 
 $udb->start($username, $password);
 
-printf "%-15s%-40s%-10s\n\n", "MACHINE", "SERVICES", "CONTACTS";
+#
+# code starts here
+#
 
-my @hosts = $udb->all_hosts_in_class($class);
+$udb->{dbh}->do(q{delete from equipment where name = ?}, undef, $hostname);
 
-foreach my $hostname (@hosts) {
-  my %host = $udb->get_host($hostname);
-  $contact = ($host{contact} or '');
-  printf "%-15s%-40s%-10s\n", $hostname, "who knows", $contact;
-}
+#
+# epilogue
+#
 
 END {
   $udb->finish;
@@ -47,17 +59,15 @@ __END__
 
 =head1 NAME
 
-cdb-contact-list - Print out a contact list for all hosts in a class
+cdb-add - Add a host to UDB
 
 =head1 SYNOPSIS
 
-cdb-contact-list [-u username] classname
+cdb-add [-u username] hostname
 
 =head1 DESCRIPTION
 
-cdb-contact-list queries the UDB database for all hosts in a class, and
-prints out a contact list which is designed to be posted in the machine
-rooms. It is designed to resemble the old I<contact-list> command.
+adds one or more hosts to the database
 
 =head1 OPTIONS
 

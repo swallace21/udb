@@ -57,7 +57,7 @@ sub textquery {
   my($prompt, $default) = @_;
   while (1) {
     my $answer = $term->readline($prompt);
-    if (($answer eq '') and $default) {
+    if (($answer eq '') and (defined $default)) {
       return $default;
     } elsif ($answer ne '') {
       return $answer;
@@ -275,9 +275,7 @@ sub insert_host {
   $self->{sths}->{class_comp_insert}->bind_param(1, undef, SQL_INTEGER);
   $self->{sths}->{class_comp_insert}->bind_param(2, undef, SQL_INTEGER);
 
-  my $machine_name = $host->{'hostname'};
-
-  print "importing cdb $machine_name";
+  my $hostname = $host->{'hostname'};
 
   my $contact = $host->{'contact'};
 
@@ -288,6 +286,9 @@ sub insert_host {
   my @classes = split(/,/, $host->{'classes'});
 
   my $ethernet = $host->{'ethernet'};
+  if ((defined $ethernet) and ($ethernet eq "")) {
+    $ethernet = undef;
+  }
 
   my $ipaddr = $host->{'ip_addr'};
   my $vlan_id;
@@ -307,7 +308,7 @@ sub insert_host {
 
   # create an equipment entry...
 
-  $self->{sths}->{equip_insert}->execute($machine_name, $contact);
+  $self->{sths}->{equip_insert}->execute($hostname, $contact);
   my $equip_id = $self->{sths}->{equip_insert}->fetch()->[0];
 
   # fill in equip_status
@@ -325,7 +326,7 @@ sub insert_host {
   }
 
   my $pxelink = $host->{'pxelink'};
-  if ($pxelink eq "") {
+  if ((defined $pxelink) and ($pxelink eq "")) {
     $pxelink = undef;
   }
 
@@ -340,7 +341,7 @@ sub insert_host {
 
   $self->{sths}->{addr_iface_insert}->execute($address_id, $interface_id);
 
-  $self->{sths}->{dns_insert}->execute($machine_name, $address_id);
+  $self->{sths}->{dns_insert}->execute($hostname, $address_id);
 
   if ( $#aliases != -1 ) {
     foreach (@aliases) {
@@ -356,8 +357,6 @@ sub insert_host {
       $self->{sths}->{class_comp_insert}->execute($class_id, $comp_id);
     }
   }
-
-  print "\n";
 }
 
 # sub find_unused_ip {
