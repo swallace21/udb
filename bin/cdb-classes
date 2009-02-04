@@ -5,6 +5,7 @@ use Pod::Usage;
 
 use lib "/home/aleks/pro/tstaff/udb/lib";
 use BrownCS::UDB;
+use BrownCS::UDB::Util qw(ask ask_password confirm choose);
 
 # Print a simple help message.
 sub usage {
@@ -31,7 +32,7 @@ if (@ARGV == 0) {
 }
 
 my $hostname = $ARGV[0];
-my $password = BrownCS::UDB->get_pass;
+my $password = &ask_password;
 
 $udb->start($username, $password);
 

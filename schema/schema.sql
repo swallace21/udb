@@ -52,20 +52,20 @@ create table places (
 
 -- {{{
 
-create domain usage text not null check (
-value = 'tstaff' or
-value = 'academic' or
-value = 'personal');
+create table equip_usage_types (
+  id                        serial primary key,
+  description               text
+) ;
 
-create domain equipstatus text not null check (
-value = 'deployed' or
-value = 'spare' or
-value = 'surplus');
+create table management_types (
+  id                        serial primary key,
+  description               text
+) ;
 
-create domain equipmanaged text not null check (
-value = 'tstaff' or
-value = 'cis' or
-value = 'user');
+create table equip_status_types (
+  id                        serial primary key,
+  description               text
+) ;
 
 create sequence cs_id_seq;
 
@@ -100,8 +100,12 @@ create table equipment (
                               on delete cascade,
   cs_id                     integer unique default nextval('cs_id_seq'),
   name                      text unique,
-  equip_status              equipstatus not null,
-  usage                     usage,
+  equip_status              integer not null references equip_status_types
+                              on update cascade
+                              on delete restrict,
+  usage                     integer not null references equip_usage_types
+                              on update cascade
+                              on delete restrict,
   installed_on              date,
   descr                     text,
   owner                     text,
@@ -190,7 +194,9 @@ create table net_services (
 create table net_zones (
   id                        serial primary key,
   name                      text not null,
-  owner                     equipmanaged,
+  manager                   integer not null references management_types
+                              on update cascade
+                              on delete restrict,
   routing                   routing_type
 ) ;
 

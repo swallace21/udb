@@ -10,6 +10,8 @@ eval('require "/tstaff/share/cdb/db.pl";');
 
 use lib "/home/aleks/pro/tstaff/udb/lib";
 use BrownCS::UDB;
+use BrownCS::UDB::Util qw(ask ask_password confirm);
+use Data::Dumper;
 
 # Print a simple help message.
 sub usage {
@@ -25,9 +27,46 @@ GetOptions ('help|h|?' => \$help,
             'u' => \$username) or usage(2);
 usage(1) if $help;
 
-my $password = BrownCS::UDB->get_pass;
+my $password = &ask_password;
 
 $udb->start($username, $password);
+
+#$udb->{dbh}->trace(1);
+
+#
+# domains
+#
+
+print "populating domains... ";
+
+sub domain_insert {
+  my ($table, $desc) = @_;
+  my $sth = $udb->prepare("INSERT INTO $table (description) VALUES (?) RETURNING id");
+  $sth->execute($desc);
+  return $sth->fetch()->[0];
+}
+
+$udb->{dbh}->do("DELETE FROM equip_usage_types; DELETE FROM equip_status_types; delete from management_types;");
+
+my %usage_types = (
+  "tstaff" => domain_insert("equip_usage_types", "tstaff"),
+  "academic" => domain_insert("equip_usage_types", "academic"),
+  "personal" => domain_insert("equip_usage_types", "personal"),
+);
+
+my %status_types = (
+  "deployed" => domain_insert("equip_status_types", "deployed"),
+  "spare" => domain_insert("equip_status_types", "spare"),
+  "surplus" => domain_insert("equip_status_types", "surplus"),
+);
+
+my %management_types = (
+  "tstaff" => domain_insert("management_types", "tstaff"),
+  "cis" => domain_insert("management_types", "cis"),
+  "user" => domain_insert("management_types", "user"),
+);
+
+print Dumper(%$management_types);
 
 #
 # vlans and zones
@@ -37,41 +76,42 @@ print "creating vlans and zones... ";
 
 $udb->{dbh}->do("DELETE FROM net_zones; DELETE FROM net_vlans;");
 
-my $zone_insert = $udb->{dbh}->prepare("INSERT INTO net_zones (owner, routing, name) VALUES (?, ?, ?)");
+my $zone_insert = $udb->{dbh}->prepare("INSERT INTO net_zones (manager, routing, name) VALUES (?, ?, ?)");
+$zone_insert->bind_param(1, undef, SQL_INTEGER);
 
 my $vlan_insert = $udb->{dbh}->prepare("INSERT INTO net_vlans (zone_id, vlan_num, network) VALUES (?, ?, ?)");
 $vlan_insert->bind_param(1, undef, SQL_INTEGER);
 $vlan_insert->bind_param(2, undef, SQL_INTEGER);
 $vlan_insert->bind_param(3, undef, {pg_type => PG_CIDR});
 
-$zone_insert->execute("tstaff", "DMZ", "tstaff-dmz");
+$zone_insert->execute($management_types{"tstaff"}, "DMZ", "tstaff-dmz");
 my $tstaff_DMZ_id = $udb->{dbh}->last_insert_id(undef, undef, "net_zones", undef);
 
-$zone_insert->execute("tstaff", "private", "tstaff-private");
+$zone_insert->execute($management_types{"tstaff"}, "private", "tstaff-private");
 my $tstaff_private_id = $udb->{dbh}->last_insert_id(undef, undef, "net_zones", undef);
 
-$zone_insert->execute("tstaff", "standard", "tstaff-standard");
+$zone_insert->execute($management_types{"tstaff"}, "standard", "tstaff-standard");
 my $tstaff_standard_id = $udb->{dbh}->last_insert_id(undef, undef, "net_zones", undef);
 
-$zone_insert->execute("user", "DMZ", "user-dmz");
+$zone_insert->execute($management_types{"user"}, "DMZ", "user-dmz");
 my $user_DMZ_id = $udb->{dbh}->last_insert_id(undef, undef, "net_zones", undef);
 
-$zone_insert->execute("user", "private", "cs166");
+$zone_insert->execute($management_types{"user"}, "private", "cs166");
 my $cs166_id = $udb->{dbh}->last_insert_id(undef, undef, "net_zones", undef);
 
-$zone_insert->execute("user", "special", "outside");
+$zone_insert->execute($management_types{"user"}, "special", "outside");
 my $outside_id = $udb->{dbh}->last_insert_id(undef, undef, "net_zones", undef);
 
-$zone_insert->execute("user", "special", "jj-oshean");
+$zone_insert->execute($management_types{"user"}, "special", "jj-oshean");
 my $jj_id = $udb->{dbh}->last_insert_id(undef, undef, "net_zones", undef);
 
-$zone_insert->execute("user", "special", "techhouse");
+$zone_insert->execute($management_types{"user"}, "special", "techhouse");
 my $techhouse_id = $udb->{dbh}->last_insert_id(undef, undef, "net_zones", undef);
 
-$zone_insert->execute("user", "special", "ipsec");
+$zone_insert->execute($management_types{"user"}, "special", "ipsec");
 my $ipsec_id = $udb->{dbh}->last_insert_id(undef, undef, "net_zones", undef);
 
-$zone_insert->execute("user", "standard", "user-standard");
+$zone_insert->execute($management_types{"user"}, "standard", "user-standard");
 my $user_standard_id = $udb->{dbh}->last_insert_id(undef, undef, "net_zones", undef);
 
 $vlan_insert->execute($tstaff_DMZ_id, 32, "128.148.32.0/25");
@@ -110,6 +150,7 @@ $udb->{dbh}->do("DELETE FROM comp_classes_computers;");
 my($key, $data);
 while ( ($key, $data) = each(%$cdb_by_hostname) ) {
   if (( $data->{'status'} ne 'disabled' ) and ($data->{'ethernet'} ne '' )) {
+    print "adding host " . $data->{hostname} . "\n";
     $udb->insert_host($data);
   }
 }

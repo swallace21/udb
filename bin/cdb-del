@@ -9,6 +9,7 @@ use Pod::Usage;
 
 use lib "/home/aleks/pro/tstaff/udb/lib";
 use BrownCS::UDB;
+use BrownCS::UDB::Util qw(ask ask_password confirm choose);
 
 use DBI qw(:sql_types);
 use DBD::Pg qw(:pg_types);
@@ -36,8 +37,7 @@ if (@ARGV == 0) {
 }
 
 my $hostname = shift;
-
-my $password = BrownCS::UDB->get_pass;
+my $password = &ask_password;
 
 $udb->start($username, $password);
 
@@ -59,15 +59,15 @@ __END__
 
 =head1 NAME
 
-cdb-add - Add a host to UDB
+cdb-del - delete a host from UDB
 
 =head1 SYNOPSIS
 
-cdb-add [-u username] hostname
+cdb-del [-u username] hostname
 
 =head1 DESCRIPTION
 
-adds one or more hosts to the database
+deletes one or more hosts from the database
 
 =head1 OPTIONS
 

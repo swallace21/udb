@@ -5,6 +5,7 @@ use Pod::Usage;
 
 use lib "/home/aleks/pro/tstaff/udb/lib";
 use BrownCS::UDB;
+use BrownCS::UDB::Util qw(ask ask_password confirm choose);
 
 use DBI qw(:sql_types);
 use DBD::Pg qw(:pg_types);
@@ -37,7 +38,7 @@ my $class = shift;
 
 my @hostnames = @ARGV;
 
-my $password = BrownCS::UDB->get_pass;
+my $password = &ask_password;
 
 $udb->start($username, $password);
 

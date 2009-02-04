@@ -6,6 +6,7 @@ use Data::Dumper;
 
 use lib "/home/aleks/pro/tstaff/udb/lib";
 use BrownCS::UDB;
+use BrownCS::UDB::Util qw(ask ask_password confirm);
 
 my $udb = BrownCS::UDB->new;
 
@@ -1855,7 +1856,7 @@ $SIG{'TERM'} = \&sighandler;
 
 if(defined($g_cdb_commands{$ARGV[0]})) {
   $g_cmdname = shift(@ARGV);
-  my $password = BrownCS::UDB->get_pass;
+  my $password = &ask_password;
   $udb->start($username, $password);
   $g_status = &{ $g_cdb_commands{$g_cmdname}{'fn'} }(@ARGV);
   $udb->finish;
