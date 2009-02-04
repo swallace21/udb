@@ -3,7 +3,7 @@
 use Getopt::Long;
 use Pod::Usage;
 
-use lib "/home/aleks/pro/udb/lib";
+use lib "/home/aleks/pro/tstaff/udb/lib";
 use BrownCS::UDB;
 
 use DBI qw(:sql_types);

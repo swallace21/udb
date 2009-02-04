@@ -352,6 +352,7 @@ create table user_accounts (
   home_dir                  text not null,
   created                   date not null,
   expiration                date,
+  enabled                   boolean,
   last_changed              timestamp not null default now()
 ) ;
 

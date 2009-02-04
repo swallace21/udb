@@ -8,7 +8,7 @@ use DBD::Pg qw(:pg_types);
 
 eval('require "/tstaff/share/cdb/db.pl";');
 
-use lib "/home/aleks/pro/udb/lib";
+use lib "/home/aleks/pro/tstaff/udb/lib";
 use BrownCS::UDB;
 
 # Print a simple help message.

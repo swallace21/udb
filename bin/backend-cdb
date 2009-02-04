@@ -4,7 +4,7 @@ use Getopt::Long;
 use Pod::Usage;
 use Data::Dumper;
 
-use lib "/home/aleks/pro/udb/lib";
+use lib "/home/aleks/pro/tstaff/udb/lib";
 use BrownCS::UDB;
 
 my $udb = BrownCS::UDB->new;
