@@ -1,0 +1,134 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+use Pod::Usage;
+
+use lib "/home/aleks/pro/tstaff/udb/lib";
+use BrownCS::UDB;
+use BrownCS::UDB::Util qw(ask_password);
+
+use BrownCS::UDB::Frontend::Add qw(add);
+use BrownCS::UDB::Frontend::ClassAdd qw(class_add);
+use BrownCS::UDB::Frontend::ClassDel qw(class_del);
+use BrownCS::UDB::Frontend::Classes qw(classes);
+use BrownCS::UDB::Frontend::ClassShow qw(class_show);
+use BrownCS::UDB::Frontend::ContactList qw(contact_list);
+use BrownCS::UDB::Frontend::Del qw(del);
+use BrownCS::UDB::Frontend::Mod qw(mod);
+use BrownCS::UDB::Frontend::Show qw(show);
+
+# Print a simple help message.
+sub usage {
+  my ($exit_status) = @_;
+  pod2usage({ -exitval => $exit_status, -verbose => 99, -sections => "SYNOPSIS|DESCRIPTION|OPTIONS"});
+}
+
+sub sort_fieldnames {
+  return -1 if($a eq 'hostname');
+  return 1 if($b eq 'hostname');
+  return $a cmp $b;
+}
+
+
+my $help = 0;
+my $verbose = 0;
+my $dryrun = 0;
+my $username = $ENV{'USER'};
+
+GetOptions ('help|h|?' => \$help, 
+            'v|verbose' => \$verbose,
+            'n|dryrun' => \$dryrun,
+            'u' => \$username) or usage(2);
+usage(1) if $help;
+
+my $cmd = shift;
+
+if (not defined $cmd) {
+  usage(2);
+}
+
+my $fn;
+
+if ($cmd eq 'add') {
+  $fn = \&add;
+} elsif ($cmd eq 'class-add') {
+  $fn = \&class_add;
+} elsif ($cmd eq 'class-del') {
+  $fn = \&class_del;
+} elsif ($cmd eq 'class-mod') {
+  $fn = \&class_mod;
+} elsif ($cmd eq 'classes') {
+  $fn = \&classes;
+} elsif ($cmd eq 'class-show') {
+  $fn = \&class_show;
+} elsif ($cmd eq 'contact-list') {
+  $fn = \&contact_list;
+} elsif ($cmd eq 'del') {
+  $fn = \&del;
+} elsif ($cmd eq 'mod') {
+  $fn = \&mod;
+} elsif ($cmd eq 'show') {
+  $fn = \&show;
+} else {
+  usage(2);
+}
+
+my $password = &ask_password;
+
+my $udb = BrownCS::UDB->new;
+$udb->start($username, $password);
+
+$fn->($udb, $verbose, $dryrun, @ARGV);
+
+END {
+  if (defined $udb) {
+    $udb->finish;
+  }
+}
+
+__END__
+
+=head1 NAME
+
+udb - main interface to the Universal DataBase
+
+=head1 SYNOPSIS
+
+udb [-v] [-n] [-u username] command [args ...]
+
+=head1 DESCRIPTION
+
+it's like cdb but better
+
+=head1 OPTIONS
+
+=over
+
+=item B<-h>, B<--help>
+
+Print a help message and exit.
+
+=item B<-u>, B<--username>=user
+
+Logs onto the database server as the specified username, instead of as
+the current user.
+
+=item B<-v>, B<--verbose>
+
+Print lots of information about what udb is doing.
+
+=item B<-n>, B<--dryrun>
+
+Don't make any changes; just print what would be done.
+
+=back
+
+=head1 AUTHORS
+
+Aleks Bromfield.
+
+=cut
+

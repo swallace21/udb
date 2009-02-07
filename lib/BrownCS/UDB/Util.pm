@@ -10,7 +10,7 @@ use File::Temp qw(tempfile);
 
 use Exporter qw(import);
 
-our @EXPORT_OK = qw(edit ask_password confirm ask);
+our @EXPORT_OK = qw(edit ask_password confirm ask choose demand get_date fmt_time);
 
 my $term = new Term::ReadLine 'udb';
 $term->ornaments(0);
@@ -25,7 +25,7 @@ $term->ornaments(0);
 sub edit {
   my ($str) = @_;
 
-  my ($fh, $filename) = tempfile();
+  my ($fh, $filename) = tempfile(UNLINK => 1);
   print $fh $str;
   close($fh);
 
@@ -74,12 +74,28 @@ sub confirm {
 # ask :: string -> string
 # Gets a line from the user.
 sub ask {
-  my($prompt, $default) = @_;
+  my($title, $prompt) = @_;
+
+  my ($fh, $filename) = tempfile(UNLINK => 1);
+  system("whiptail --backtitle \"UDB\" --title \"$title\" --inputbox \"$prompt\" 0 0 ");
+  my $answer = <$fh>;
+  close($fh);
+
+  return $answer;
+}
+
+# demand :: string -> string
+# Gets a nonempty line from the user.
+sub demand {
+  my($title, $prompt) = @_;
   while (1) {
-    my $answer = $term->readline($prompt);
-    if (($answer eq '') and (defined $default)) {
-      return $default;
-    } elsif ($answer ne '') {
+
+    my ($fh, $filename) = tempfile(UNLINK => 1);
+    system("whiptail --backtitle \"UDB\" --title \"$title\" --input \"$prompt\" 0 0 ");
+    my $answer = <$fh>;
+    close($fh);
+
+    if ($answer ne '') {
       return $answer;
     } else {
       print "Invalid answer. Please enter a non-empty string.\n"
@@ -91,18 +107,44 @@ sub ask {
 # Gets an answer from the user. The answer must belong to a specified
 # list.
 sub choose {
-  my($prompt, @choices) = @_;
-  while (1) {
-    my $answer = $term->readline($prompt);
-    if ( grep { "$_" eq "$answer" } @choices ) {
-      return $answer;
-    } else {
-      print "Invalid answer. You must enter one of the following: \n";
-      foreach my $choice (@choices) {
-        print "  $choice\n";
-      }
-    }
+  my($title, $prompt, $choices) = @_;
+
+  my $menu_items = [];
+
+  foreach my $choice (@{$choices}) {
+    push @{$menu_items}, $choice;
+    push @{$menu_items}, "";
   }
+
+  my ($fh, $filename) = tempfile(UNLINK => 1);
+  system("whiptail --backtitle \"UDB\" --title \"$title\" --menu \"$prompt\" 0 0 0 " .  join(" ", @{$menu_items}) . " 2>$filename");
+  my $answer = <$fh>;
+  close($fh);
+
+  return $answer;
+}
+
+# get_date :: ???
+# Return current date using nice format
+sub get_date {
+  my(@elems);
+  my($raw);
+
+  chop($raw = localtime(time));
+  @elems = split(/\s+/, $raw);
+  return $elems[2] . $elems[1] . substr($elems[4], -2);
+}
+
+# fmt_time :: ???
+# Return specified time using nice format
+sub fmt_time {
+  my($time) = @_;
+  my($sec, $min, $hour, $mday, $mon, $year) = localtime($time);
+
+  my(@moname) = ( 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec' );
+
+  return "${mday}${moname[$mon]}${year} ${hour}:${min}:${sec}";
 }
 
 1;

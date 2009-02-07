@@ -1,11 +1,14 @@
-#!/usr/bin/perl -w
+package BrownCS::UDB::Frontend::Show;
 
-use Getopt::Long;
+use strict;
+use warnings;
+
+use Exporter qw(import);
+our @EXPORT_OK = qw(show);
+
 use Pod::Usage;
-
-use lib "/home/aleks/pro/tstaff/udb/lib";
-use BrownCS::UDB;
-use BrownCS::UDB::Util qw(ask ask_password confirm choose);
+use DBI qw(:sql_types);
+use DBD::Pg qw(:pg_types);
 
 # Print a simple help message.
 sub usage {
@@ -19,39 +22,27 @@ sub sort_fieldnames {
   return $a cmp $b;
 }
 
-my $help = 0;
-my $username = $ENV{'USER'};
-my $udb = BrownCS::UDB->new;
-
-GetOptions ('help|h|?' => \$help, 
-            'u' => \$username) or usage(2);
-usage(1) if $help;
-
-if (@ARGV == 0) {
-  usage(2);
-}
-
-my $hostname = $ARGV[0];
-my $password = &ask_password;
-
-$udb->start($username, $password);
-
-my %host = $udb->get_host($hostname);
-
-$host{aliases} = join(',',@{$host{aliases}});
-$host{classes} = join(',',@{$host{classes}});
-
-foreach $field (sort sort_fieldnames keys(%host)) {
-  if (not $host{$field}) {
-    $host{$field} = '';
+sub show {
+  my ($udb, $verbose, $dryrun, @ARGV) = @_;
+  if (@ARGV == 0) {
+    usage(2);
   }
-  print $field, ' = ', $host{$field}, "\n";
+
+  my $hostname = shift @ARGV;
+
+  my %host = $udb->get_host($hostname);
+  $host{aliases} = join(',',@{$host{aliases}});
+  $host{classes} = join(',',@{$host{classes}});
+
+  foreach my $field (sort sort_fieldnames keys(%host)) {
+    if (not $host{$field}) {
+      $host{$field} = '';
+    }
+    print $field, ' = ', $host{$field}, "\n";
+  }
 }
 
-END {
-  $udb->finish;
-}
-
+1;
 __END__
 
 =head1 NAME

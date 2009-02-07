@@ -8,6 +8,8 @@ VERIFY:
 
 - alias must match [a-z][a-z0-9_\-]* format
 
+- equipment managed_by and zone managed_by must match
+
 CLEAN:
 
 - convert hostname to lowercase and remove whitespace

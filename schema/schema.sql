@@ -106,6 +106,9 @@ create table equipment (
   usage                     integer not null references equip_usage_types
                               on update cascade
                               on delete restrict,
+  managed_by                integer not null references management_types
+                              on update cascade
+                              on delete restrict,
   installed_on              date,
   descr                     text,
   owner                     text,
@@ -219,6 +222,8 @@ create table net_addresses (
                               on update cascade
                               on delete cascade,
   ipaddr                    inet,
+  dns_name                  text not null,
+  domain                    text not null,
   enabled                   boolean not null default true,
   monitored                 boolean not null,
   last_changed              timestamp not null default now(),
@@ -240,9 +245,9 @@ create trigger vlan_zone_trigger before insert or update on net_addresses
   for each row execute procedure update_zone_by_vlan();
 
 create table net_dns_entries (
-  name                      text,
-  domain                    text,
-  zone                      dns_type,
+  name                      text not null,
+  domain                    text not null,
+  zone                      dns_type not null,
   net_address_id            integer not null references net_addresses
                               on update cascade
                               on delete cascade,

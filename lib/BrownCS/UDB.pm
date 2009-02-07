@@ -84,7 +84,7 @@ sub get_host {
   my $aliases_select = $self->prepare("select nde.name from net_dns_entries nde, equipment e, net_addresses_net_interfaces nani, net_interfaces ni, net_addresses na where e.name = ? and e.id = ni.equipment_id and nani.net_interfaces_id = ni.id and nani.net_addresses_id = na.id and na.id = nde.net_address_id");
   my $classes_select = $self->prepare("select cc.class from comp_classes cc, computers c, comp_classes_computers ccc, equipment e where e.name = ? and e.id = c.equipment_id and ccc.comp_classes_id = cc.id and ccc.computers_id = c.id");
   my $comp_select = $self->prepare("select c.id, c.hw_arch, c.os, c.pxelink from equipment e, computers c where e.name = ? and c.equipment_id = e.id");
-  my $equip_select = $self->prepare("select e.id, e.contact, e.equip_status from equipment e where e.name = ?");
+  my $equip_select = $self->prepare("select id, contact, equip_status, usage, managed_by from equipment where name = ?");
   my $ethernet_select = $self->prepare("select ni.ethernet from equipment e, net_interfaces ni where e.name = ? and e.id = ni.equipment_id");
   my $ip_addr_select = $self->prepare("select na.ipaddr from equipment e, net_addresses_net_interfaces nani, net_interfaces ni, net_addresses na where e.name = ? and e.id = ni.equipment_id and nani.net_interfaces_id = ni.id and nani.net_addresses_id = na.id");
 
@@ -93,8 +93,12 @@ sub get_host {
 
   $equip_select->execute($hostname);
   die "No record for host $hostname\n" if ($equip_select->rows == 0);
-  $equip_select->bind_columns(\$host{equip_id}, \$host{contact}, \$host{status});
+  $equip_select->bind_columns(\$host{equip_id}, \$host{contact}, \$host{status}, \$host{usage}, \$host{managed_by});
   $equip_select->fetch;
+
+  $host{status} = $self->get_field("equip_status_types", "description", $host{status});
+  $host{managed_by} = $self->get_field("management_types", "description", $host{managed_by});
+  $host{usage} = $self->get_field("equip_usage_types", "description", $host{usage});
 
   $comp_select->execute($hostname);
   $comp_select->bind_columns(\$host{comp_id}, \$host{hw_arch}, \$host{os_type}, \$host{pxelink});
@@ -148,6 +152,24 @@ sub get_id {
   my ($table, $field, $value) = @_;
   my $id;
 
+  my $sth_select = $self->prepare("select id from $table where $field = ?");
+
+  $sth_select->execute($value);
+
+  if ($sth_select->rows == 0) {
+    die "Can't find entry in $table where $field = $value!\n";
+  } else {
+    $id = $sth_select->fetchrow_arrayref()->[0];
+  }
+
+  return $id;
+}
+
+sub get_or_create_id {
+  my $self = shift;
+  my ($table, $field, $value) = @_;
+  my $id;
+
   my $sth_insert = $self->prepare("insert into $table ($field) values (?) returning id");
   my $sth_select = $self->prepare("select id from $table where $field = ?");
 
@@ -163,10 +185,28 @@ sub get_id {
   return $id;
 }
 
-sub get_class {
+sub get_field {
+  my $self = shift;
+  my ($table, $field, $value) = @_;
+  my $id;
+
+  my $sth_select = $self->prepare("select $field from $table where id = ?");
+
+  $sth_select->execute($value);
+
+  if ($sth_select->rows == 0) {
+    die "Can't find entry in $table where id = $value!\n";
+  } else {
+    $id = $sth_select->fetchrow_arrayref()->[0];
+  }
+
+  return $id;
+}
+
+sub get_class_id {
   my $self = shift;
   my ($class) = @_;
-  return $self->get_id("comp_classes", "class", $class);
+  return $self->get_or_create_id("comp_classes", "class", $class);
 }
 
 sub get_vlan {
@@ -194,8 +234,9 @@ sub insert_host {
 
   my $deployed_id = $self->get_id("equip_status_types", "description", "deployed");
   my $academic_id = $self->get_id("equip_usage_types", "description", "academic");
+  my $managed_by_id = $self->get_id("management_types", "description", "tstaff");
 
-  my $equip_insert = $self->prepare("INSERT INTO equipment (equip_status, usage, name, contact) VALUES ($deployed_id, $academic_id, ?, ?) RETURNING id");
+  my $equip_insert = $self->prepare("INSERT INTO equipment (equip_status, usage, managed_by, name, contact) VALUES ($deployed_id, $academic_id, $managed_by_id, ?, ?) RETURNING id");
 
   my $comp_insert = $self->prepare("INSERT INTO computers (equipment_id, hw_arch, os, pxelink) VALUES (?, ?, ?, ?) RETURNING id");
   $comp_insert->bind_param(1, undef, SQL_INTEGER);
@@ -204,7 +245,7 @@ sub insert_host {
   $interface_insert->bind_param(1, undef, SQL_INTEGER);
   $interface_insert->bind_param(2, undef, {pg_type => PG_MACADDR});
 
-  my $address_insert = $self->prepare("INSERT INTO net_addresses (vlan_id, ipaddr, monitored) VALUES (?, ?, ?) RETURNING id");
+  my $address_insert = $self->prepare("INSERT INTO net_addresses (vlan_id, ipaddr, monitored, dns_name, domain) VALUES (?, ?, ?, ?, 'cs.brown.edu') RETURNING id");
   $address_insert->bind_param(1, undef, SQL_INTEGER);
   $address_insert->bind_param(2, undef, {pg_type => PG_INET});
   $address_insert->bind_param(3, undef, {pg_type => PG_BOOL});
@@ -281,7 +322,7 @@ sub insert_host {
   $interface_insert->execute($equip_id, $ethernet);
   my $interface_id = $interface_insert->fetch()->[0];
 
-  $address_insert->execute($vlan_id, $ipaddr, $monitored);
+  $address_insert->execute($vlan_id, $ipaddr, $monitored, $hostname);
   my $address_id = $address_insert->fetch()->[0];
 
   $addr_iface_insert->execute($address_id, $interface_id);
@@ -296,7 +337,7 @@ sub insert_host {
 
   if ( $#classes != -1 ) {
     foreach (@classes) {
-      my $class_id = $self->get_class($_);
+      my $class_id = $self->get_class_id($_);
       $class_comp_insert->execute($class_id, $comp_id);
     }
   }

@@ -1,11 +1,14 @@
-#!/usr/bin/perl -w
+package BrownCS::UDB::Frontend::ClassShow;
 
-use Getopt::Long;
+use strict;
+use warnings;
+
+use Exporter qw(import);
+our @EXPORT_OK = qw(class_show);
+
 use Pod::Usage;
-
-use lib "/home/aleks/pro/tstaff/udb/lib";
-use BrownCS::UDB;
-use BrownCS::UDB::Util qw(ask ask_password confirm choose);
+use DBI qw(:sql_types);
+use DBD::Pg qw(:pg_types);
 
 # Print a simple help message.
 sub usage {
@@ -13,31 +16,18 @@ sub usage {
   pod2usage({ -exitval => $exit_status, -verbose => 99, -sections => "SYNOPSIS|DESCRIPTION|OPTIONS"});
 }
 
-my $help = 0;
-my $username = $ENV{'USER'};
-my $udb = BrownCS::UDB->new;
+sub class_show {
+  my ($udb, $verbose, $dryrun, @ARGV) = @_;
+  if (@ARGV == 0) {
+    usage(2);
+  }
 
-GetOptions ('help|h|?' => \$help, 
-            'u' => \$username) or usage(2);
-usage(1) if $help;
-
-if (@ARGV == 0) {
-  usage(2);
+  my $class = shift @ARGV;
+  my @hosts = $udb->all_hosts_in_class($class);
+  print join(" ", @hosts) . "\n";
 }
 
-my $class = $ARGV[0];
-my $password = &ask_password;
-
-$udb->start($username, $password);
-
-my @hosts = $udb->all_hosts_in_class($class);
-
-print join(" ", @hosts) . "\n";
-
-END {
-  $udb->finish;
-}
-
+1;
 __END__
 
 =head1 NAME

@@ -1,16 +1,12 @@
-#!/usr/bin/perl -w
+package BrownCS::UDB::Frontend::Del;
 
-#
-# Prologue
-#
+use strict;
+use warnings;
 
-use Getopt::Long;
+use Exporter qw(import);
+our @EXPORT_OK = qw(del);
+
 use Pod::Usage;
-
-use lib "/home/aleks/pro/tstaff/udb/lib";
-use BrownCS::UDB;
-use BrownCS::UDB::Util qw(ask ask_password confirm choose);
-
 use DBI qw(:sql_types);
 use DBD::Pg qw(:pg_types);
 
@@ -20,41 +16,17 @@ sub usage {
   pod2usage({ -exitval => $exit_status, -verbose => 99, -sections => "SYNOPSIS|DESCRIPTION|OPTIONS"});
 }
 
-my $help = 0;
-my $username = $ENV{'USER'};
-my $udb = BrownCS::UDB->new;
+sub del {
+  my ($udb, $verbose, $dryrun, @ARGV) = @_;
+  if (@ARGV == 0) {
+    usage(2);
+  }
 
-#
-# argument gathering
-#
-
-GetOptions ('help|h|?' => \$help, 
-            'u' => \$username) or usage(2);
-usage(1) if $help;
-
-if (@ARGV == 0) {
-  usage(2);
+  my $hostname = shift @ARGV;
+  $udb->{dbh}->do(q{delete from equipment where name = ?}, undef, $hostname);
 }
 
-my $hostname = shift;
-my $password = &ask_password;
-
-$udb->start($username, $password);
-
-#
-# code starts here
-#
-
-$udb->{dbh}->do(q{delete from equipment where name = ?}, undef, $hostname);
-
-#
-# epilogue
-#
-
-END {
-  $udb->finish;
-}
-
+1;
 __END__
 
 =head1 NAME
