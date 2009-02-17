@@ -6,7 +6,8 @@ use warnings;
 use Getopt::Long;
 use Pod::Usage;
 
-use lib "/home/aleks/pro/tstaff/udb/lib";
+use FindBin qw($RealBin);
+use lib "$RealBin/../lib";
 use BrownCS::UDB;
 use BrownCS::UDB::Util qw(ask_password);
 
@@ -20,18 +21,94 @@ use BrownCS::UDB::Frontend::Del qw(del);
 use BrownCS::UDB::Frontend::Mod qw(mod);
 use BrownCS::UDB::Frontend::Show qw(show);
 
+my %udb_commands = (
+  'add' => {
+    'fn' => \&add,
+    'desc' => ["\t\tadd a new host"],
+    'usage' => "add",
+    'common' => 1,
+  },
+  'class-add' => {
+    'fn' => \&class_add,
+    'desc' => ["\tadd one or more hosts to a class"],
+    'usage' => "class-add CLASS HOST...",
+    'common' => 0,
+  },
+  'class-del' => {
+    'fn' => \&class_del,
+    'desc' => ["\tremove one or more hosts from a class"],
+    'usage' => "class-del CLASS HOST...",
+    'common' => 0,
+  },
+  'classes' => {
+    'fn' => \&classes,
+    'desc' => ["\tlist the classes to which the host belongs"],
+    'usage' => "classes HOST",
+    'common' => 0,
+  },
+  'class-show' => {
+    'fn' => \&class_show,
+    'desc' => ["\tlist the members of a class"],
+    'usage' => "class-show CLASS",
+    'common' => 0,
+  },
+  'contact-list' => {
+    'fn' => \&contact_list,
+    'desc' => ["print out a contact list for all hosts in a class"],
+    'usage' => "contact-list CLASS",
+    'common' => 0,
+  },
+  'delete' => {
+    'fn' => \&del,
+    'desc' => ["\tdelete a host"],
+    'usage' => "delete HOST",
+    'common' => 1,
+  },
+  'help' => {
+    'fn' => \&command_help,
+    'desc' => ["\tget help on a command"],
+    'usage' => "help command",
+    'common' => 0,
+  },
+  'modify' => {
+    'fn' => \&mod,
+    'desc' => ["\tmodify a host"],
+    'usage' => "modify HOST",
+    'common' => 1,
+  },
+  'show' => {
+    'fn' => \&show,
+    'desc' => ["\tprint a summary of a host"],
+    'usage' => "show HOST",
+    'common' => 1,
+  },
+);
+
 # Print a simple help message.
 sub usage {
   my ($exit_status) = @_;
-  pod2usage({ -exitval => $exit_status, -verbose => 99, -sections => "SYNOPSIS|DESCRIPTION|OPTIONS"});
+  pod2usage({ -exitval => "NOEXIT", -verbose => 1});
+  print "Commands:\n\n";
+  foreach my $k (sort(keys(%udb_commands))) {
+    next if not $udb_commands{$k}{'common'};
+    print "    $k\t" . $udb_commands{$k}{'desc'}[0] . "\n";
+  }
+  print "\nSee 'udb help COMMAND' for more information on a specific command.\n";
+  exit($exit_status);
 }
 
-sub sort_fieldnames {
-  return -1 if($a eq 'hostname');
-  return 1 if($b eq 'hostname');
-  return $a cmp $b;
+# Print a simple help message for a specific command.
+sub command_help {
+  my ($cmd) = @_;
+  print "Usage: ";
+  print $udb_commands{$cmd}{"usage"} , "\n\n";
+  my $lines = $udb_commands{$cmd}{"desc"};
+  foreach my $line (@$lines) {
+    $line =~ s/^\s+//;
+    print "  \u$line.\n";
+  }
+  print "\n";
 }
-
 
 my $help = 0;
 my $verbose = 0;
@@ -52,26 +129,8 @@ if (not defined $cmd) {
 
 my $fn;
 
-if ($cmd eq 'add') {
-  $fn = \&add;
-} elsif ($cmd eq 'class-add') {
-  $fn = \&class_add;
-} elsif ($cmd eq 'class-del') {
-  $fn = \&class_del;
-} elsif ($cmd eq 'class-mod') {
-  $fn = \&class_mod;
-} elsif ($cmd eq 'classes') {
-  $fn = \&classes;
-} elsif ($cmd eq 'class-show') {
-  $fn = \&class_show;
-} elsif ($cmd eq 'contact-list') {
-  $fn = \&contact_list;
-} elsif ($cmd eq 'del') {
-  $fn = \&del;
-} elsif ($cmd eq 'mod') {
-  $fn = \&mod;
-} elsif ($cmd eq 'show') {
-  $fn = \&show;
+if(defined($udb_commands{$cmd})) {
+  $fn = $udb_commands{$cmd}{'fn'};
 } else {
   usage(2);
 }

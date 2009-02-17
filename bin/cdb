@@ -7,7 +7,8 @@ use Getopt::Long;
 use Pod::Usage;
 use Data::Dumper;
 
-use lib "/home/aleks/pro/tstaff/udb/lib";
+use FindBin qw($RealBin);
+use lib "$RealBin/../lib";
 use BrownCS::UDB;
 use BrownCS::UDB::Util qw(ask ask_password confirm);
 

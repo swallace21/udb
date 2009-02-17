@@ -74,27 +74,17 @@ sub confirm {
 # ask :: string -> string
 # Gets a line from the user.
 sub ask {
-  my($title, $prompt) = @_;
-
-  my ($fh, $filename) = tempfile(UNLINK => 1);
-  system("whiptail --backtitle \"UDB\" --title \"$title\" --inputbox \"$prompt\" 0 0 ");
-  my $answer = <$fh>;
-  close($fh);
-
+  my($prompt, $default) = @_;
+  my $answer = $term->readline("$prompt ");
   return $answer;
 }
 
 # demand :: string -> string
 # Gets a nonempty line from the user.
 sub demand {
-  my($title, $prompt) = @_;
+  my($prompt, $default) = @_;
   while (1) {
-
-    my ($fh, $filename) = tempfile(UNLINK => 1);
-    system("whiptail --backtitle \"UDB\" --title \"$title\" --input \"$prompt\" 0 0 ");
-    my $answer = <$fh>;
-    close($fh);
-
+    my $answer = $term->readline("$prompt ");
     if ($answer ne '') {
       return $answer;
     } else {
@@ -103,25 +93,32 @@ sub demand {
   }
 }
 
-# choose :: string * [string] -> string
+# choose :: string * [(string * string * string)] -> string
 # Gets an answer from the user. The answer must belong to a specified
 # list.
 sub choose {
-  my($title, $prompt, $choices) = @_;
+  my($prompt, $choices) = @_;
 
-  my $menu_items = [];
+  my $answer = undef;
+
+  print "$prompt\n";
 
   foreach my $choice (@{$choices}) {
-    push @{$menu_items}, $choice;
-    push @{$menu_items}, "";
+    printf(" [%s] %s\n", $choice->{'key'}, $choice->{'desc'});
   }
 
-  my ($fh, $filename) = tempfile(UNLINK => 1);
-  system("whiptail --backtitle \"UDB\" --title \"$title\" --menu \"$prompt\" 0 0 0 " .  join(" ", @{$menu_items}) . " 2>$filename");
-  my $answer = <$fh>;
-  close($fh);
-
-  return $answer;
+  while (1) {
+    $|++;
+    print STDOUT  "Choose an option: ";
+    $|--;
+    chop($answer = <STDIN>);
+    foreach my $choice (@{$choices}) {
+      if ($choice->{'key'} eq $answer) {
+        return $choice->{'name'};
+      }
+    }
+    print "Invalid choice. Please try again.\n";
+  }
 }
 
 # get_date :: ???

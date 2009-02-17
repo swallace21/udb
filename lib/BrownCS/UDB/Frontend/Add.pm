@@ -9,6 +9,7 @@ our @EXPORT_OK = qw(add);
 use Pod::Usage;
 use DBI qw(:sql_types);
 use DBD::Pg qw(:pg_types);
+use Data::Dumper;
 
 use BrownCS::UDB;
 use BrownCS::UDB::Util qw(ask_password ask confirm edit choose);
@@ -49,11 +50,27 @@ sub add {
     next if ($reqd ne 'req');
   
     if ($type eq 'string') {
-      $comp{$name} = &ask($full, $cmts);
+      $comp{$name} = &ask($cmts);
     } elsif ($type eq 'choice') {
-      $comp{$name} = &choose($full, $cmts, ["1", "2", "3", "4"]);
+      $comp{$name} = &choose($cmts, [
+        {
+          'key' => "1key",
+          'name' => "1name",
+          'desc' => "description of item 1",
+        },
+        {
+          'key' => "2key",
+          'name' => "2name",
+          'desc' => "description of item 2",
+        },
+        {
+          'key' => "3key",
+          'name' => "3name",
+          'desc' => "description of item 3",
+        },
+        ]);
     } elsif ($type eq 'list') {
-      $comp{$name} = &ask($name, $full);
+      $comp{$name} = &ask($cmts);
     }
   }
   

@@ -5,13 +5,14 @@ use Pod::Usage;
 
 use DBI qw(:sql_types);
 use DBD::Pg qw(:pg_types);
+use Data::Dumper;
 
 eval('require "/tstaff/share/cdb/db.pl";');
 
-use lib "/home/aleks/pro/tstaff/udb/lib";
+use FindBin qw($RealBin);
+use lib "$RealBin/../lib";
 use BrownCS::UDB;
 use BrownCS::UDB::Util qw(ask ask_password confirm);
-use Data::Dumper;
 
 # Print a simple help message.
 sub usage {
