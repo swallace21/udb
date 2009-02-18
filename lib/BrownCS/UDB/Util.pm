@@ -10,7 +10,7 @@ use File::Temp qw(tempfile);
 
 use Exporter qw(import);
 
-our @EXPORT_OK = qw(edit ask_password confirm ask choose demand get_date fmt_time);
+our @EXPORT_OK = qw(edit ask_password confirm ask choose demand get_date fmt_time ipv4_n2x);
 
 my $term = new Term::ReadLine 'udb';
 $term->ornaments(0);
@@ -142,6 +142,13 @@ sub fmt_time {
                   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec' );
 
   return "${mday}${moname[$mon]}${year} ${hour}:${min}:${sec}";
+}
+
+sub ipv4_n2x {
+  my ($ipaddr_n) = @_;
+  $ipaddr_n =~ /(\d+)\.(\d+)\.(\d+)\.(\d+)/;
+  my $ipaddr_x = sprintf("%0.2X%0.2X%0.2X%0.2X", $1, $2, $3, $4);
+  return $ipaddr_x;
 }
 
 1;

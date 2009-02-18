@@ -44,8 +44,10 @@ $udb->{dbh}->do("DELETE FROM net_addresses_net_interfaces;");
 $udb->{dbh}->do("DELETE FROM net_dns_entries;");
 $udb->{dbh}->do("DELETE FROM comp_classes;");
 $udb->{dbh}->do("DELETE FROM comp_classes_computers;");
-$udb->{dbh}->do("DELETE FROM net_zones; DELETE FROM net_vlans;");
-$udb->{dbh}->do("DELETE FROM equip_usage_types; DELETE FROM equip_status_types; delete from management_types;");
+$udb->{dbh}->do("DELETE FROM net_zones;");
+$udb->{dbh}->do("DELETE FROM net_vlans;");
+$udb->{dbh}->do("DELETE FROM equip_status_types;");
+$udb->{dbh}->do("DELETE FROM management_types;");
 
 print "done.\n";
 
@@ -53,46 +55,67 @@ print "populating static tables... ";
 
 sub domain_insert {
   my ($table, $desc) = @_;
-  my $sth = $udb->prepare("INSERT INTO $table (name) VALUES (?) RETURNING name");
+  my $sth = $udb->prepare("INSERT INTO $table (name) VALUES (?)");
   $sth->execute($desc);
-  return $sth->fetch()->[0];
 }
 
-my %usage_types = (
-  "tstaff" => domain_insert("equip_usage_types", "tstaff"),
-  "academic" => domain_insert("equip_usage_types", "academic"),
-  "personal" => domain_insert("equip_usage_types", "personal"),
-);
+sub os_insert {
+  my ($desc, $pxe) = @_;
+  my $sth = $udb->prepare("INSERT INTO os_types (name, pxe_boot) VALUES (?, ?)");
+  $sth->execute($desc, $pxe);
+}
 
-my %status_types = (
-  "deployed" => domain_insert("equip_status_types", "deployed"),
-  "spare" => domain_insert("equip_status_types", "spare"),
-  "surplus" => domain_insert("equip_status_types", "surplus"),
-);
+domain_insert("equip_status_types", "deployed"),
+domain_insert("equip_status_types", "spare"),
+domain_insert("equip_status_types", "surplus"),
 
-my %management_types = (
-  "tstaff" => domain_insert("management_types", "tstaff"),
-  "cis" => domain_insert("management_types", "cis"),
-  "user" => domain_insert("management_types", "user"),
-);
+domain_insert("management_types", "tstaff"),
+domain_insert("management_types", "cis"),
+domain_insert("management_types", "user"),
 
-my $zone_insert = $udb->{dbh}->prepare("INSERT INTO net_zones (manager, routing, name, dynamic_dhcp) VALUES (?, ?, ?, ?)");
+domain_insert("routing_types", "standard");
+domain_insert("routing_types", "private");
+domain_insert("routing_types", "DMZ");
+domain_insert("routing_types", "special");
+
+domain_insert("dns_entry_types", "internal");
+domain_insert("dns_entry_types", "external");
+domain_insert("dns_entry_types", "both");
+
+domain_insert("hw_arch_types", "amd64");
+domain_insert("hw_arch_types", "linksys");
+domain_insert("hw_arch_types", "mac");
+domain_insert("hw_arch_types", "mac-ppc");
+domain_insert("hw_arch_types", "sun4u");
+domain_insert("hw_arch_types", "x86");
+domain_insert("hw_arch_types", "xen");
+
+os_insert("dualboot", 0);
+os_insert("linux", 1);
+os_insert("linux-server", 1);
+os_insert("linux-xen", 1);
+os_insert("osx", 0);
+os_insert("solaris", 0);
+os_insert("vista", 0);
+os_insert("winxp", 0);
+
+my $zone_insert = $udb->{dbh}->prepare("INSERT INTO net_zones (manager, routing_type, name, dynamic_dhcp) VALUES (?, ?, ?, ?)");
 $zone_insert->bind_param(4, undef, {pg_type => PG_BOOL});
 
 my $vlan_insert = $udb->{dbh}->prepare("INSERT INTO net_vlans (zone, vlan_num, network) VALUES (?, ?, ?)");
 $vlan_insert->bind_param(2, undef, SQL_INTEGER);
 $vlan_insert->bind_param(3, undef, {pg_type => PG_CIDR});
 
-$zone_insert->execute($management_types{"tstaff"}, "DMZ", "tstaff-dmz", 0);
-$zone_insert->execute($management_types{"tstaff"}, "private", "tstaff-private", 0);
-$zone_insert->execute($management_types{"tstaff"}, "standard", "tstaff-standard", 0);
-$zone_insert->execute($management_types{"user"}, "DMZ", "user-dmz", 0);
-$zone_insert->execute($management_types{"user"}, "private", "cs166", 0);
-$zone_insert->execute($management_types{"user"}, "special", "outside", 0);
-$zone_insert->execute($management_types{"user"}, "special", "jj-oshean", 0);
-$zone_insert->execute($management_types{"user"}, "special", "techhouse", 0);
-$zone_insert->execute($management_types{"user"}, "special", "ipsec", 0);
-$zone_insert->execute($management_types{"user"}, "standard", "user-standard", 0);
+$zone_insert->execute("tstaff", "DMZ", "tstaff-dmz", 0);
+$zone_insert->execute("tstaff", "private", "tstaff-private", 0);
+$zone_insert->execute("tstaff", "standard", "tstaff-standard", 0);
+$zone_insert->execute("user", "DMZ", "user-dmz", 0);
+$zone_insert->execute("user", "private", "cs166", 0);
+$zone_insert->execute("user", "special", "outside", 0);
+$zone_insert->execute("user", "special", "jj-oshean", 0);
+$zone_insert->execute("user", "special", "techhouse", 0);
+$zone_insert->execute("user", "special", "ipsec", 0);
+$zone_insert->execute("user", "standard", "user-standard", 1);
 
 $vlan_insert->execute("tstaff-dmz", 32, "128.148.32.0/25");
 $vlan_insert->execute("tstaff-private", 192, "192.168.1.0/24");

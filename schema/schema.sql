@@ -52,10 +52,6 @@ create table places (
 
 -- {{{
 
-create table equip_usage_types (
-  name                      text primary key
-) ;
-
 create table management_types (
   name                      text primary key
 ) ;
@@ -98,9 +94,6 @@ create table equipment (
   equip_status              text not null references equip_status_types
                               on update cascade
                               on delete restrict,
-  usage                     text not null references equip_usage_types
-                              on update cascade
-                              on delete restrict,
   managed_by                text not null references management_types
                               on update cascade
                               on delete restrict,
@@ -131,19 +124,66 @@ create table surplus_equipment (
 
 -- {{{
 
-create domain routing_type text not null check (
-value = 'standard' or
-value = 'private' or
-value = 'DMZ' or
-value = 'special');
+create table routing_types (
+  name                      text primary key
+) ;
 
-create domain dns_type text not null check (
-value = 'internal' or
-value = 'external' or
-value = 'both');
+create table dns_entry_types (
+  name                      text primary key
+) ;
 
 create or replace function num_ports(text) returns integer as 'select 0' language 'sql';
 create or replace function vlan_zone(integer) returns text as 'select cast('''' as text)' language 'sql';
+
+create table net_zones (
+  name                      text primary key,
+  manager                   text not null references management_types
+                              on update cascade
+                              on delete restrict,
+  routing_type              text not null references routing_types
+                              on update cascade
+                              on delete restrict,
+  dynamic_dhcp              boolean not null default true
+) ;
+
+create table net_vlans (
+  vlan_num                  integer primary key,
+  zone                      text not null references net_zones
+                              on update cascade
+                              on delete cascade,
+  network                   cidr not null
+) ;
+
+create or replace function update_zone_by_vlan() returns trigger as $update_zone_by_vlan$
+declare
+  new_vlan_zone             text;
+begin
+  select (zone) into strict new_vlan_zone from net_vlans
+    where vlan_num = new.vlan_num;
+  new.zone := new_vlan_zone;
+  return new;
+end;
+$update_zone_by_vlan$ language plpgsql;
+
+create table net_addresses (
+  id                        serial primary key,
+  zone                      text not null references net_zones
+                              on update cascade
+                              on delete cascade,
+  vlan_num                  integer not null references net_vlans
+                              on update cascade
+                              on delete cascade,
+  ipaddr                    inet,
+  dns_name                  text not null,
+  domain                    text not null,
+  enabled                   boolean not null default true,
+  monitored                 boolean not null,
+  last_changed              timestamp not null default now(),
+  check (ipaddr is null or masklen(ipaddr) = 32)
+) ;
+
+create trigger vlan_zone_trigger before insert or update on net_addresses
+  for each row execute procedure update_zone_by_vlan();
 
 create table net_switches (
   name                      text not null references equipment
@@ -174,13 +214,16 @@ create table net_ports (
 
 create table net_interfaces (
   id                        serial primary key,
-  name                      text not null references equipment
+  equip_name                text not null references equipment
                               on update cascade
                               on delete cascade,
   port_id                   integer references net_ports
                               on update cascade
                               on delete set null,
   ethernet                  macaddr not null,
+  primary_address           integer references net_addresses
+                              on update cascade
+                              on delete set null,
   last_changed              timestamp not null default now()
 ) ;
 
@@ -188,64 +231,17 @@ create table net_services (
   service                   text primary key
 ) ;
 
-create table net_zones (
-  name                      text primary key,
-  manager                   text not null references management_types
-                              on update cascade
-                              on delete restrict,
-  routing                   routing_type,
-  dynamic_dhcp              boolean not null default true
-) ;
-
-create table net_vlans (
-  vlan_num                  integer primary key,
-  zone                      text not null references net_zones
-                              on update cascade
-                              on delete cascade,
-  network                   cidr not null
-) ;
-
--- net_addresses
-create table net_addresses (
-  id                        serial primary key,
-  zone                      text not null references net_zones
-                              on update cascade
-                              on delete cascade,
-  vlan_num                  integer not null references net_vlans
-                              on update cascade
-                              on delete cascade,
-  ipaddr                    inet,
-  dns_name                  text not null,
-  domain                    text not null,
-  enabled                   boolean not null default true,
-  monitored                 boolean not null,
-  last_changed              timestamp not null default now(),
-  check (ipaddr is null or masklen(ipaddr) = 32)
-) ;
-
-create or replace function update_zone_by_vlan() returns trigger as $update_zone_by_vlan$
-declare
-  new_vlan_zone             text;
-begin
-  select (zone) into strict new_vlan_zone from net_vlans
-    where vlan_num = new.vlan_num;
-  new.zone := new_vlan_zone;
-  return new;
-end;
-$update_zone_by_vlan$ language plpgsql;
-
-create trigger vlan_zone_trigger before insert or update on net_addresses
-  for each row execute procedure update_zone_by_vlan();
-
 create table net_dns_entries (
   name                      text not null,
   domain                    text not null,
-  zone                      dns_type not null,
+  dns_entry_type            text not null references dns_entry_types
+                              on update cascade
+                              on delete restrict,
   net_address_id            integer not null references net_addresses
                               on update cascade
                               on delete cascade,
   last_changed              timestamp not null default now(),
-  primary key               (name, domain, zone)
+  primary key               (name, domain, dns_entry_type)
 ) ;
 
 -- join tables {{{
@@ -315,12 +311,9 @@ create table log_macaddr (
 
 -- {{{
 
-create domain userstatus text not null check (
-value = 'ugrad' or
-value = 'grad' or
-value = 'fac' or
-value = 'staff' or
-value = 'guest');
+create table user_status_types (
+  name                      text primary key
+) ;
 
 create sequence uid_seq;
 
@@ -328,7 +321,9 @@ create sequence gid_seq;
 
 create table people (
   id                        serial primary key,
-  user_status               userstatus,
+  user_status               text not null references user_status_types
+                              on update cascade
+                              on delete restrict,
   full_name                 text,
   common_name               text,
   family_name               text,
@@ -397,13 +392,13 @@ create table courses (
 ) ;
 
 create table enrollment (
-  id                        serial primary key,
   student_id                integer not null references people
                               on update cascade
                               on delete cascade,
   course_id                 integer not null references courses
                               on update cascade
                               on delete cascade,
+  primary key               (student_id, course_id),
   year                      text,
   grade                     text,
   phd_seq                   text,
@@ -482,32 +477,26 @@ create table fs_automounts (
 
 -- {{{
 
-create domain hw_arch_type text check (
-value = 'amd64' or
-value = 'linksys' or
-value = 'mac' or
-value = 'mac-ppc' or
-value = 'sun4u' or
-value = 'x86' or
-value = 'xen');
+create table hw_arch_types (
+  name                      text primary key
+) ;
 
-create domain os_type text check (
-value = 'dualboot' or
-value = 'linux' or
-value = 'linux-server' or
-value = 'linux-xen' or
-value = 'osx' or
-value = 'solaris' or
-value = 'vista' or
-value = 'winxp');
+create table os_types (
+  name                      text primary key,
+  pxe_boot                  boolean not null default false
+) ;
 
 create table computers (
   name                      text not null references equipment
                               on update cascade
                               on delete cascade,
   primary key (name),
-  hw_arch                   hw_arch_type,
-  os                        os_type,
+  hw_arch                   text references hw_arch_types
+                              on update cascade
+                              on delete restrict,
+  os                        text references os_types
+                              on update cascade
+                              on delete restrict,
   system_model              text,
   num_cpus                  integer,
   cpu_type                  text,

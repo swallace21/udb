@@ -10,7 +10,7 @@ use Data::Dumper;
 use FindBin qw($RealBin);
 use lib "$RealBin/../lib";
 use BrownCS::UDB;
-use BrownCS::UDB::Util qw(ask_password get_date fmt_time);
+use BrownCS::UDB::Util qw(ask_password get_date fmt_time ipv4_n2x);
 
 # Print a simple help message.
 sub usage {
@@ -73,9 +73,8 @@ my $CDB_INCLUDE_DIR = '/u/system/include';
 my @cdb_classC_subnets = ( 31, 32, 33, 34, 36, 37, 38 );
 my @cdb_classB_subnets = ( 116 );
 
-&build_tftpboot;
 &build_netgroup;
-#build_dhcp;
+&build_dhcp;
 &build_nagios_hosts;
 &build_nagios_services;
 &build_wpkg_hosts;
@@ -93,54 +92,6 @@ sub maybe_system {
     print "DEBUG: @_\n";
   } else {
     system(@_);
-  }
-}
-
-#
-# FUNCTION: build_tftpboot
-#    DESCR: Rebuild the tftp network boot directory
-#
-
-sub build_tftpboot {
-
-  my $tftpboot_path = "/tftpboot/pxelinux.cfg";
-
-  my $sth = $udb->prepare("select na.ipaddr, c.hw_arch, c.os, c.pxelink from net_addresses na, net_interfaces ni, net_addresses_net_interfaces nani, computers c where ni.equipment_id = c.equipment_id and nani.net_addresses_id = na.id and nani.net_interfaces_id = ni.id");
-
-  $sth->execute();
-  my $array_ref = $sth->fetchall_arrayref({});
-
-  foreach my $addr (@{$array_ref}) {
-
-    my $bootimage;
-
-    next if not defined $addr->{os};
-    next if not defined $addr->{hw_arch};
-    next if not defined $addr->{ipaddr};
-
-    if (defined $addr->{pxelink}) {
-      $bootimage = $addr->{pxelink};
-    } elsif ($addr->{os} eq 'linux') {
-      $bootimage = ("fai-workstation-" . $addr->{hw_arch});
-    } elsif ($addr->{os} eq 'linux-server') {
-      $bootimage = ("fai-server-" . $addr->{hw_arch});
-    }
-      
-    if(!defined($bootimage)) {
-      next;
-    }
-
-    $addr->{ipaddr} =~ /(\d+)\.(\d+)\.(\d+)\.(\d+)/;
-
-    my $hex_ip = sprintf("$tftpboot_path/%0.2X%0.2X%0.2X%0.2X", $1, $2, $3, $4);
-
-    if(!$dry_run) {
-      unlink("$tftpboot_path/$hex_ip");
-      symlink("$bootimage", "$tftpboot_path/$hex_ip") ||
-        warn "$0: ERROR: Failed to create link $hex_ip: $!\n";
-    } else {
-      print "DEBUG: $hex_ip -> $bootimage\n";
-    }
   }
 }
 
@@ -165,7 +116,7 @@ sub build_netgroup {
 
   my ($sth, $array_ref);
 
-  $sth = $udb->prepare("select e.name, cc.class from equipment e, comp_classes cc, computers c, comp_classes_computers ccc where ccc.comp_classes_id = cc.id and ccc.computers_id = c.id and c.equipment_id = e.id");
+  $sth = $udb->prepare("select e.name, cc.class from equipment e, comp_classes cc, computers c, comp_classes_computers ccc where ccc.comp_class = cc.class and ccc.computer = c.name and c.name = e.name");
   $sth->execute();
   $array_ref = $sth->fetchall_arrayref({});
 
@@ -178,7 +129,7 @@ sub build_netgroup {
     push @{$host_classes{$ccc->{name}}}, $ccc->{class};
   }
 
-  $sth = $udb->prepare("select e.name, c.os, m.description from equipment e, computers c, management_types m where c.equipment_id = e.id and m.id = e.managed_by");
+  $sth = $udb->prepare("select e.name, c.os, e.managed_by from equipment e, computers c where c.name = e.name");
   $sth->execute();
   $array_ref = $sth->fetchall_arrayref({});
 
@@ -229,34 +180,14 @@ sub build_netgroup {
 
 sub build_dhcp {
 
+  my $include = '/u/system/include/cdb_dhcp.in';
+  my ($sth, $array_ref);
   my $file;
 
   if ($dry_run) {
     $file = '/tmp/dhcpd.conf';
   } else {
     $file = '/maytag/sys0/dhcp/dhcpd.conf';
-  }
-
-  my $include = '/u/system/include/cdb_dhcp.in';
-
-  my(@all_hosts) = keys(%$cdb_by_hostname);
-  my(@inctext, @pxe_hosts, @ppc_pxe_hosts, @dynamic_hosts, @other_hosts);
-  my($primgrp, $ethernet, $status);
-
-  foreach my $host (@all_hosts) {
-    # make sure only hosts with ethernet address are entered into the
-    # DHCP tables
-    next unless ($cdb_by_hostname->{$host}{'ethernet'});
-
-    $prim_grp = $cdb_by_hostname->{$host}{'prim_grp'};
-    if($prim_grp eq "linux" || $prim_grp eq "ilab" || \
-      $prim_grp eq "private" || $prim_grp eq "standalone" ) {
-      push @pxe_hosts, $host;
-    } elsif($prim_grp eq "dynamic") {
-      push @dynamic_hosts, $host;
-    } else {
-      push @other_hosts, $host;
-    }
   }
 
   my $PATH_TMPFILE = $file . '.tmp';
@@ -272,10 +203,14 @@ sub build_dhcp {
     open(INCLUDE, "<$include") ||
     die "$0: ERROR: Failed to open include $include: $!\n";
 
-    @inctext = <INCLUDE>;
+    my @inctext = <INCLUDE>;
     print DHCP @inctext;
     close(INCLUDE);
   }
+
+  #
+  # PXE section
+  #
 
   print DHCP "#\n";
   print DHCP "# PXElinux Clients\n";
@@ -285,20 +220,86 @@ sub build_dhcp {
   print DHCP "    use-host-decl-names on;\n";
   print DHCP "    next-server pxe.cs.brown.edu;\n";
   print DHCP "    filename \"pxelinux.0\"\;\n\n";
-  foreach my $host (@pxe_hosts) {
-    $ethernet = $cdb_by_hostname->{$host}{'ethernet'};
-    next unless ( $ethernet );
 
-    # only include hosts that are listed as active or monitored
-    $status = $cdb_by_hostname->{$host}{'status'};
-    next unless ( $status eq "active" || $status eq "monitored" || $status eq "ugrad-monitored" );
+  my $tftpboot_path = "/tftpboot/pxelinux.cfg";
 
-    print DHCP "    host $host {\n";
+  $sth = $udb->prepare(<<SQL
+select
+  ni.ethernet,
+  na.ipaddr,
+  c.hw_arch,
+  c.os,
+  c.pxelink,
+  na.dns_name,
+  na.domain
+from
+  net_addresses na,
+  net_interfaces ni,
+  net_addresses_net_interfaces nani,
+  computers c,
+  os_types o
+where
+  ni.equip_name = c.name and
+  nani.net_addresses_id = na.id and
+  nani.net_interfaces_id = ni.id and
+  ni.primary_address = na.id and
+  ni.ethernet is not null and
+  na.ipaddr is not null and
+  na.enabled = true and
+  c.os = o.name and
+  o.pxe_boot = true
+SQL
+  );
+
+  $sth->execute();
+  $array_ref = $sth->fetchall_arrayref({});
+
+  foreach my $pxe_host (@{$array_ref}) {
+    my $hostname = $pxe_host->{dns_name};
+    if ($pxe_host->{domain} ne 'cs.brown.edu') {
+      $hostname .= $pxe_host->{domain};
+    }
+    my $ip_addr = $pxe_host->{ipaddr};
+    my $ethernet = $pxe_host->{ethernet};
+    my $os = $pxe_host->{os};
+    my $hw_arch = $pxe_host->{hw_arch};
+
+    # write the dhcpd.conf entry
+    print DHCP "    host $hostname {\n";
     print DHCP "        hardware ethernet $ethernet;\n";
-    print DHCP "        fixed-address $host;\n";
+    print DHCP "        fixed-address $hostname;\n";
     print DHCP "    }\n";
+
+    # set up the pxelink
+    my $bootimage;
+
+    if (defined $pxe_host->{pxelink}) {
+      $bootimage = $pxe_host->{pxelink};
+    } elsif ($pxe_host->{os} eq 'linux') {
+      $bootimage = ("fai-workstation-" . $pxe_host->{hw_arch});
+    } elsif ($pxe_host->{os} eq 'linux-server') {
+      $bootimage = ("fai-server-" . $pxe_host->{hw_arch});
+    } else {
+      next;
+    }
+      
+    my $hex_ip = ipv4_n2x($ip_addr);
+
+    if($dry_run) {
+      print "DEBUG: $hex_ip -> $bootimage\n";
+    } else {
+      unlink("$tftpboot_path/$hex_ip");
+      symlink("$bootimage", "$tftpboot_path/$hex_ip") ||
+        warn "Failed to create link $hex_ip: $!\n";
+    }
+
   }
+
   print DHCP "}\n\n";
+
+  #
+  # non-PXE static section
+  #
 
   print DHCP "#\n";
   print DHCP "# Other Static DHCP Clients\n";
@@ -306,20 +307,61 @@ sub build_dhcp {
 
   print DHCP "group {\n";
   print DHCP "    use-host-decl-names on;\n";
-  foreach my $host (@other_hosts) {
-    $ethernet = $cdb_by_hostname->{$host}{'ethernet'};
-    next unless ( $ethernet );
 
-    # only include hosts that are listed as active or monitored
-    $status = $cdb_by_hostname->{$host}{'status'};
-    next unless ( $status eq "active" || $status eq "monitored" || $status eq "ugrad-monitored" );
+  $sth = $udb->prepare(<<SQL
+select
+  ni.ethernet,
+  na.ipaddr,
+  c.hw_arch,
+  c.os,
+  c.pxelink,
+  na.dns_name,
+  na.domain
+from
+  net_addresses na,
+  net_interfaces ni,
+  net_addresses_net_interfaces nani,
+  computers c,
+  os_types o
+where
+  ni.equip_name = c.name and
+  nani.net_addresses_id = na.id and
+  nani.net_interfaces_id = ni.id and
+  ni.primary_address = na.id and
+  ni.ethernet is not null and
+  na.ipaddr is not null and
+  na.enabled = true and
+  c.os = o.name and
+  o.pxe_boot = false
+SQL
+  );
 
-    print DHCP "    host $host {\n";
+  $sth->execute();
+  $array_ref = $sth->fetchall_arrayref({});
+
+  foreach my $static_host (@{$array_ref}) {
+    my $hostname = $static_host->{dns_name};
+    if ($static_host->{domain} ne 'cs.brown.edu') {
+      $hostname .= $static_host->{domain};
+    }
+    my $ip_addr = $static_host->{ipaddr};
+    my $ethernet = $static_host->{ethernet};
+    my $os = $static_host->{os};
+    my $hw_arch = $static_host->{hw_arch};
+
+    # write the dhcpd.conf entry
+    print DHCP "    host $hostname {\n";
     print DHCP "        hardware ethernet $ethernet;\n";
-    print DHCP "        fixed-address $host;\n";
+    print DHCP "        fixed-address $hostname;\n";
     print DHCP "    }\n";
+
   }
+
   print DHCP "}\n\n";
+
+  #
+  # dynamic section
+  #
 
   print DHCP "#\n";
   print DHCP "# Dynamic DHCP Clients\n";
@@ -327,19 +369,57 @@ sub build_dhcp {
 
   print DHCP "group {\n";
   print DHCP "    use-host-decl-names on;\n";
-  foreach my $host (@dynamic_hosts) {
-    $ethernet = $cdb_by_hostname->{$host}{'ethernet'};
-    next unless ( $ethernet );
 
-    # only include hosts that are listed as active
-    $status = $cdb_by_hostname->{$host}{'status'};
-    next unless ( $status eq "active" );
+  $sth = $udb->prepare(<<SQL
+select
+  ni.ethernet,
+  na.ipaddr,
+  c.hw_arch,
+  c.os,
+  c.pxelink,
+  na.dns_name,
+  na.domain
+from
+  net_addresses na,
+  net_interfaces ni,
+  net_addresses_net_interfaces nani,
+  computers c,
+  os_types o,
+  net_zones nz
+where
+  ni.equip_name = c.name and
+  nani.net_addresses_id = na.id and
+  nani.net_interfaces_id = ni.id and
+  ni.primary_address = na.id and
+  ni.ethernet is not null and
+  na.ipaddr is null and
+  na.enabled = true and
+  nz.name = na.zone and
+  c.os = o.name and
+  nz.dynamic_dhcp = true
+SQL
+  );
 
-    print DHCP "    # $cdb_by_hostname->{$host}{'comment'}\n";
-    print DHCP "    host $host {\n";
+  $sth->execute();
+  $array_ref = $sth->fetchall_arrayref({});
+
+  foreach my $dynamic_host (@{$array_ref}) {
+    my $hostname = $dynamic_host->{dns_name};
+    if ($dynamic_host->{domain} ne 'cs.brown.edu') {
+      $hostname .= $dynamic_host->{domain};
+    }
+    my $ip_addr = $dynamic_host->{ipaddr};
+    my $ethernet = $dynamic_host->{ethernet};
+    my $os = $dynamic_host->{os};
+    my $hw_arch = $dynamic_host->{hw_arch};
+
+    # write the dhcpd.conf entry
+    print DHCP "    host $hostname {\n";
     print DHCP "        hardware ethernet $ethernet;\n";
     print DHCP "    }\n";
+
   }
+
   print DHCP "}\n";
 
   print DHCP "\n# EOF\n";
@@ -379,7 +459,7 @@ sub build_nagios_hosts {
 
   my $include = '/u/system/include/cdb_nagios_hosts.in';
 
-  my(@inctext, $primgrp, $aliases, $tabs, $hostref);
+  my($aliases, $tabs, $hostref);
 
   my $PATH_TMPFILE = $file . '.tmp';
 
@@ -394,7 +474,7 @@ sub build_nagios_hosts {
     open(INCLUDE, "<$include") ||
       die "$0: ERROR: Failed to open include $include: $!\n";
 
-    @inctext = <INCLUDE>;
+    my @inctext = <INCLUDE>;
     print OUT @inctext;
     close(INCLUDE);
   }
@@ -460,7 +540,7 @@ sub build_nagios_services {
 
   my $include = '/u/system/include/cdb_nagios_services.in';
 
-  my(@inctext, $primgrp, $aliases, $tabs, $hostref);
+  my($aliases, $tabs, $hostref);
 
   my $PATH_TMPFILE = $file . '.tmp';
 
@@ -475,14 +555,30 @@ sub build_nagios_services {
     open(INCLUDE, "<$include") ||
       die "$0: ERROR: Failed to open include $include: $!\n";
 
-    @inctext = <INCLUDE>;
+    my @inctext = <INCLUDE>;
     print OUT @inctext;
     close(INCLUDE);
   }
 
   my ($sth, $array_ref);
 
-  $sth = $udb->prepare("select na.ipaddr, na.dns_name, na.domain, ns.service from net_addresses na, net_services ns, net_addresses_net_services nans where nans.net_addresses_id = na.id and nans.net_services_id = ns.id and na.monitored = true and na.enabled = true");
+  $sth = $udb->prepare(<<SQL
+select
+  na.ipaddr,
+  na.dns_name,
+  na.domain,
+  ns.service
+from
+  net_addresses na,
+  net_services ns,
+  net_addresses_net_services nans
+where
+  nans.net_addresses_id = na.id and
+  nans.net_services_id = ns.service and
+  na.monitored = true and
+  na.enabled = true
+SQL
+  );
 
   $sth->execute();
   $array_ref = $sth->fetchall_arrayref({});
@@ -708,7 +804,7 @@ sub build_wpkg_hosts {
 
   my $file = '/u/system/win32/WPKG/hosts/cdb.xml';
 
-  my(@inctext, $primgrp, $aliases, $tabs, $hostref);
+  my($aliases, $tabs, $hostref);
 
   my $PATH_TMPFILE = $file . '.tmp';
 
@@ -727,7 +823,7 @@ sub build_wpkg_hosts {
 
   my ($sth, $array_ref);
 
-  $sth = $udb->prepare("select e.name, cc.class from equipment e, comp_classes cc, computers c, comp_classes_computers ccc where ccc.comp_classes_id = cc.id and ccc.computers_id = c.id and c.equipment_id = e.id");
+  $sth = $udb->prepare("select e.name, cc.class from equipment e, comp_classes cc, computers c, comp_classes_computers ccc where ccc.comp_class = cc.class and ccc.computer = c.name and c.name = e.name");
   $sth->execute();
   $array_ref = $sth->fetchall_arrayref({});
 
@@ -740,7 +836,7 @@ sub build_wpkg_hosts {
     push @{$host_classes{$ccc->{name}}}, $ccc->{class};
   }
 
-  $sth = $udb->prepare("select e.name, c.os from equipment e, computers c, management_types m where c.equipment_id = e.id and m.description = 'tstaff' and m.id = e.managed_by");
+  $sth = $udb->prepare("select e.name, c.os from equipment e, computers c where c.name = e.name and e.managed_by = 'tstaff'");
   $sth->execute();
   $array_ref = $sth->fetchall_arrayref({});
 

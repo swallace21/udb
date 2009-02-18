@@ -31,6 +31,12 @@ sub show {
   my $hostname = shift @ARGV;
 
   my %host = $udb->get_host($hostname);
+
+  if (not %host) {
+    print "No record for host $hostname.\n";
+    exit(2);
+  }
+
   $host{aliases} = join(',',@{$host{aliases}});
   $host{classes} = join(',',@{$host{classes}});
 

@@ -64,12 +64,6 @@ my %udb_commands = (
     'usage' => "delete HOST",
     'common' => 1,
   },
-  'help' => {
-    'fn' => \&command_help,
-    'desc' => ["\tget help on a command"],
-    'usage' => "help command",
-    'common' => 0,
-  },
   'modify' => {
     'fn' => \&mod,
     'desc' => ["\tmodify a host"],
@@ -86,11 +80,13 @@ my %udb_commands = (
 
 # Print a simple help message.
 sub usage {
-  my ($exit_status) = @_;
+  my ($exit_status, $long) = @_;
   pod2usage({ -exitval => "NOEXIT", -verbose => 1});
   print "Commands:\n\n";
   foreach my $k (sort(keys(%udb_commands))) {
-    next if not $udb_commands{$k}{'common'};
+    if (not $long) {
+      next if not $udb_commands{$k}{'common'};
+    }
     print "    $k\t" . $udb_commands{$k}{'desc'}[0] . "\n";
   }
   print "\nSee 'udb help COMMAND' for more information on a specific command.\n";
@@ -100,7 +96,7 @@ sub usage {
 # Print a simple help message for a specific command.
 sub command_help {
   my ($cmd) = @_;
-  print "Usage: ";
+  print "Usage: udb ";
   print $udb_commands{$cmd}{"usage"} , "\n\n";
   my $lines = $udb_commands{$cmd}{"desc"};
   foreach my $line (@$lines) {
@@ -118,16 +114,26 @@ my $username = $ENV{'USER'};
 GetOptions ('help|h|?' => \$help, 
             'v|verbose' => \$verbose,
             'n|dryrun' => \$dryrun,
-            'u' => \$username) or usage(2);
-usage(1) if $help;
+            'u' => \$username) or usage(1, 0);
+usage(0, 0) if $help;
 
 my $cmd = shift;
 
 if (not defined $cmd) {
-  usage(2);
+  usage(2, 0);
 }
 
 my $fn;
+
+if ($cmd eq 'help') {
+  if (@ARGV) {
+    my $help_cmd = shift;
+    command_help($help_cmd);
+    exit(0);
+  } else {
+    usage(0, 1);
+  }
+}
 
 if(defined($udb_commands{$cmd})) {
   $fn = $udb_commands{$cmd}{'fn'};

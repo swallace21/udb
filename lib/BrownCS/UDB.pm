@@ -92,7 +92,7 @@ sub all_hosts_in_class {
   my @hosts_in_class = ();
   my $host;
 
-  my $all_hosts_in_class_select = $self->prepare("select e.name from comp_classes cc, computers c, comp_classes_computers ccc, equipment e where e.id = c.name and ccc.comp_class = cc.id and ccc.computer = c.id and cc.class = ?");
+  my $all_hosts_in_class_select = $self->prepare("select c.name from comp_classes cc, computers c, comp_classes_computers ccc where ccc.comp_class = cc.class and ccc.computer = c.name and cc.class = ?");
 
   $all_hosts_in_class_select->execute($class);
   $all_hosts_in_class_select->bind_columns(\$host);
@@ -109,28 +109,22 @@ sub get_host {
   my ($hostname) = @_;
   my %host = ();
 
-  my $aliases_select = $self->prepare("select nde.name from net_dns_entries nde, equipment e, net_addresses_net_interfaces nani, net_interfaces ni, net_addresses na where e.name = ? and e.id = ni.name and nani.net_interfaces_id = ni.id and nani.net_addresses_id = na.id and na.id = nde.net_address_id");
-  my $classes_select = $self->prepare("select cc.class from comp_classes cc, computers c, comp_classes_computers ccc, equipment e where e.name = ? and e.id = c.name and ccc.comp_class = cc.id and ccc.computer = c.id");
-  my $comp_select = $self->prepare("select c.id, c.hw_arch, c.os, c.pxelink from equipment e, computers c where e.name = ? and c.name = e.id");
-  my $equip_select = $self->prepare("select id, contact, equip_status, usage, managed_by from equipment where name = ?");
-  my $ethernet_select = $self->prepare("select ni.ethernet from equipment e, net_interfaces ni where e.name = ? and e.id = ni.name");
-  my $ip_addr_select = $self->prepare("select na.ipaddr from equipment e, net_addresses_net_interfaces nani, net_interfaces ni, net_addresses na where e.name = ? and e.id = ni.name and nani.net_interfaces_id = ni.id and nani.net_addresses_id = na.id");
+  my $aliases_select = $self->prepare("select nde.name from net_dns_entries nde, equipment e, net_addresses_net_interfaces nani, net_interfaces ni, net_addresses na where e.name = ? and e.name = ni.equip_name and nani.net_interfaces_id = ni.id and nani.net_addresses_id = na.id and na.id = nde.net_address_id");
+  my $classes_select = $self->prepare("select cc.class from comp_classes cc, computers c, comp_classes_computers ccc where c.name = ? and ccc.comp_class = cc.class and ccc.computer = c.name");
+  my $comp_select = $self->prepare("select e.contact, e.equip_status, e.managed_by, c.hw_arch, c.os, c.pxelink from equipment e, computers c where e.name = ? and c.name = e.name");
+  my $ethernet_select = $self->prepare("select ni.ethernet from equipment e, net_interfaces ni where e.name = ? and e.name = ni.equip_name");
+  my $ip_addr_select = $self->prepare("select na.ipaddr from equipment e, net_addresses_net_interfaces nani, net_interfaces ni, net_addresses na where e.name = ? and e.name = ni.equip_name and nani.net_interfaces_id = ni.id and nani.net_addresses_id = na.id");
 
   $host{hostname} = $hostname;
   $host{mxhost} = "mx.cs.brown.edu";
 
-  $equip_select->execute($hostname);
-  die "No record for host $hostname\n" if ($equip_select->rows == 0);
-  $equip_select->bind_columns(\$host{equip_id}, \$host{contact}, \$host{status}, \$host{usage}, \$host{managed_by});
-  $equip_select->fetch;
-
-  $host{status} = $self->get_field("equip_status_types", "description", $host{status});
-  $host{managed_by} = $self->get_field("management_types", "description", $host{managed_by});
-  $host{usage} = $self->get_field("equip_usage_types", "description", $host{usage});
-
   $comp_select->execute($hostname);
-  $comp_select->bind_columns(\$host{comp_id}, \$host{hw_arch}, \$host{os_type}, \$host{pxelink});
+  $comp_select->bind_columns(\$host{contact}, \$host{status}, \$host{managed_by}, \$host{hw_arch}, \$host{os_type}, \$host{pxelink});
   $comp_select->fetch;
+
+  if ($comp_select->rows == 0) {
+    return ();
+  }
 
   $ethernet_select->execute($hostname);
   $ethernet_select->bind_columns(\$host{ethernet});
@@ -238,23 +232,24 @@ sub insert_host {
   # open (my $fh, ">>$file") or die qq{Could not open "$file": $!\n};
   # $self->{dbh}->pg_server_trace($fh);
 
-  my $equip_insert = $self->prepare("INSERT INTO equipment (equip_status, usage, managed_by, name, contact) VALUES (?, ?, ?, ?, ?)");
+  my $equip_insert = $self->prepare("INSERT INTO equipment (equip_status, managed_by, name, contact) VALUES (?, ?, ?, ?)");
 
   my $comp_insert = $self->prepare("INSERT INTO computers (name, hw_arch, os, pxelink) VALUES (?, ?, ?, ?)");
-
-  my $interface_insert = $self->prepare("INSERT INTO net_interfaces (name, ethernet) VALUES (?, ?) RETURNING id");
-  $interface_insert->bind_param(2, undef, {pg_type => PG_MACADDR});
 
   my $address_insert = $self->prepare("INSERT INTO net_addresses (vlan_num, ipaddr, monitored, dns_name, domain) VALUES (?, ?, ?, ?, 'cs.brown.edu') RETURNING id");
   $address_insert->bind_param(1, undef, SQL_INTEGER);
   $address_insert->bind_param(2, undef, {pg_type => PG_INET});
   $address_insert->bind_param(3, undef, {pg_type => PG_BOOL});
 
+  my $interface_insert = $self->prepare("INSERT INTO net_interfaces (equip_name, ethernet, primary_address) VALUES (?, ?, ?) RETURNING id");
+  $interface_insert->bind_param(2, undef, {pg_type => PG_MACADDR});
+  $interface_insert->bind_param(3, undef, SQL_INTEGER);
+
   my $addr_iface_insert = $self->prepare("INSERT INTO net_addresses_net_interfaces (net_addresses_id, net_interfaces_id) VALUES (?, ?)");
   $addr_iface_insert->bind_param(1, undef, SQL_INTEGER);
   $addr_iface_insert->bind_param(2, undef, SQL_INTEGER);
 
-  my $dns_insert = $self->prepare("INSERT INTO net_dns_entries (name, domain, zone, net_address_id) VALUES (?, 'cs.brown.edu', 'both', ?)");
+  my $dns_insert = $self->prepare("INSERT INTO net_dns_entries (name, domain, dns_entry_type, net_address_id) VALUES (?, 'cs.brown.edu', 'both', ?)");
   $dns_insert->bind_param(2, undef, SQL_INTEGER);
 
   my $class_comp_insert = $self->prepare("INSERT INTO comp_classes_computers (comp_class, computer) VALUES (?,?)");
@@ -295,7 +290,7 @@ sub insert_host {
 
   # create an equipment entry...
 
-  $equip_insert->execute("deployed", "academic", "tstaff", $hostname, $contact);
+  $equip_insert->execute("deployed", "tstaff", $hostname, $contact);
   $equip_insert->finish;
 
   # fill in equip_status
@@ -320,13 +315,13 @@ sub insert_host {
   $comp_insert->execute($hostname, $hw_arch, $os, $pxelink);
   $comp_insert->finish;
 
-  $interface_insert->execute($hostname, $ethernet);
-  my $interface_id = $interface_insert->fetch()->[0];
-  $interface_insert->finish;
-
   $address_insert->execute($vlan_id, $ipaddr, $monitored, $hostname);
   my $address_id = $address_insert->fetch()->[0];
   $address_insert->finish;
+
+  $interface_insert->execute($hostname, $ethernet, $address_id);
+  my $interface_id = $interface_insert->fetch()->[0];
+  $interface_insert->finish;
 
   $addr_iface_insert->execute($address_id, $interface_id);
   $addr_iface_insert->finish;
