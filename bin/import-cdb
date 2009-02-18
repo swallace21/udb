@@ -34,11 +34,22 @@ $udb->start($username, $password);
 
 #$udb->{dbh}->trace(1);
 
-#
-# domains
-#
+print "deleting old data... ";
 
-print "populating domains... ";
+$udb->{dbh}->do("DELETE FROM equipment;");
+$udb->{dbh}->do("DELETE FROM computers;");
+$udb->{dbh}->do("DELETE FROM net_interfaces;");
+$udb->{dbh}->do("DELETE FROM net_addresses;");
+$udb->{dbh}->do("DELETE FROM net_addresses_net_interfaces;");
+$udb->{dbh}->do("DELETE FROM net_dns_entries;");
+$udb->{dbh}->do("DELETE FROM comp_classes;");
+$udb->{dbh}->do("DELETE FROM comp_classes_computers;");
+$udb->{dbh}->do("DELETE FROM net_zones; DELETE FROM net_vlans;");
+$udb->{dbh}->do("DELETE FROM equip_usage_types; DELETE FROM equip_status_types; delete from management_types;");
+
+print "done.\n";
+
+print "populating static tables... ";
 
 sub domain_insert {
   my ($table, $desc) = @_;
@@ -46,8 +57,6 @@ sub domain_insert {
   $sth->execute($desc);
   return $sth->fetch()->[0];
 }
-
-$udb->{dbh}->do("DELETE FROM equip_usage_types; DELETE FROM equip_status_types; delete from management_types;");
 
 my %usage_types = (
   "tstaff" => domain_insert("equip_usage_types", "tstaff"),
@@ -66,16 +75,6 @@ my %management_types = (
   "cis" => domain_insert("management_types", "cis"),
   "user" => domain_insert("management_types", "user"),
 );
-
-print Dumper(%$management_types);
-
-#
-# vlans and zones
-#
-
-print "creating vlans and zones... ";
-
-$udb->{dbh}->do("DELETE FROM net_zones; DELETE FROM net_vlans;");
 
 my $zone_insert = $udb->{dbh}->prepare("INSERT INTO net_zones (manager, routing, name, dynamic_dhcp) VALUES (?, ?, ?, ?)");
 $zone_insert->bind_param(4, undef, {pg_type => PG_BOOL});
@@ -113,20 +112,7 @@ $vlan_insert->execute("ipsec", 885, "10.117.0.0/16");
 
 print "done.\n";
 
-#
-# cdb
-# 
-
 print "importing cdb... ";
-
-$udb->{dbh}->do("DELETE FROM equipment;");
-$udb->{dbh}->do("DELETE FROM computers;");
-$udb->{dbh}->do("DELETE FROM net_interfaces;");
-$udb->{dbh}->do("DELETE FROM net_addresses;");
-$udb->{dbh}->do("DELETE FROM net_addresses_net_interfaces;");
-$udb->{dbh}->do("DELETE FROM net_dns_entries;");
-$udb->{dbh}->do("DELETE FROM comp_classes;");
-$udb->{dbh}->do("DELETE FROM comp_classes_computers;");
 
 my($key, $data);
 while ( ($key, $data) = each(%$cdb_by_hostname) ) {
