@@ -53,25 +53,21 @@ create table places (
 -- {{{
 
 create table equip_usage_types (
-  id                        serial primary key,
-  description               text
+  name                      text primary key
 ) ;
 
 create table management_types (
-  id                        serial primary key,
-  description               text
+  name                      text primary key
 ) ;
 
 create table equip_status_types (
-  id                        serial primary key,
-  description               text
+  name                      text primary key
 ) ;
 
 create sequence cs_id_seq;
 
 create table purchase_orders (
-  id                        serial primary key,
-  po_num                    numeric unique,
+  po_num                    numeric primary key,
   req_num                   numeric unique,
   purchased_on              date,
   for_by                    text,
@@ -88,25 +84,24 @@ create table purchase_orders (
 ) ;
 
 create table equipment (
-  id                        serial primary key,
-  parent_equip_id           integer references equipment
+  name                      text primary key,
+  parent_equip_id           text references equipment
                               on update cascade
                               on delete cascade,
-  po_id                     integer references purchase_orders
+  po_num                    integer references purchase_orders
                               on update cascade
                               on delete cascade,
   place_id                  integer references places
                               on update cascade
                               on delete cascade,
   cs_id                     integer unique default nextval('cs_id_seq'),
-  name                      text unique,
-  equip_status              integer not null references equip_status_types
+  equip_status              text not null references equip_status_types
                               on update cascade
                               on delete restrict,
-  usage                     integer not null references equip_usage_types
+  usage                     text not null references equip_usage_types
                               on update cascade
                               on delete restrict,
-  managed_by                integer not null references management_types
+  managed_by                text not null references management_types
                               on update cascade
                               on delete restrict,
   installed_on              date,
@@ -118,10 +113,10 @@ create table equipment (
 ) ;
 
 create table surplus_equipment (
-  id                        serial primary key,
-  equipment_id              integer not null references equipment
+  name                      text not null references equipment
                               on update cascade
                               on delete cascade,
+  primary key (name),
   surplus_date              date,
   sale_date                 date,
   buyer                     text,
@@ -147,14 +142,14 @@ value = 'internal' or
 value = 'external' or
 value = 'both');
 
-create or replace function num_ports(integer) returns integer as 'select 0' language 'sql';
-create or replace function vlan_zone(integer) returns integer as 'select 0' language 'sql';
+create or replace function num_ports(text) returns integer as 'select 0' language 'sql';
+create or replace function vlan_zone(integer) returns text as 'select cast('''' as text)' language 'sql';
 
 create table net_switches (
-  id                        serial primary key,
-  equipment_id              integer not null references equipment
+  name                      text not null references equipment
                               on update cascade
                               on delete cascade,
+  primary key (name),
   num_ports                 integer not null,
   num_blades                integer,
   switch_type               text not null,
@@ -166,20 +161,20 @@ create table net_switches (
 
 create table net_ports (
   id                        serial primary key,
-  switch_id                 integer not null references net_switches
+  switch                    text not null references net_switches
                               on update cascade
                               on delete cascade,
   port_num                  integer not null,
   wall_plate                text unique not null,
   last_changed              timestamp not null default now(),
   blade_num                 integer,
-  -- check that port is unique in switch
-  check (port_num >= 0 and port_num <= num_ports(switch_id))
+  unique (switch, port_num, blade_num),
+  check (port_num >= 0 and port_num <= num_ports(switch))
 ) ;
 
 create table net_interfaces (
   id                        serial primary key,
-  equipment_id              integer not null references equipment
+  name                      text not null references equipment
                               on update cascade
                               on delete cascade,
   port_id                   integer references net_ports
@@ -190,35 +185,33 @@ create table net_interfaces (
 ) ;
 
 create table net_services (
-  id                        serial primary key,
-  service                   text not null
+  service                   text primary key
 ) ;
 
 create table net_zones (
-  id                        serial primary key,
-  name                      text not null,
-  manager                   integer not null references management_types
+  name                      text primary key,
+  manager                   text not null references management_types
                               on update cascade
                               on delete restrict,
-  routing                   routing_type
+  routing                   routing_type,
+  dynamic_dhcp              boolean not null default true
 ) ;
 
 create table net_vlans (
-  id                        serial primary key,
-  zone_id                   integer not null references net_zones
+  vlan_num                  integer primary key,
+  zone                      text not null references net_zones
                               on update cascade
                               on delete cascade,
-  vlan_num                  integer unique not null,
   network                   cidr not null
 ) ;
 
 -- net_addresses
 create table net_addresses (
   id                        serial primary key,
-  vlan_id                   integer not null references net_vlans
+  zone                      text not null references net_zones
                               on update cascade
                               on delete cascade,
-  zone_id                   integer not null references net_zones
+  vlan_num                  integer not null references net_vlans
                               on update cascade
                               on delete cascade,
   ipaddr                    inet,
@@ -232,11 +225,11 @@ create table net_addresses (
 
 create or replace function update_zone_by_vlan() returns trigger as $update_zone_by_vlan$
 declare
-  new_vlan_zone_id          integer;
+  new_vlan_zone             text;
 begin
-  select (zone_id) into strict new_vlan_zone_id from net_vlans
-    where id = new.vlan_id;
-  new.zone_id := new_vlan_zone_id;
+  select (zone) into strict new_vlan_zone from net_vlans
+    where vlan_num = new.vlan_num;
+  new.zone := new_vlan_zone;
   return new;
 end;
 $update_zone_by_vlan$ language plpgsql;
@@ -280,7 +273,7 @@ create table net_addresses_net_services (
   net_addresses_id          integer not null references net_addresses
                               on update cascade
                               on delete cascade,
-  net_services_id           integer not null references net_services
+  net_services_id           text not null references net_services
                               on update cascade
                               on delete cascade,
   primary key               (net_addresses_id, net_services_id)
@@ -288,13 +281,13 @@ create table net_addresses_net_services (
 -- }}}
 
 create or replace function vlan_zone(integer)
-  returns integer
-  as 'select zone_id from net_vlans where id = $1'
+  returns text
+  as 'select zone from net_vlans where vlan_num = $1'
   language 'sql';
 
-create or replace function num_ports(integer)
+create or replace function num_ports(text)
   returns integer
-  as 'select num_ports from net_switches where id = $1'
+  as 'select num_ports from net_switches where name = $1'
   language 'sql';
 
 create table log_dhcp (
@@ -509,10 +502,10 @@ value = 'vista' or
 value = 'winxp');
 
 create table computers (
-  id                        serial primary key,
-  equipment_id              integer not null references equipment
+  name                      text not null references equipment
                               on update cascade
                               on delete cascade,
+  primary key (name),
   hw_arch                   hw_arch_type,
   os                        os_type,
   system_model              text,
@@ -532,19 +525,18 @@ create table computers (
 ) ;
 
 create table comp_classes (
-  id                        serial primary key,
-  class                     text unique not null
+  class                     text primary key
 ) ;
 
 -- join tables {{{
 create table comp_classes_computers (
-  comp_classes_id           integer not null references comp_classes
+  comp_class                text not null references comp_classes
                               on update cascade
                               on delete cascade,
-  computers_id              integer not null references computers
+  computer                  text not null references computers
                               on update cascade
                               on delete cascade,
-  primary key               (comp_classes_id, computers_id)
+  primary key               (comp_class, computer)
 ) ;
 -- }}}
 
@@ -558,13 +550,13 @@ create table comp_classes_computers (
 
 -- association between equipment and people
 create table equipment_people (
-  equipment_id              integer not null references equipment
+  equipment_name            text not null references equipment
                               on update cascade
                               on delete cascade,
   equip_user_id             integer not null references people
                               on update cascade
                               on delete cascade,
-  primary key               (equipment_id, equip_user_id)
+  primary key               (equipment_name, equip_user_id)
 ) ;
 
 -- }}}

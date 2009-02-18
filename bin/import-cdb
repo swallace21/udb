@@ -42,7 +42,7 @@ print "populating domains... ";
 
 sub domain_insert {
   my ($table, $desc) = @_;
-  my $sth = $udb->prepare("INSERT INTO $table (description) VALUES (?) RETURNING id");
+  my $sth = $udb->prepare("INSERT INTO $table (name) VALUES (?) RETURNING name");
   $sth->execute($desc);
   return $sth->fetch()->[0];
 }
@@ -77,59 +77,39 @@ print "creating vlans and zones... ";
 
 $udb->{dbh}->do("DELETE FROM net_zones; DELETE FROM net_vlans;");
 
-my $zone_insert = $udb->{dbh}->prepare("INSERT INTO net_zones (manager, routing, name) VALUES (?, ?, ?)");
-$zone_insert->bind_param(1, undef, SQL_INTEGER);
+my $zone_insert = $udb->{dbh}->prepare("INSERT INTO net_zones (manager, routing, name, dynamic_dhcp) VALUES (?, ?, ?, ?)");
+$zone_insert->bind_param(4, undef, {pg_type => PG_BOOL});
 
-my $vlan_insert = $udb->{dbh}->prepare("INSERT INTO net_vlans (zone_id, vlan_num, network) VALUES (?, ?, ?)");
-$vlan_insert->bind_param(1, undef, SQL_INTEGER);
+my $vlan_insert = $udb->{dbh}->prepare("INSERT INTO net_vlans (zone, vlan_num, network) VALUES (?, ?, ?)");
 $vlan_insert->bind_param(2, undef, SQL_INTEGER);
 $vlan_insert->bind_param(3, undef, {pg_type => PG_CIDR});
 
-$zone_insert->execute($management_types{"tstaff"}, "DMZ", "tstaff-dmz");
-my $tstaff_DMZ_id = $udb->{dbh}->last_insert_id(undef, undef, "net_zones", undef);
+$zone_insert->execute($management_types{"tstaff"}, "DMZ", "tstaff-dmz", 0);
+$zone_insert->execute($management_types{"tstaff"}, "private", "tstaff-private", 0);
+$zone_insert->execute($management_types{"tstaff"}, "standard", "tstaff-standard", 0);
+$zone_insert->execute($management_types{"user"}, "DMZ", "user-dmz", 0);
+$zone_insert->execute($management_types{"user"}, "private", "cs166", 0);
+$zone_insert->execute($management_types{"user"}, "special", "outside", 0);
+$zone_insert->execute($management_types{"user"}, "special", "jj-oshean", 0);
+$zone_insert->execute($management_types{"user"}, "special", "techhouse", 0);
+$zone_insert->execute($management_types{"user"}, "special", "ipsec", 0);
+$zone_insert->execute($management_types{"user"}, "standard", "user-standard", 0);
 
-$zone_insert->execute($management_types{"tstaff"}, "private", "tstaff-private");
-my $tstaff_private_id = $udb->{dbh}->last_insert_id(undef, undef, "net_zones", undef);
-
-$zone_insert->execute($management_types{"tstaff"}, "standard", "tstaff-standard");
-my $tstaff_standard_id = $udb->{dbh}->last_insert_id(undef, undef, "net_zones", undef);
-
-$zone_insert->execute($management_types{"user"}, "DMZ", "user-dmz");
-my $user_DMZ_id = $udb->{dbh}->last_insert_id(undef, undef, "net_zones", undef);
-
-$zone_insert->execute($management_types{"user"}, "private", "cs166");
-my $cs166_id = $udb->{dbh}->last_insert_id(undef, undef, "net_zones", undef);
-
-$zone_insert->execute($management_types{"user"}, "special", "outside");
-my $outside_id = $udb->{dbh}->last_insert_id(undef, undef, "net_zones", undef);
-
-$zone_insert->execute($management_types{"user"}, "special", "jj-oshean");
-my $jj_id = $udb->{dbh}->last_insert_id(undef, undef, "net_zones", undef);
-
-$zone_insert->execute($management_types{"user"}, "special", "techhouse");
-my $techhouse_id = $udb->{dbh}->last_insert_id(undef, undef, "net_zones", undef);
-
-$zone_insert->execute($management_types{"user"}, "special", "ipsec");
-my $ipsec_id = $udb->{dbh}->last_insert_id(undef, undef, "net_zones", undef);
-
-$zone_insert->execute($management_types{"user"}, "standard", "user-standard");
-my $user_standard_id = $udb->{dbh}->last_insert_id(undef, undef, "net_zones", undef);
-
-$vlan_insert->execute($tstaff_DMZ_id, 32, "128.148.32.0/25");
-$vlan_insert->execute($tstaff_private_id, 192, "192.168.1.0/24");
-$vlan_insert->execute($tstaff_private_id, 898, "10.116.0.0/16");
-$vlan_insert->execute($tstaff_private_id, 897, "192.168.10.0/24");
-$vlan_insert->execute($tstaff_standard_id, 31, "128.148.31.0/24");
-$vlan_insert->execute($tstaff_standard_id, 33, "128.148.33.0/24");
-$vlan_insert->execute($tstaff_standard_id, 37, "128.148.37.0/24");
-$vlan_insert->execute($tstaff_standard_id, 38, "128.148.38.0/24");
-$vlan_insert->execute($user_DMZ_id, 892, "128.148.32.128/25");
-$vlan_insert->execute($cs166_id, 893, "192.168.100.0/24");
-$vlan_insert->execute($outside_id, 34, "128.148.34.0/24");
-$vlan_insert->execute($jj_id, 698, "198.7.242.32/28");
-$vlan_insert->execute($techhouse_id, 360, "138.16.60.0/24");
-$vlan_insert->execute($user_standard_id, 36, "128.148.36.0/24");
-$vlan_insert->execute($ipsec_id, 885, "10.117.0.0/16");
+$vlan_insert->execute("tstaff-dmz", 32, "128.148.32.0/25");
+$vlan_insert->execute("tstaff-private", 192, "192.168.1.0/24");
+$vlan_insert->execute("tstaff-private", 898, "10.116.0.0/16");
+$vlan_insert->execute("tstaff-private", 897, "192.168.10.0/24");
+$vlan_insert->execute("tstaff-standard", 31, "128.148.31.0/24");
+$vlan_insert->execute("tstaff-standard", 33, "128.148.33.0/24");
+$vlan_insert->execute("tstaff-standard", 37, "128.148.37.0/24");
+$vlan_insert->execute("tstaff-standard", 38, "128.148.38.0/24");
+$vlan_insert->execute("user-dmz", 892, "128.148.32.128/25");
+$vlan_insert->execute("cs166", 893, "192.168.100.0/24");
+$vlan_insert->execute("outside", 34, "128.148.34.0/24");
+$vlan_insert->execute("jj-oshean", 698, "198.7.242.32/28");
+$vlan_insert->execute("techhouse", 360, "138.16.60.0/24");
+$vlan_insert->execute("user-standard", 36, "128.148.36.0/24");
+$vlan_insert->execute("ipsec", 885, "10.117.0.0/16");
 
 print "done.\n";
 
