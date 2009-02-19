@@ -29,6 +29,17 @@ create aggregate textcat_all (
   initcond    = ''
 );
 
+create or replace function fqdn_brown(hostname text, domain text) returns text as
+$$
+begin
+  if domain = 'cs.brown.edu' then
+    return hostname;
+  else
+    return hostname || '.' || domain;
+  end if;
+end;
+$$ language plpgsql;
+
 -- }}}
 
 ------------
