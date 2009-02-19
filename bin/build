@@ -9,6 +9,7 @@ use Data::Dumper;
 use NetAddr::IP qw(Coalesce);
 use List::MoreUtils qw(uniq);
 use Template;
+use Template::Stash;
 
 use FindBin qw($RealBin);
 use lib "$RealBin/../lib";
@@ -238,12 +239,8 @@ sub build_nagios_services {
   my $vars = {filename => $file, date => get_date(), dbh => $udb->{dbh}};
   $tt->process('services.cfg.tt2', $vars, $PATH_TMPFILE) || die $tt->error(), "\n";
 
-  print OUT "# EOF\n";
-  close(OUT);
-
-  maybe_rename($PATH_TMPFILE, $file);
-
   # send new config file to each server
+  maybe_rename($PATH_TMPFILE, $file);
   maybe_system('scp', '-pq', $file, "storm:/etc/nagios3/conf.d/");
   if ( $? != 0 ) {
     warn "$0: ERROR: Failed to copy nagios files to storm\n";
@@ -386,32 +383,55 @@ sub build_wpkg_hosts {
   maybe_rename($PATH_TMPFILE, $file);
 }
 
-#
-# FUNCTION: build_dns
-#    DESCR: Creates the necessary dns-related files and reloads named
-#
+sub build_dns_map_forward {
+  my ($serial_num, $zone) = @_;
+
+  my $file = $dry_run ? "/tmp/db.$zone" : "/maytag/sys0/DNS/db.$zone";
+  my $PATH_TMPFILE = $file . '.tmp';
+  my $vars = {
+    filename => $file,
+    date => get_date(),
+    dbh => $udb->{dbh},
+    zone => $zone,
+  };
+  $tt->process('dns.db.forward.tt2', $vars, $PATH_TMPFILE) || die $tt->error(), "\n";
+
+  return $file;
+}
+
+sub build_dns_map_reverse {
+  my ($serial_num, $subnet) = @_;
+  my $zone = $subnet->prefix;
+
+  my $file = $dry_run ? "/tmp/db.$zone" : "/maytag/sys0/DNS/db.$zone";
+  my $PATH_TMPFILE = $file . '.tmp';
+  my $vars = {
+    filename => $file,
+    date => get_date(),
+    dbh => $udb->{dbh},
+    zone => $zone,
+    cidr => $subnet->cidr,
+  };
+  $tt->process('dns.db.reverse.tt2', $vars, $PATH_TMPFILE) || die $tt->error(), "\n";
+
+  return $file;
+}
 
 sub build_dns {
-  my %handles = ();
-  my @files = ();
 
-  my ($sth, $array_ref);
+  $Template::Stash::SCALAR_OPS->{to_dns_ptr_record} = sub {
+    my ($ip) = @_;
+    my $formatted_ip = join(".",reverse(split(/\./, $ip)));
+    my $spaces = ' ' x (18 - length($formatted_ip));
+    return "$formatted_ip.IN-ADDR.ARPA.$spaces";
+  };
 
-  ## build headers for all the maps
+  # TODO increment the SOA line
+  my $serial_num = 6675;
 
-  $sth = $udb->prepare(<<SQL
-select
-  nv.network
-from
-  net_vlans nv,
-  net_zones nz
-where
-  nv.zone = nz.name
-  and nz.routing_type != 'private'
-SQL
-  );
+  my $sth = $udb->prepare("select nv.network from net_vlans nv, net_zones nz where nv.zone = nz.name and nz.routing_type != 'private'");
   $sth->execute();
-  $array_ref = $sth->fetchall_arrayref({});
+  my $array_ref = $sth->fetchall_arrayref({});
 
   my @spread_subnets = ();
 
@@ -423,138 +443,32 @@ SQL
   my $classB = Coalesce(16, 1, grep {$_->masklen < 24} @spread_subnets);
   my @subnets = uniq( @{$classC}, @{$classB} );
 
+  my @files = ();
+
+  foreach my $subnet (@subnets) {
+    my $file = build_dns_map_reverse($serial_num, $subnet);
+    push @files, $file;
+  }
+
   my @forward_maps = qw(cs ilab);
-  my @reverse_maps = map { $_->prefix } @subnets;
-  my @all_maps = (@forward_maps, @reverse_maps);
-
-  foreach my $zone (@all_maps) {
-    # specify the current source files
-    my $srcfile = $dry_run ? "/tmp/db.$zone" : "/var/named/src/db.$zone";
-    my $srcinc = "/u/system/include/cdb_dns_$zone.in";
-
-    my $handle;
-    open($handle, ">$srcfile.tmp") || die "$0: ERROR: Failed to open $srcfile: $!\n";
-
-    push @files, $srcfile;
-    $handles{$zone} = $handle;
-
-    print $handle "\$ttl 1d\n";
-
-    ## Retrieve serial number from SOA line
-
-    #my ($head, $tail) = split(/\(/, $line);
-    #my @nums = split(/\s+/, $tail);
-    #shift(@nums);
-
-    ## Recreate line and print it to file  
-    #         
-    #my $line = $head . '( ' . (shift(@nums) + 1);
-    #while ($_ = shift(@nums)) {
-    #  $line .= " $_";
-    #}
-    #print $handle "$line\n";
-
-    #if(-s ("$include")) {
-    #  if (!open(INCLUDE, "<$include")) { 
-    #    warn "$0: ERROR: Failed to open include $include: $!\n";
-    #    return 0;
-    #  }
-
-    #  @inctext = <INCLUDE>;
-    #  print $handle @inctext;
-    #  close(INCLUDE);
-    #}
-
-    #build_dns_headers($srcfile, $srcinc, $handle);
+  foreach my $map (@forward_maps) {
+    my $file = build_dns_map_forward($serial_num, $map);
+    push @files, $file;
   }
 
-  exit(1);
-
-  my($handle, $line, $spaces, $host, $cname, @nibbles, $subnet);
-
-  ### foreach my $host (keys(%$cdb_by_hostname)) {
-  ###   my($prim_grp) = $cdb_by_hostname->{$host}{'prim_grp'};
-
-  ###   # TODO Don't add DNS entries for dynamic hosts
-
-  ###   # only include hosts that are listed as active or monitored
-  ###   my $status = $cdb_by_hostname->{$host}{'status'};
-  ###   next unless ( $status eq "active" || $status eq "monitored" || $status eq "ugrad-monitored" );
-
-  ###   # first write out to forward tables
-  ###   if ("$prim_grp" eq "ilab") {
-  ###     $handle = $handles{$prim_grp};
-  ###   } else {
-  ###     $handle = $handles{'cs'};
-  ###   }
-
-  ###   $spaces = ' ' x (21 - length($host));
-  ###   $line = $host . $spaces . "IN  A     " .  
-  ###     $cdb_by_hostname->{$host}{'ip_addr'};
-  ###   print $handle "$line\n";
-
-  ###   if ($cdb_by_hostname->{$host}{'aliases'} ne '') {
-  ###     my @aliases = split(/,/, $cdb_by_hostname->{$host}{'aliases'});
-  ###     while ($cname = pop(@aliases)) {
-  ###       $spaces = ' ' x (21 - length($cname));
-  ###       if ("$prim_grp" eq "ilab") {
-  ###         $line = $cname . $spaces . "IN  CNAME " . "${host}.ilab.cs.brown.edu.";
-  ###       } else {
-  ###         $line = $cname . $spaces . "IN  CNAME " . "${host}.cs.brown.edu.";
-  ###       }
-  ###       print $handle "$line\n";
-  ###     }
-  ###   }
-
-  ###   if ($cdb_by_hostname->{$host}{'mxhost'} ne '') {
-  ###     $spaces = ' ' x (21 - length($host));
-  ###     $line = $host . $spaces . "IN  MX    10 " . 
-  ###       $cdb_by_hostname->{$host}{'mxhost'} . ".";
-  ###     print $handle "$line\n";
-  ###   }
-
-  ###   # Then the appropriate subnet database
-
-  ###   @nibbles = split(/\./, $cdb_by_hostname->{$host}{'ip_addr'});
-  ###   if (grep /$nibbles[1]/, @cdb_classB_subnets) {
-  ###     $subnet = $nibbles[1];
-  ###   } elsif (grep /$nibbles[2]/, @cdb_classC_subnets) {
-  ###     $subnet = $nibbles[2];
-  ###   }
-
-  ###   $line = "";
-  ###   foreach (reverse(@nibbles)) {
-  ###     $line .= "${_}.";
-  ###   }
-
-  ###   $spaces = ' ' x (18 - length($cdb_by_hostname->{$host}{'ip_addr'}));
-  ###   if ("$prim_grp" eq "ilab") {
-  ###     $line .= "IN-ADDR.ARPA." . $spaces . "IN  PTR   " .
-  ###            "${host}.ilab.cs.brown.edu.";
-  ###   } else {
-  ###     $line .= "IN-ADDR.ARPA." . $spaces . "IN  PTR   " .
-  ###            "${host}.cs.brown.edu.";
-  ###   }
-
-  ###   if (defined($handles{$subnet})) {  
-  ###     $handle = $handles{$subnet};
-  ###     print $handle "$line\n";
-  ###   }
-  ### }
-
-  foreach my $handle (keys %handles) {
-    close($handle);
-  }
-
+  # fix permissions
   foreach my $file (@files) {
     maybe_rename("$file.tmp", $file);
-
-    # fix permissions the file
-    #chown(0, (getgrnam('sys'))[2], $file) || warn "$0: WARNING: Failed to chown $file: $!\n";
-
-    #chmod(0444, $file) || warn "$0: WARNING: Failed to chmod $file: $!\n";
+    if ($dry_run) {
+      print "DEBUG: fix permissions\n";
+    } else {
+      # fix permissions the file
+      chown(0, (getgrnam('sys'))[2], $file) || warn "$0: WARNING: Failed to chown $file: $!\n";
+      chmod(0444, $file) || warn "$0: WARNING: Failed to chmod $file: $!\n";
+    }
   }
 
+  # send new config file to each server
   my @dns_servers = qw(payday snickers);
   foreach my $host (@dns_servers) {
     maybe_system('scp', '-pq', @files, "$host:/var/cache/bind");

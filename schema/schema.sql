@@ -139,7 +139,7 @@ create table routing_types (
   name                      text primary key
 ) ;
 
-create table dns_entry_types (
+create table dns_regions (
   name                      text primary key
 ) ;
 
@@ -185,8 +185,6 @@ create table net_addresses (
                               on update cascade
                               on delete cascade,
   ipaddr                    inet,
-  dns_name                  text not null,
-  domain                    text not null,
   enabled                   boolean not null default true,
   monitored                 boolean not null,
   last_changed              timestamp not null default now(),
@@ -243,17 +241,24 @@ create table net_services (
 ) ;
 
 create table net_dns_entries (
-  name                      text not null,
+  dns_name                  text not null,
   domain                    text not null,
-  dns_entry_type            text not null references dns_entry_types
+  dns_region                text not null references dns_regions
                               on update cascade
                               on delete restrict,
-  net_address_id            integer not null references net_addresses
+  address                   integer not null references net_addresses
                               on update cascade
                               on delete cascade,
+  authoritative             boolean not null,
   last_changed              timestamp not null default now(),
-  primary key               (name, domain, dns_entry_type)
+  primary key               (dns_name, domain, dns_region)
 ) ;
+
+create unique index authoritative_dns_entries_index on net_dns_entries (
+  dns_name,
+  domain,
+  dns_region
+) where authoritative = true;
 
 -- join tables {{{
 create table net_ports_net_vlans (
@@ -285,6 +290,7 @@ create table net_addresses_net_services (
                               on delete cascade,
   primary key               (net_addresses_id, net_services_id)
 ) ;
+
 -- }}}
 
 create or replace function vlan_zone(integer)

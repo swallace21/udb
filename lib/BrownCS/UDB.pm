@@ -33,7 +33,7 @@ sub start {
   my ($username, $password) = @_;
   $self->{dbh} = DBI->connect("dbi:Pg:dbname=udb;host=sysdb", $username, $password, {AutoCommit=>0, pg_errorlevel=>2}) or die "Couldn't connect to database: " . DBI->errstr;
 
-  my $all_aliases_select = $self->prepare("select name from net_dns_entries");
+  my $all_aliases_select = $self->prepare("select fqdn_brown(dns_name, domain) from net_dns_entries");
   my $all_classes_select = $self->prepare("select cc.class from comp_classes cc");
   my $all_comps_select = $self->prepare("select hw_arch, os, pxelink from computers");
   my $all_equip_select = $self->prepare("select contact, equip_status from equipment");
@@ -109,7 +109,7 @@ sub get_host {
   my ($hostname) = @_;
   my %host = ();
 
-  my $aliases_select = $self->prepare("select nde.name from net_dns_entries nde, equipment e, net_addresses_net_interfaces nani, net_interfaces ni, net_addresses na where e.name = ? and e.name = ni.equip_name and nani.net_interfaces_id = ni.id and nani.net_addresses_id = na.id and na.id = nde.net_address_id");
+  my $aliases_select = $self->prepare("select nde.dns_name from net_dns_entries nde, net_addresses_net_interfaces nani, net_interfaces ni, net_addresses na where ni.equip_name = ? and nani.net_interfaces_id = ni.id and nani.net_addresses_id = na.id and na.id = nde.address and nde.authoritative = false");
   my $classes_select = $self->prepare("select cc.class from comp_classes cc, computers c, comp_classes_computers ccc where c.name = ? and ccc.comp_class = cc.class and ccc.computer = c.name");
   my $comp_select = $self->prepare("select e.contact, e.equip_status, e.managed_by, c.hw_arch, c.os, c.pxelink from equipment e, computers c where e.name = ? and c.name = e.name");
   my $ethernet_select = $self->prepare("select ni.ethernet from equipment e, net_interfaces ni where e.name = ? and e.name = ni.equip_name");
@@ -236,7 +236,7 @@ sub insert_host {
 
   my $comp_insert = $self->prepare("INSERT INTO computers (name, hw_arch, os, pxelink) VALUES (?, ?, ?, ?)");
 
-  my $address_insert = $self->prepare("INSERT INTO net_addresses (vlan_num, ipaddr, monitored, dns_name, domain) VALUES (?, ?, ?, ?, 'cs.brown.edu') RETURNING id");
+  my $address_insert = $self->prepare("INSERT INTO net_addresses (vlan_num, ipaddr, monitored) VALUES (?, ?, ?) RETURNING id");
   $address_insert->bind_param(1, undef, SQL_INTEGER);
   $address_insert->bind_param(2, undef, {pg_type => PG_INET});
   $address_insert->bind_param(3, undef, {pg_type => PG_BOOL});
@@ -249,8 +249,9 @@ sub insert_host {
   $addr_iface_insert->bind_param(1, undef, SQL_INTEGER);
   $addr_iface_insert->bind_param(2, undef, SQL_INTEGER);
 
-  my $dns_insert = $self->prepare("INSERT INTO net_dns_entries (name, domain, dns_entry_type, net_address_id) VALUES (?, 'cs.brown.edu', 'both', ?)");
-  $dns_insert->bind_param(2, undef, SQL_INTEGER);
+  my $dns_insert = $self->prepare("INSERT INTO net_dns_entries (dns_name, domain, address, authoritative, dns_region) VALUES (?, ?, ?, ?, ?)");
+  $dns_insert->bind_param(3, undef, SQL_INTEGER);
+  $dns_insert->bind_param(4, undef, {pg_type => PG_BOOL});
 
   my $class_comp_insert = $self->prepare("INSERT INTO comp_classes_computers (comp_class, computer) VALUES (?,?)");
 
@@ -315,7 +316,7 @@ sub insert_host {
   $comp_insert->execute($hostname, $hw_arch, $os, $pxelink);
   $comp_insert->finish;
 
-  $address_insert->execute($vlan_id, $ipaddr, $monitored, $hostname);
+  $address_insert->execute($vlan_id, $ipaddr, $monitored);
   my $address_id = $address_insert->fetch()->[0];
   $address_insert->finish;
 
@@ -326,11 +327,18 @@ sub insert_host {
   $addr_iface_insert->execute($address_id, $interface_id);
   $addr_iface_insert->finish;
 
-  $dns_insert->execute($hostname, $address_id);
+  my $domain = 'cs.brown.edu';
+  if ($host->{prim_grp} eq 'ilab') {
+    $domain = 'ilab.cs.brown.edu';
+  }
+
+  $dns_insert->execute($hostname, $domain, $address_id, 1, "internal");
+  $dns_insert->execute($hostname, $domain, $address_id, 1, "external");
 
   if ( $#aliases != -1 ) {
     foreach (@aliases) {
-      $dns_insert->execute($_, $address_id);
+      $dns_insert->execute($_, $domain, $address_id, 0, "internal");
+      $dns_insert->execute($_, $domain, $address_id, 0, "external");
     }
   }
 
@@ -352,8 +360,8 @@ sub insert_host {
   $addr_svc_insert->finish;
   $class_comp_insert->finish;
 
-#  $self->{dbh}->pg_server_untrace;
-#  close($fh);
+  # $self->{dbh}->pg_server_untrace;
+  # close($fh);
 }
 
 sub get_host_class_map {

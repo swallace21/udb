@@ -48,6 +48,10 @@ $udb->{dbh}->do("DELETE FROM net_zones;");
 $udb->{dbh}->do("DELETE FROM net_vlans;");
 $udb->{dbh}->do("DELETE FROM equip_status_types;");
 $udb->{dbh}->do("DELETE FROM management_types;");
+$udb->{dbh}->do("DELETE FROM routing_types;");
+$udb->{dbh}->do("DELETE FROM dns_regions;");
+$udb->{dbh}->do("DELETE FROM hw_arch_types;");
+$udb->{dbh}->do("DELETE FROM os_types;");
 
 print "done.\n";
 
@@ -78,9 +82,8 @@ domain_insert("routing_types", "private");
 domain_insert("routing_types", "DMZ");
 domain_insert("routing_types", "special");
 
-domain_insert("dns_entry_types", "internal");
-domain_insert("dns_entry_types", "external");
-domain_insert("dns_entry_types", "both");
+domain_insert("dns_regions", "internal");
+domain_insert("dns_regions", "external");
 
 domain_insert("hw_arch_types", "amd64");
 domain_insert("hw_arch_types", "linksys");
