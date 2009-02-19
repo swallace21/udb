@@ -17,7 +17,7 @@ use BrownCS::UDB::Util qw(ask ask_password confirm);
 # Print a simple help message.
 sub usage {
   my ($exit_status) = @_;
-  pod2usage({ -exitval => $exit_status, -verbose => 99, -sections => "SYNOPSIS|DESCRIPTION|OPTIONS"});
+  pod2usage({ -exitval => $exit_status, -verbose => 1});
 }
 
 my $help = 0;

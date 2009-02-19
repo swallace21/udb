@@ -43,12 +43,12 @@ sub edit {
 # ask_password :: void -> string
 # Prompt the user for a password and return it.
 sub ask_password {
-  print "Password: ";
+  print STDERR "Password: ";
   ReadMode 'noecho';
   my $password = ReadLine 0;
   chomp $password;
   ReadMode 'normal';
-  print "\n";
+  print STDERR "\n";
 
   return $password;
 }

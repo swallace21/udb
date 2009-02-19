@@ -356,6 +356,25 @@ sub insert_host {
 #  close($fh);
 }
 
+sub get_host_class_map {
+  my $self = shift;
+
+  my $sth = $self->prepare("select c.name, cc.class from comp_classes cc, computers c, comp_classes_computers ccc where ccc.comp_class = cc.class and ccc.computer = c.name");
+  $sth->execute();
+  my $array_ref = $sth->fetchall_arrayref({});
+
+  my $host_classes = {};
+
+  foreach my $ccc (@{$array_ref}) {
+    if (not defined @{$host_classes->{$ccc->{name}}}) {
+      $host_classes->{$ccc->{name}} = [];
+    }
+    push @{$host_classes->{$ccc->{name}}}, $ccc->{class};
+  }
+  
+  return $host_classes;
+}
+
 # sub find_unused_ip {
 #   my($ip_addr) = @_;
 #   my(%ip_addrs) = ();
