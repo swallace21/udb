@@ -280,7 +280,7 @@ define service{
   register 0
 }
 
-[% FOREACH host IN DBI.query('select na.ipaddr, fqdn_brown(nde.dns_name, nde.domain) as hostname, ns.service from net_addresses na, net_services ns, net_addresses_net_services nans, net_dns_entries nde where nans.net_addresses_id = na.id and nans.net_services_id = ns.service and na.monitored and na.enabled and nde.authoritative and nde.address = na.id') -%]
+[% FOREACH host IN DBI.query("select na.ipaddr, fqdn_brown(nde.dns_name, nde.domain) as hostname, ns.service from net_addresses na, net_services ns, net_addresses_net_services nans, net_dns_entries nde where nans.net_addresses_id = na.id and nans.net_services_id = ns.service and na.monitored and na.enabled and nde.authoritative and nde.address = na.id and nde.dns_region = 'external' order by ns.service, hostname") -%]
 [% SWITCH host.service %]
 [%  CASE 'printer' %]
 define service{

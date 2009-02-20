@@ -384,7 +384,10 @@ sub build_wpkg_hosts {
 }
 
 sub build_dns_map_forward {
-  my ($serial_num, $zone) = @_;
+  my ($serial_num, $domain) = @_;
+
+  my @domain_parts = split(/\./, $domain);
+  my $zone = $domain_parts[0];
 
   my $file = $dry_run ? "/tmp/db.$zone" : "/maytag/sys0/DNS/db.$zone";
   my $PATH_TMPFILE = $file . '.tmp';
@@ -393,6 +396,7 @@ sub build_dns_map_forward {
     date => get_date(),
     dbh => $udb->{dbh},
     zone => $zone,
+    domain => $domain,
   };
   $tt->process('dns.db.forward.tt2', $vars, $PATH_TMPFILE) || die $tt->error(), "\n";
 
@@ -419,11 +423,16 @@ sub build_dns_map_reverse {
 
 sub build_dns {
 
+  $Template::Stash::SCALAR_OPS->{fix_width} = sub {
+    my ($str, $width) = @_;
+    my $spaces = ' ' x ($width - length($str));
+    return ($str . $spaces);
+  };
+
   $Template::Stash::SCALAR_OPS->{to_dns_ptr_record} = sub {
     my ($ip) = @_;
     my $formatted_ip = join(".",reverse(split(/\./, $ip)));
-    my $spaces = ' ' x (18 - length($formatted_ip));
-    return "$formatted_ip.IN-ADDR.ARPA.$spaces";
+    return "$formatted_ip.IN-ADDR.ARPA.";
   };
 
   # TODO increment the SOA line
@@ -450,9 +459,9 @@ sub build_dns {
     push @files, $file;
   }
 
-  my @forward_maps = qw(cs ilab);
-  foreach my $map (@forward_maps) {
-    my $file = build_dns_map_forward($serial_num, $map);
+  my @domains = qw(cs.brown.edu ilab.cs.brown.edu);
+  foreach my $domain (@domains) {
+    my $file = build_dns_map_forward($serial_num, $domain);
     push @files, $file;
   }
 
