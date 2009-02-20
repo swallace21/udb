@@ -135,6 +135,8 @@ create table surplus_equipment (
 
 -- {{{
 
+create sequence dns_serial_num_seq;
+
 create table routing_types (
   name                      text primary key
 ) ;
@@ -148,7 +150,10 @@ create or replace function vlan_zone(integer) returns text as 'select cast('''' 
 
 create table net_zones (
   name                      text primary key,
-  manager                   text not null references management_types
+  zone_manager              text not null references management_types
+                              on update cascade
+                              on delete restrict,
+  equip_manager             text not null references management_types
                               on update cascade
                               on delete restrict,
   routing_type              text not null references routing_types

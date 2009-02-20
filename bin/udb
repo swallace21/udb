@@ -166,7 +166,32 @@ udb [-v] [-n] [-u username] command [args ...]
 
 =head1 DESCRIPTION
 
-it's like cdb but better
+The B<cdb> database front-end program reads in the latest copy of the database
+and a configuration file describing various parameters for the domain, and then
+allows the user to add, remove, or modify records, or to perform simple
+queries.  Using the front-end also reduces errors: all names and addresses are
+automatically converted to standard formats, and the database automatically
+checks for conflicts, preventing duplicate hostnames or addresses from being
+entered into the database.  If changes have been made, the B<cdb make> command
+is used to rebuilt all system configuration files which will be affected by the
+changes.  The database modifications may be performed safely by any user with
+appropriate privileges from any machine.  The rebuild command must be issued as
+root from the NIS master machine.
+
+Each client stored in the database must belong to a designated primary
+netgroup, which must be described in the database configuration file, and may
+also belong to one or more supplementary netgroups.  Based on the client's
+primary group, the information for a record will be output to one or more
+system-wide maps when they are generated from the database.  This allows the
+administrator to configure, for example, a primary group for which
+B<hosts.equiv(4)> entries will be generated, and another primary group for
+which they will not.  All primary groups and the maps they will produce are
+defined in the database configuration file.
+
+Each database record consists of a set of fields which are stored as ASCII
+text strings.  Certain fields are mandatory and must contain legal values.
+Other fields are optional, and may be left blank.  The front-end software
+enforces these policies so that the user cannot insert an invalid record.
 
 =head1 OPTIONS
 

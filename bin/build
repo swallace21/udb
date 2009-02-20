@@ -74,11 +74,6 @@ sub maybe_rename {
   }
 }
 
-#
-# FUNCTION: build_tftpboot
-#    DESCR: Rebuild the tftp network boot directory
-#
-
 sub build_tftpboot {
 
   my $tftpboot_path = "/tftpboot/pxelinux.cfg";
@@ -128,11 +123,6 @@ sub add_to_group {
   }
 
 }
-
-#
-# FUNCTION: build_netgroup
-#    DESCR: Generate the netgroup database
-#
 
 sub build_netgroup {
   my(%netgroups) = ();
@@ -206,11 +196,6 @@ sub build_dhcp {
   maybe_system('ssh', '-x', 'dhcp', '/etc/init.d/dhcp restart');
 }
 
-# 
-# FUNCTION: build_nagios_hosts
-#    DESCR: Generate the nagios hosts.cfg file
-#
-
 sub build_nagios_hosts {
 
   my $file = $dry_run ? '/tmp/hosts.cfg' : '/maytag/sys0/Linux/files/add/group.debian.server.nagios3/etc/nagios3/conf.d/hosts.cfg';
@@ -226,11 +211,6 @@ sub build_nagios_hosts {
   }
   maybe_system('ssh', '-x', 'storm', '/etc/init.d/nagios3 restart');
 }
-
-# 
-# FUNCTION: build_nagios_services
-#    DESCR: Generate the nagios services.cfg file
-#
 
 sub build_nagios_services {
 
@@ -249,11 +229,6 @@ sub build_nagios_services {
   maybe_system('ssh', '-x', 'storm', '/etc/init.d/nagios3 restart');
 
 }
-
-# 
-# FUNCTION: build_wpkg_hosts
-#    DESCR: Generate the wpkg hosts.xml file
-#
 
 sub build_wpkg_hosts {
 
@@ -396,6 +371,7 @@ sub build_dns_map_forward {
     date => get_date(),
     dbh => $udb->{dbh},
     zone => $zone,
+    serial_num => $serial_num,
     domain => $domain,
   };
   $tt->process('dns.db.forward.tt2', $vars, $PATH_TMPFILE) || die $tt->error(), "\n";
@@ -414,6 +390,7 @@ sub build_dns_map_reverse {
     date => get_date(),
     dbh => $udb->{dbh},
     zone => $zone,
+    serial_num => $serial_num,
     cidr => $subnet->cidr,
   };
   $tt->process('dns.db.reverse.tt2', $vars, $PATH_TMPFILE) || die $tt->error(), "\n";
@@ -436,9 +413,9 @@ sub build_dns {
   };
 
   # TODO increment the SOA line
-  my $serial_num = 6675;
+  my ($serial_num) = $udb->{dbh}->selectrow_array("select nextval('dns_serial_num_seq')");
 
-  my $sth = $udb->prepare("select nv.network from net_vlans nv, net_zones nz where nv.zone = nz.name and nz.routing_type != 'private'");
+  my $sth = $udb->prepare("select nv.network from net_vlans nv, net_zones nz where nv.zone = nz.name and nz.routing_type != 'private' and nz.zone_manager = 'tstaff'");
   $sth->execute();
   my $array_ref = $sth->fetchall_arrayref({});
 
@@ -492,7 +469,6 @@ sub build_dns {
   }
 
 }
-
 
 sub build_ypmake {
 
