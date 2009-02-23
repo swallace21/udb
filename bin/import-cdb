@@ -115,6 +115,12 @@ my $vlan_insert = $udb->{dbh}->prepare("INSERT INTO net_vlans (zone, vlan_num, n
 $vlan_insert->bind_param(2, undef, SQL_INTEGER);
 $vlan_insert->bind_param(3, undef, {pg_type => PG_CIDR});
 
+my $vlan_dhcp_insert = $udb->{dbh}->prepare("INSERT INTO net_vlans (zone, vlan_num, network, dynamic_dhcp_start, dynamic_dhcp_end) VALUES (?, ?, ?, ?, ?)");
+$vlan_dhcp_insert->bind_param(2, undef, SQL_INTEGER);
+$vlan_dhcp_insert->bind_param(3, undef, {pg_type => PG_CIDR});
+$vlan_dhcp_insert->bind_param(4, undef, {pg_type => PG_INET});
+$vlan_dhcp_insert->bind_param(5, undef, {pg_type => PG_INET});
+
 $zone_insert->execute("tstaff", "tstaff", "DMZ", "tstaff-dmz", 0);
 $zone_insert->execute("tstaff", "tstaff", "private", "tstaff-private", 0);
 $zone_insert->execute("tstaff", "tstaff", "standard", "tstaff-standard", 0);
@@ -125,6 +131,7 @@ $zone_insert->execute("tstaff", "user", "special", "ipsec", 0);
 $zone_insert->execute("tstaff", "user", "standard", "user-standard", 1);
 $zone_insert->execute("cis", "user", "special", "jj-oshean", 0);
 $zone_insert->execute("cis", "user", "special", "techhouse", 0);
+$zone_insert->execute("cis", "cis", "special", "cis-switches", 0);
 
 $vlan_insert->execute("tstaff-dmz", 32, "128.148.32.0/25");
 $vlan_insert->execute("tstaff-private", 192, "192.168.1.0/24");
@@ -139,8 +146,10 @@ $vlan_insert->execute("cs166", 893, "192.168.100.0/24");
 $vlan_insert->execute("outside", 34, "128.148.34.0/24");
 $vlan_insert->execute("jj-oshean", 698, "198.7.242.32/28");
 $vlan_insert->execute("techhouse", 360, "138.16.60.0/24");
-$vlan_insert->execute("user-standard", 36, "128.148.36.0/24");
 $vlan_insert->execute("ipsec", 885, "10.117.0.0/16");
+$vlan_insert->execute("cis-switches", 653, "10.115.1.0/24");
+
+$vlan_dhcp_insert->execute("user-standard", 36, "128.148.36.0/24", "128.148.36.100", "128.148.36.254");
 
 print "done.\n";
 
@@ -148,9 +157,19 @@ print "importing cdb... ";
 
 my($key, $data);
 while ( ($key, $data) = each(%$cdb_by_hostname) ) {
-  if (( $data->{'status'} ne 'disabled' ) and ($data->{'ethernet'} ne '' )) {
-    print "adding host " . $data->{hostname} . "\n";
-    $udb->insert_host($data);
+  if ($data->{'status'} ne 'disabled') {
+    if ($data->{'ethernet'} ne '' ) {
+      print "adding host " . $data->{hostname} . "\n";
+      $udb->insert_host($data);
+    } elsif ($data->{'prim_grp'} eq 'switch') {
+      print "adding switch " . $data->{hostname} . "\n";
+      #$udb->insert_switch($data);
+    } elsif ($data->{'prim_grp'} eq 'dhcp-placeholder') {
+      # skip
+    } else {
+      print "adding virtual IP " . $data->{hostname} . "\n";
+      $udb->insert_virtual_ip($data);
+    }
   }
 }
 

@@ -296,7 +296,7 @@ sub build_wpkg_hosts {
       }
 
       if (/^fun$/) {
-        push @wpkg_profiles, "fun";
+        push @wpkg_profiles, "ugrad";
       }
 
       if (/^research$/) {
@@ -415,7 +415,7 @@ sub build_dns {
   # TODO increment the SOA line
   my ($serial_num) = $udb->{dbh}->selectrow_array("select nextval('dns_serial_num_seq')");
 
-  my $sth = $udb->prepare("select nv.network from net_vlans nv, net_zones nz where nv.zone = nz.name and nz.routing_type != 'private' and nz.zone_manager = 'tstaff'");
+  my $sth = $udb->prepare("select nv.network from net_vlans nv, net_zones nz where nv.zone = nz.name and nz.zone_manager = 'tstaff'");
   $sth->execute();
   my $array_ref = $sth->fetchall_arrayref({});
 

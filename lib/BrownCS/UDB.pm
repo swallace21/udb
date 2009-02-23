@@ -364,6 +364,87 @@ sub insert_host {
   # close($fh);
 }
 
+sub insert_virtual_ip {
+  my $self = shift;
+  my($host) = @_;
+
+  # my $file = "/tmp/test.debug.log";
+  # open (my $fh, ">>$file") or die qq{Could not open "$file": $!\n};
+  # $self->{dbh}->pg_server_trace($fh);
+
+  my $address_insert = $self->prepare("INSERT INTO net_addresses (vlan_num, ipaddr, monitored) VALUES (?, ?, ?) RETURNING id");
+  $address_insert->bind_param(1, undef, SQL_INTEGER);
+  $address_insert->bind_param(2, undef, {pg_type => PG_INET});
+  $address_insert->bind_param(3, undef, {pg_type => PG_BOOL});
+
+  my $dns_insert = $self->prepare("INSERT INTO net_dns_entries (dns_name, domain, address, authoritative, dns_region) VALUES (?, ?, ?, ?, ?)");
+  $dns_insert->bind_param(3, undef, SQL_INTEGER);
+  $dns_insert->bind_param(4, undef, {pg_type => PG_BOOL});
+
+  my $addr_svc_insert = $self->prepare("INSERT INTO net_addresses_net_services (net_addresses_id, net_services_id) VALUES (?, ?)");
+  $addr_svc_insert->bind_param(1, undef, SQL_INTEGER);
+
+  my $hostname = $host->{'hostname'};
+
+  $host->{'aliases'} =~ s/\s//g;
+  my @aliases = split(/,/, $host->{'aliases'});
+
+  $host->{'classes'} =~ s/\s//g;
+  my @classes = split(/,/, $host->{'classes'});
+
+  my $ipaddr = $host->{'ip_addr'};
+  my $vlan_id;
+  if ((!$ipaddr) or ($ipaddr eq "")) {
+    die "no ip address for host $hostname!!!\n";
+  } else {
+    $vlan_id = $self->get_vlan($ipaddr);
+  }
+
+  my $status = $host->{'status'};
+
+  my $monitored = 0;
+  if ($status eq "monitored") {
+    $monitored = 1;
+  }
+
+  $address_insert->execute($vlan_id, $ipaddr, $monitored);
+  my $address_id = $address_insert->fetch()->[0];
+  $address_insert->finish;
+
+  my $domain = 'cs.brown.edu';
+  if ($host->{prim_grp} eq 'ilab') {
+    $domain = 'ilab.cs.brown.edu';
+  }
+
+  $dns_insert->execute($hostname, $domain, $address_id, 1, "internal");
+  $dns_insert->execute($hostname, $domain, $address_id, 1, "external");
+
+  if ( $#aliases != -1 ) {
+    foreach (@aliases) {
+      $dns_insert->execute($_, $domain, $address_id, 0, "internal");
+      $dns_insert->execute($_, $domain, $address_id, 0, "external");
+    }
+  }
+
+  $dns_insert->finish;
+
+  if ( $#classes != -1 ) {
+    foreach (@classes) {
+      if (/^service\./) {
+        s/^service\.//;
+        $self->get_service_id($_);
+        $addr_svc_insert->execute($address_id, $_);
+      } else {
+      }
+    }
+  }
+
+  $addr_svc_insert->finish;
+
+  # $self->{dbh}->pg_server_untrace;
+  # close($fh);
+}
+
 sub get_host_class_map {
   my $self = shift;
 

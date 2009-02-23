@@ -158,7 +158,7 @@ create table net_zones (
                               on delete restrict,
   routing_type              text not null references routing_types
                               on update cascade
-                              on delete restrict,
+                              on delete restrict
   dynamic_dhcp              boolean not null default true
 ) ;
 
@@ -167,7 +167,9 @@ create table net_vlans (
   zone                      text not null references net_zones
                               on update cascade
                               on delete cascade,
-  network                   cidr not null
+  network                   cidr not null,
+  dynamic_dhcp_start        inet,
+  dynamic_dhcp_end          inet
 ) ;
 
 create or replace function update_zone_by_vlan() returns trigger as $update_zone_by_vlan$
