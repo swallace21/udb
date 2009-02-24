@@ -18,7 +18,7 @@ use BrownCS::UDB::DbBase::Comp qw($attrs);
 # Print a simple help message.
 sub usage {
   my ($exit_status) = @_;
-  pod2usage({ -exitval => $exit_status, -verbose => 99, -sections => "SYNOPSIS|DESCRIPTION|OPTIONS"});
+  pod2usage({ -exitval => $exit_status, -verbose => 1});
 }
 
 sub add {

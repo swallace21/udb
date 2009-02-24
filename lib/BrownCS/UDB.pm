@@ -111,14 +111,14 @@ sub get_host {
   my ($hostname) = @_;
   my %host = ();
 
-  my $aliases_select = $self->prepare("select nde.dns_name from net_dns_entries nde, net_addresses_net_interfaces nani, net_interfaces ni, net_addresses na where ni.equip_name = ? and nani.net_interfaces_id = ni.id and nani.net_addresses_id = na.id and na.id = nde.address and nde.authoritative = false");
-  my $classes_select = $self->prepare("select cc.class from comp_classes cc, computers c, comp_classes_computers ccc where c.name = ? and ccc.comp_class = cc.class and ccc.computer = c.name");
   my $comp_select = $self->prepare("select e.contact, e.equip_status, e.managed_by, c.os, c.pxelink from equipment e, computers c where e.name = ? and c.name = e.name");
+  my $place_select = $self->prepare("select p.city, p.building, p.room from places p, equipment e where e.name = ? and e.place_id = p.id");
   my $ethernet_select = $self->prepare("select ni.ethernet from equipment e, net_interfaces ni where e.name = ? and e.name = ni.equip_name");
   my $ip_addr_select = $self->prepare("select na.ipaddr from equipment e, net_addresses_net_interfaces nani, net_interfaces ni, net_addresses na where e.name = ? and e.name = ni.equip_name and nani.net_interfaces_id = ni.id and nani.net_addresses_id = na.id");
+  my $classes_select = $self->prepare("select cc.class from comp_classes cc, computers c, comp_classes_computers ccc where c.name = ? and ccc.comp_class = cc.class and ccc.computer = c.name");
+  my $aliases_select = $self->prepare("select nde.dns_name from net_dns_entries nde, net_addresses_net_interfaces nani, net_interfaces ni, net_addresses na where ni.equip_name = ? and nani.net_interfaces_id = ni.id and nani.net_addresses_id = na.id and na.id = nde.address and nde.authoritative = false");
 
   $host{hostname} = $hostname;
-  $host{mxhost} = "mx.cs.brown.edu";
 
   $comp_select->execute($hostname);
   $comp_select->bind_columns(\$host{contact}, \$host{status}, \$host{managed_by}, \$host{os_type}, \$host{pxelink});
@@ -127,6 +127,10 @@ sub get_host {
   if ($comp_select->rows == 0) {
     return ();
   }
+
+  $place_select->execute($hostname);
+  $place_select->bind_columns(\$host{city}, \$host{building}, \$host{room});
+  $place_select->fetch;
 
   $ethernet_select->execute($hostname);
   $ethernet_select->bind_columns(\$host{ethernet});

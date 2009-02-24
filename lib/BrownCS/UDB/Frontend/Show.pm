@@ -15,7 +15,7 @@ use BrownCS::UDB::Util qw(:all);
 # Print a simple help message.
 sub usage {
   my ($exit_status) = @_;
-  pod2usage({ -exitval => $exit_status, -verbose => 99, -sections => "SYNOPSIS|DESCRIPTION|OPTIONS"});
+  pod2usage({ -exitval => $exit_status, -verbose => 1});
 }
 
 sub sort_fieldnames {
@@ -39,14 +39,22 @@ sub show {
     exit(2);
   }
 
-  $host{aliases} = join(',',@{$host{aliases}});
-  $host{classes} = join(',',@{$host{classes}});
-
-  foreach my $field (sort sort_fieldnames keys(%host)) {
-    if (not $host{$field}) {
-      $host{$field} = '';
-    }
-    print fix_width($field . ":", 19), $host{$field}, "\n";
+  print "\n";
+  print fix_width("Hostname:", 19), $host{'hostname'}, "\n";
+  print "\n";
+  print fix_width("Owner:", 19), ($host{'contact'} or 'unknown'), "\n";
+  print fix_width("Location:", 19), ($host{'room'} or 'unknown'), "\n";
+  print "\n";
+  print fix_width("Status:", 19), $host{'status'}, "\n";
+  print fix_width("Managed by:", 19), $host{'managed_by'}, "\n";
+  print fix_width("OS:", 19), $host{'os_type'}, "\n";
+  print "\n";
+  print fix_width("MAC address:", 19), $host{'ethernet'}, "\n";
+  print fix_width("IP address:", 19), $host{'ip_addr'}, "\n";
+  print "\n";
+  print "Classes: \n";
+  foreach my $class (sort @{$host{classes}}) {
+    print "  - $class\n";
   }
 }
 
