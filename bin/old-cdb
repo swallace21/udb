@@ -10,7 +10,7 @@ use Data::Dumper;
 use FindBin qw($RealBin);
 use lib "$RealBin/../lib";
 use BrownCS::UDB;
-use BrownCS::UDB::Util qw(ask ask_password confirm);
+use BrownCS::UDB::Util qw(:all);
 
 my $udb = BrownCS::UDB->new;
 
@@ -60,7 +60,6 @@ my %g_cdb_fields = (
   'ip_addr' => 'IP address',
   'ethernet' => 'Ethernet address',
   'os_type' => 'Operating system type',
-  'hw_arch' => 'Hardware architecture',
   'comment' => 'Comments',
   'contact' => 'Primary contact for this host',
   'classes' => 'Classes for unattended installation',

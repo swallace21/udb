@@ -37,7 +37,7 @@ sub start {
 
   my $all_aliases_select = $self->prepare("select fqdn_brown(dns_name, domain) from net_dns_entries");
   my $all_classes_select = $self->prepare("select cc.class from comp_classes cc");
-  my $all_comps_select = $self->prepare("select hw_arch, os, pxelink from computers");
+  my $all_comps_select = $self->prepare("select os, pxelink from computers");
   my $all_equip_select = $self->prepare("select contact, equip_status from equipment");
   my $all_ethernet_select = $self->prepare("select ethernet from net_interfaces");
 
@@ -113,7 +113,7 @@ sub get_host {
 
   my $aliases_select = $self->prepare("select nde.dns_name from net_dns_entries nde, net_addresses_net_interfaces nani, net_interfaces ni, net_addresses na where ni.equip_name = ? and nani.net_interfaces_id = ni.id and nani.net_addresses_id = na.id and na.id = nde.address and nde.authoritative = false");
   my $classes_select = $self->prepare("select cc.class from comp_classes cc, computers c, comp_classes_computers ccc where c.name = ? and ccc.comp_class = cc.class and ccc.computer = c.name");
-  my $comp_select = $self->prepare("select e.contact, e.equip_status, e.managed_by, c.hw_arch, c.os, c.pxelink from equipment e, computers c where e.name = ? and c.name = e.name");
+  my $comp_select = $self->prepare("select e.contact, e.equip_status, e.managed_by, c.os, c.pxelink from equipment e, computers c where e.name = ? and c.name = e.name");
   my $ethernet_select = $self->prepare("select ni.ethernet from equipment e, net_interfaces ni where e.name = ? and e.name = ni.equip_name");
   my $ip_addr_select = $self->prepare("select na.ipaddr from equipment e, net_addresses_net_interfaces nani, net_interfaces ni, net_addresses na where e.name = ? and e.name = ni.equip_name and nani.net_interfaces_id = ni.id and nani.net_addresses_id = na.id");
 
@@ -121,7 +121,7 @@ sub get_host {
   $host{mxhost} = "mx.cs.brown.edu";
 
   $comp_select->execute($hostname);
-  $comp_select->bind_columns(\$host{contact}, \$host{status}, \$host{managed_by}, \$host{hw_arch}, \$host{os_type}, \$host{pxelink});
+  $comp_select->bind_columns(\$host{contact}, \$host{status}, \$host{managed_by}, \$host{os_type}, \$host{pxelink});
   $comp_select->fetch;
 
   if ($comp_select->rows == 0) {
@@ -239,7 +239,7 @@ sub insert_host {
 
   my $equip_insert = $self->prepare("INSERT INTO equipment (equip_status, managed_by, name, contact) VALUES (?, ?, ?, ?)");
 
-  my $comp_insert = $self->prepare("INSERT INTO computers (name, hw_arch, os, pxelink) VALUES (?, ?, ?, ?)");
+  my $comp_insert = $self->prepare("INSERT INTO computers (name, os, pxelink) VALUES (?, ?, ?)");
 
   my $address_insert = $self->prepare("INSERT INTO net_addresses (vlan_num, ipaddr, monitored) VALUES (?, ?, ?) RETURNING id");
   $address_insert->bind_param(1, undef, SQL_INTEGER);
@@ -299,15 +299,6 @@ sub insert_host {
   $equip_insert->execute("deployed", "tstaff", $hostname, $contact);
   $equip_insert->finish;
 
-  # fill in equip_status
-
-  my $hw_arch = $host->{'hw_arch'};
-  if ($hw_arch eq "") {
-    $hw_arch = undef;
-  } elsif ($hw_arch eq "x64") {
-    $hw_arch = "amd64";
-  }
-
   my $os = $host->{'os_type'};
   if (($os eq "other") or ($os eq "") or ($os eq "windows")) {
     $os = undef;
@@ -318,7 +309,7 @@ sub insert_host {
     $pxelink = undef;
   }
 
-  $comp_insert->execute($hostname, $hw_arch, $os, $pxelink);
+  $comp_insert->execute($hostname, $os, $pxelink);
   $comp_insert->finish;
 
   $address_insert->execute($vlan_id, $ipaddr, $monitored);

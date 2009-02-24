@@ -526,10 +526,6 @@ create table fs_automounts (
 
 -- {{{
 
-create table hw_arch_types (
-  name                      text primary key
-) ;
-
 create table os_types (
   name                      text primary key,
   pxe_boot                  boolean not null default false
@@ -540,9 +536,6 @@ create table computers (
                               on update cascade
                               on delete cascade,
   primary key (name),
-  hw_arch                   text references hw_arch_types
-                              on update cascade
-                              on delete restrict,
   os                        text references os_types
                               on update cascade
                               on delete restrict,

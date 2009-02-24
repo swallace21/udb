@@ -10,7 +10,20 @@ use File::Temp qw(tempfile);
 
 use Exporter qw(import);
 
-our @EXPORT_OK = qw(edit ask_password confirm ask choose demand get_date fmt_time ipv4_n2x);
+our @EXPORT_OK = qw(
+  ask
+  ask_password
+  choose
+  confirm
+  demand
+  edit
+  fix_width
+  fmt_time
+  get_date
+  ipv4_n2x
+);
+
+our %EXPORT_TAGS = ("all" => [@EXPORT_OK]);
 
 my $term = new Term::ReadLine 'udb';
 $term->ornaments(0);
@@ -150,6 +163,12 @@ sub ipv4_n2x {
   my $ipaddr_x = sprintf("%0.2X%0.2X%0.2X%0.2X", $1, $2, $3, $4);
   return $ipaddr_x;
 }
+
+sub fix_width {
+  my ($str, $width) = @_;
+  my $spaces = ' ' x ($width - length($str));
+  return ($str . $spaces);
+};
 
 1;
 __END__

@@ -14,7 +14,7 @@ use Template::Stash;
 use FindBin qw($RealBin);
 use lib "$RealBin/../lib";
 use BrownCS::UDB;
-use BrownCS::UDB::Util qw(ask_password get_date fmt_time ipv4_n2x);
+use BrownCS::UDB::Util qw(:all);
 
 # Print a simple help message.
 sub usage {
@@ -78,7 +78,7 @@ sub build_tftpboot {
 
   my $tftpboot_path = "/tftpboot/pxelinux.cfg";
 
-  my $sth = $udb->prepare("select na.ipaddr, c.hw_arch, c.os, c.pxelink from net_addresses na, net_interfaces ni, net_addresses_net_interfaces nani, computers c where ni.equip_name = c.name and nani.net_addresses_id = na.id and nani.net_interfaces_id = ni.id");
+  my $sth = $udb->prepare("select na.ipaddr, c.os, c.pxelink from net_addresses na, net_interfaces ni, net_addresses_net_interfaces nani, computers c where ni.equip_name = c.name and nani.net_addresses_id = na.id and nani.net_interfaces_id = ni.id");
 
   $sth->execute();
   my $array_ref = $sth->fetchall_arrayref({});
@@ -88,15 +88,18 @@ sub build_tftpboot {
     my $bootimage;
 
     next if not defined $addr->{os};
-    next if not defined $addr->{hw_arch};
     next if not defined $addr->{ipaddr};
 
     if (defined $addr->{pxelink}) {
       $bootimage = $addr->{pxelink};
     } elsif ($addr->{os} eq 'linux') {
-      $bootimage = ("fai-workstation-" . $addr->{hw_arch});
+      $bootimage = "fai-workstation-i386";
+    } elsif ($addr->{os} eq 'linux64') {
+      $bootimage = "fai-workstation-amd64";
     } elsif ($addr->{os} eq 'linux-server') {
-      $bootimage = ("fai-server-" . $addr->{hw_arch});
+      $bootimage = "fai-server-i386";
+    } elsif ($addr->{os} eq 'linux-server') {
+      $bootimage = "fai-server-amd64";
     }
       
     next if not defined($bootimage);
@@ -400,11 +403,7 @@ sub build_dns_map_reverse {
 
 sub build_dns {
 
-  $Template::Stash::SCALAR_OPS->{fix_width} = sub {
-    my ($str, $width) = @_;
-    my $spaces = ' ' x ($width - length($str));
-    return ($str . $spaces);
-  };
+  $Template::Stash::SCALAR_OPS->{fix_width} = \&fix_width;
 
   $Template::Stash::SCALAR_OPS->{to_dns_ptr_record} = sub {
     my ($ip) = @_;

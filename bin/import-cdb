@@ -12,7 +12,7 @@ eval('require "/tstaff/share/cdb/db.pl";');
 use FindBin qw($RealBin);
 use lib "$RealBin/../lib";
 use BrownCS::UDB;
-use BrownCS::UDB::Util qw(ask ask_password confirm);
+use BrownCS::UDB::Util qw(:all);
 
 # Print a simple help message.
 sub usage {
@@ -50,7 +50,6 @@ $udb->{dbh}->do("DELETE FROM equip_status_types;");
 $udb->{dbh}->do("DELETE FROM management_types;");
 $udb->{dbh}->do("DELETE FROM routing_types;");
 $udb->{dbh}->do("DELETE FROM dns_regions;");
-$udb->{dbh}->do("DELETE FROM hw_arch_types;");
 $udb->{dbh}->do("DELETE FROM os_types;");
 
 print "done.\n";
@@ -91,22 +90,21 @@ domain_insert("routing_types", "special");
 domain_insert("dns_regions", "internal");
 domain_insert("dns_regions", "external");
 
-domain_insert("hw_arch_types", "amd64");
-domain_insert("hw_arch_types", "linksys");
-domain_insert("hw_arch_types", "mac");
-domain_insert("hw_arch_types", "mac-ppc");
-domain_insert("hw_arch_types", "sun4u");
-domain_insert("hw_arch_types", "x86");
-domain_insert("hw_arch_types", "xen");
+os_insert("linux", 1);
+os_insert("linux64", 1);
+os_insert("linux-server", 1);
+os_insert("linux64-server", 1);
+os_insert("linux-xen", 1);
+os_insert("linux64-xen", 1);
 
 os_insert("dualboot", 0);
-os_insert("linux", 1);
-os_insert("linux-server", 1);
-os_insert("linux-xen", 1);
+os_insert("linksys", 0);
 os_insert("osx", 0);
 os_insert("solaris", 0);
 os_insert("vista", 0);
+os_insert("vista64", 0);
 os_insert("winxp", 0);
+os_insert("winxp64", 0);
 
 my $zone_insert = $udb->{dbh}->prepare("INSERT INTO net_zones (zone_manager, equip_manager, routing_type, name, dynamic_dhcp) VALUES (?, ?, ?, ?, ?)");
 $zone_insert->bind_param(5, undef, {pg_type => PG_BOOL});

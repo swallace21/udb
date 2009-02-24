@@ -15,7 +15,6 @@ my $attrs = [
   ["contact", "string", "req", "Contact", ["Who is the owner or primary user of this computer?"]],
   ["ethernet", "macaddr", "opt", "MAC address", ["What is the computer's MAC address?", "If you don't know (e.g. for a xen machine), leave this blank."]],
   ["ip_addr", "inet", "opt", "IP", ["What is the computer's primary IP address?", "If you would like a random address assigned, leave this blank."]],
-  ["hw_arch", "choice", "req", "Arch", ["What is the computer's hardware architecture?"]],
   ["os_type", "choice", "req", "OS", ["What is the computer's primary OS?"]],
   ["aliases", "list", "opt", "Aliases", ["List any DNS aliases the computer should have."]],
   ["classes", "list", "opt", "Classes", ["List any classes the computer should have (i.e. for tweak)."]],

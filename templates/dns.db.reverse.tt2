@@ -25,9 +25,9 @@ $ttl 1d
 
 
 [% IF zone == '128.148.34.' -%]
-103.34.148.128.IN-ADDR.ARPA.     IN  PTR ries.debian.org.
+103.34.148.128.IN-ADDR.ARPA.        IN  PTR ries.debian.org.
 [%- END -%]
 
 [% FOREACH entry IN DBI.query("select nde.dns_name||'.'||nde.domain as fqdn, na.ipaddr from net_dns_entries nde, net_addresses na where nde.dns_region = 'external' and nde.authoritative and nde.address = na.id and na.ipaddr is not null and na.enabled and na.ipaddr << '$cidr' order by na.ipaddr") -%]
-[% entry.ipaddr.to_dns_ptr_record().fix_width(18) %] IN  PTR [% entry.fqdn %].
+[% entry.ipaddr.to_dns_ptr_record().fix_width(35) %] IN  PTR [% entry.fqdn %].
 [% END %]

@@ -10,6 +10,8 @@ use Pod::Usage;
 use DBI qw(:sql_types);
 use DBD::Pg qw(:pg_types);
 
+use BrownCS::UDB::Util qw(:all);
+
 # Print a simple help message.
 sub usage {
   my ($exit_status) = @_;
@@ -44,7 +46,7 @@ sub show {
     if (not $host{$field}) {
       $host{$field} = '';
     }
-    print $field, ' = ', $host{$field}, "\n";
+    print fix_width($field . ":", 19), $host{$field}, "\n";
   }
 }
 

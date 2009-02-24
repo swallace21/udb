@@ -12,7 +12,7 @@ use DBD::Pg qw(:pg_types);
 use Data::Dumper;
 
 use BrownCS::UDB;
-use BrownCS::UDB::Util qw(ask_password ask confirm edit choose);
+use BrownCS::UDB::Util qw(:all);
 use BrownCS::UDB::DbBase::Comp qw($attrs);
 
 # Print a simple help message.
@@ -37,7 +37,6 @@ sub add {
   my %comp = (
     "hostname" => $hostname,
     "status" => "deployed",
-    "hw_arch" => "x86",
   );
   
   foreach my $attr (@{$comp_db->{attrs}}) {

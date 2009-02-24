@@ -9,7 +9,7 @@ use Pod::Usage;
 use FindBin qw($RealBin);
 use lib "$RealBin/../lib";
 use BrownCS::UDB;
-use BrownCS::UDB::Util qw(ask_password);
+use BrownCS::UDB::Util qw(:all);
 
 use BrownCS::UDB::Frontend::Add qw(add);
 use BrownCS::UDB::Frontend::ClassAdd qw(class_add);
