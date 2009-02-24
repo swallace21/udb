@@ -158,7 +158,7 @@ create table net_zones (
                               on delete restrict,
   routing_type              text not null references routing_types
                               on update cascade
-                              on delete restrict
+                              on delete restrict,
   dynamic_dhcp              boolean not null default true
 ) ;
 
@@ -172,7 +172,8 @@ create table net_vlans (
   dynamic_dhcp_end          inet
 ) ;
 
-create or replace function update_zone_by_vlan() returns trigger as $update_zone_by_vlan$
+create or replace function update_zone_by_vlan() returns trigger as
+$$
 declare
   new_vlan_zone             text;
 begin
@@ -181,7 +182,19 @@ begin
   new.zone := new_vlan_zone;
   return new;
 end;
-$update_zone_by_vlan$ language plpgsql;
+$$ language plpgsql;
+
+create or replace function non_dynamic_ip(integer, inet)
+returns boolean as $$
+  select (
+    (nv.dynamic_dhcp_start is null) or
+    (nv.dynamic_dhcp_end is null) or
+    ($2 < nv.dynamic_dhcp_start) or
+    ($2 > nv.dynamic_dhcp_end)
+  ) from net_vlans nv
+  where
+    nv.vlan_num = $1
+$$ language sql;
 
 create table net_addresses (
   id                        serial primary key,
@@ -195,8 +208,18 @@ create table net_addresses (
   enabled                   boolean not null default true,
   monitored                 boolean not null,
   last_changed              timestamp not null default now(),
-  check (ipaddr is null or masklen(ipaddr) = 32)
+  check (
+    ipaddr is null or (
+      masklen(ipaddr) = 32 and
+      non_dynamic_ip(vlan_num, ipaddr)
+    )
+  )
 ) ;
+
+create unique index idx_net_addresses_vlan_ip on net_addresses (
+  vlan_num,
+  ipaddr
+) where ipaddr is not null;
 
 create trigger vlan_zone_trigger before insert or update on net_addresses
   for each row execute procedure update_zone_by_vlan();
