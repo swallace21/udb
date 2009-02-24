@@ -108,18 +108,22 @@ os_insert("solaris", 0);
 os_insert("vista", 0);
 os_insert("winxp", 0);
 
-my $zone_insert = $udb->{dbh}->prepare("INSERT INTO net_zones (equip_manager, zone_manager, routing_type, name, dynamic_dhcp) VALUES (?, ?, ?, ?, ?)");
+my $zone_insert = $udb->{dbh}->prepare("INSERT INTO net_zones (zone_manager, equip_manager, routing_type, name, dynamic_dhcp) VALUES (?, ?, ?, ?, ?)");
 $zone_insert->bind_param(5, undef, {pg_type => PG_BOOL});
 
-my $vlan_insert = $udb->{dbh}->prepare("INSERT INTO net_vlans (zone, vlan_num, network) VALUES (?, ?, ?)");
+my $vlan_insert = $udb->{dbh}->prepare("INSERT INTO net_vlans (zone, vlan_num, network, dhcp, gateway) VALUES (?, ?, ?, ?, ?)");
 $vlan_insert->bind_param(2, undef, SQL_INTEGER);
 $vlan_insert->bind_param(3, undef, {pg_type => PG_CIDR});
+$vlan_insert->bind_param(4, undef, {pg_type => PG_BOOL});
+$vlan_insert->bind_param(5, undef, {pg_type => PG_INET});
 
-my $vlan_dhcp_insert = $udb->{dbh}->prepare("INSERT INTO net_vlans (zone, vlan_num, network, dynamic_dhcp_start, dynamic_dhcp_end) VALUES (?, ?, ?, ?, ?)");
-$vlan_dhcp_insert->bind_param(2, undef, SQL_INTEGER);
+my $vlan_dhcp_insert = $udb->{dbh}->prepare("INSERT INTO net_vlans (zone, vlan_num, network, dhcp, dynamic_dhcp_start, dynamic_dhcp_end, gateway) VALUES (?, ?, ?, ?, ?, ?, ?)");
+$vlan_dhcp_insert->bind_param(2, undef, SQL_INTEGER); 
 $vlan_dhcp_insert->bind_param(3, undef, {pg_type => PG_CIDR});
-$vlan_dhcp_insert->bind_param(4, undef, {pg_type => PG_INET});
+$vlan_dhcp_insert->bind_param(4, undef, {pg_type => PG_BOOL});
 $vlan_dhcp_insert->bind_param(5, undef, {pg_type => PG_INET});
+$vlan_dhcp_insert->bind_param(6, undef, {pg_type => PG_INET});
+$vlan_dhcp_insert->bind_param(7, undef, {pg_type => PG_INET});
 
 $zone_insert->execute("tstaff", "tstaff", "DMZ", "tstaff-dmz", 0);
 $zone_insert->execute("tstaff", "tstaff", "private", "tstaff-private", 0);
@@ -133,23 +137,23 @@ $zone_insert->execute("cis", "user", "special", "jj-oshean", 0);
 $zone_insert->execute("cis", "user", "special", "techhouse", 0);
 $zone_insert->execute("cis", "cis", "special", "cis-switches", 0);
 
-$vlan_insert->execute("tstaff-dmz", 32, "128.148.32.0/25");
-$vlan_insert->execute("tstaff-private", 192, "192.168.1.0/24");
-$vlan_insert->execute("tstaff-private", 898, "10.116.0.0/16");
-$vlan_insert->execute("tstaff-private", 897, "192.168.10.0/24");
-$vlan_insert->execute("tstaff-standard", 31, "128.148.31.0/24");
-$vlan_insert->execute("tstaff-standard", 33, "128.148.33.0/24");
-$vlan_insert->execute("tstaff-standard", 37, "128.148.37.0/24");
-$vlan_insert->execute("tstaff-standard", 38, "128.148.38.0/24");
-$vlan_insert->execute("user-dmz", 892, "128.148.32.128/25");
-$vlan_insert->execute("cs166", 893, "192.168.100.0/24");
-$vlan_insert->execute("outside", 34, "128.148.34.0/24");
-$vlan_insert->execute("jj-oshean", 698, "198.7.242.32/28");
-$vlan_insert->execute("techhouse", 360, "138.16.60.0/24");
-$vlan_insert->execute("ipsec", 885, "10.117.0.0/16");
-$vlan_insert->execute("cis-switches", 653, "10.115.1.0/24");
+$vlan_insert->execute("tstaff-dmz", 32, "128.148.32.0/25", 1, "128.148.32.1");
+$vlan_insert->execute("tstaff-private", 192, "192.168.1.0/24", 0, "192.168.1.1");
+$vlan_insert->execute("tstaff-private", 898, "10.116.0.0/16", 1, "10.116.1.1");
+$vlan_insert->execute("tstaff-private", 897, "192.168.10.0/24", 1, "192.168.10.1");
+$vlan_insert->execute("tstaff-standard", 31, "128.148.31.0/24", 1, "128.148.31.1");
+$vlan_insert->execute("tstaff-standard", 33, "128.148.33.0/24", 1, "128.148.33.1");
+$vlan_insert->execute("tstaff-standard", 37, "128.148.37.0/24", 1, "128.148.37.1");
+$vlan_insert->execute("tstaff-standard", 38, "128.148.38.0/24", 1, "128.148.38.1");
+$vlan_insert->execute("user-dmz", 892, "128.148.32.128/25", 1, "128.148.32.129");
+$vlan_insert->execute("cs166", 893, "192.168.100.0/24", 0, "192.168.100.1");
+$vlan_insert->execute("outside", 34, "128.148.34.0/24", 0, "128.148.34.1");
+$vlan_insert->execute("jj-oshean", 698, "198.7.242.32/28", 1, "198.7.242.34");
+$vlan_insert->execute("techhouse", 360, "138.16.60.0/24", 1, "138.16.60.1");
+$vlan_insert->execute("ipsec", 885, "10.117.0.0/16", 0, "10.117.1.1");
+$vlan_insert->execute("cis-switches", 653, "10.115.1.0/24", 1, "10.115.1.1");
 
-$vlan_dhcp_insert->execute("user-standard", 36, "128.148.36.0/24", "128.148.36.100", "128.148.36.254");
+$vlan_dhcp_insert->execute("user-standard", 36, "128.148.36.0/24", 1, "128.148.36.100", "128.148.36.254", "128.148.36.1");
 
 print "done.\n";
 

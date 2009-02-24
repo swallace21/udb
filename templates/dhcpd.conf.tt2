@@ -27,11 +27,6 @@ default-lease-time 3600;
 max-lease-time 86400;
 
 #
-# Our NIS Domain name
-#
-option nis-domain "cs";
-
-#
 # WINS Server information
 #	the netbios-name-servers entry points
 #	to raisinets, currently for testing with the
@@ -70,140 +65,44 @@ allow bootp;
 #
 deny unknown-clients;
 
+[% FOREACH subnet IN DBI.query("select nv.vlan_num, host(network(nv.network)) as network, host(nv.gateway) as gateway, host(broadcast(nv.network)) as broadcast, netmask(nv.network) as netmask, host(nv.dynamic_dhcp_start) as range_start, host(dynamic_dhcp_end) as range_end from net_vlans nv, net_zones nz where nv.zone = nz.name and nz.zone_manager = 'tstaff' and nv.dhcp order by nv.vlan_num") -%]
 #
-# Dynamic addresses (subnet 36)
+# subnet declaration for the [% subnet.vlan_num %] subnet
 #
-subnet 128.148.36.0 netmask 255.255.255.0 {
-    option routers 128.148.36.1;
-    option domain-name "cs.brown.edu";
-    option domain-name-servers 128.148.38.200, 128.148.38.254, 128.148.38.253;
-    option ntp-servers 128.148.38.148, 128.148.33.79;
-    option broadcast-address 128.148.36.255;
-
-
-    default-lease-time 3600;	
-    max-lease-time 10800;
-
-    range 128.148.36.100 128.148.36.254;
-}
-
-#
-# subnet 31
-#
-subnet 128.148.31.0 netmask 255.255.255.0 {
-    option routers 128.148.31.1;
-    option domain-name "cs.brown.edu";
-    option domain-name-servers 128.148.38.200, 128.148.38.254, 128.148.38.253;
-    option ntp-servers 128.148.38.148, 128.148.33.79;
-    option broadcast-address 128.148.31.255;
-    option nis-servers 128.148.31.253, 128.148.31.254;
-
-    default-lease-time 86400;	
-    max-lease-time 86400;
-}
-
-#
-# subnet 32 (tstaff-dmz)
-#
-subnet 128.148.32.0 netmask 255.255.255.128 {
-    option routers 128.148.32.1;
-    option domain-name "cs.brown.edu";
-    option domain-name-servers 128.148.32.121;
-    option ntp-servers 128.148.128.11;
-    option broadcast-address 128.148.32.127;
-
-    default-lease-time 86400;	
-    max-lease-time 86400;
-}
-
-#
-# subnet 892 (user-dmz)
-#
-subnet 128.148.32.128 netmask 255.255.255.128 {
-    option routers 128.148.32.129;
-    option domain-name "cs.brown.edu";
-    option domain-name-servers 128.148.32.121;
-    option ntp-servers 128.148.128.11;
-    option broadcast-address 128.148.32.255;
-
-    default-lease-time 86400;	
-    max-lease-time 86400;
-}
-
-#
-# subnet 33
-#
-subnet 128.148.33.0 netmask 255.255.255.0 {
-    option routers 128.148.33.1;
-    option domain-name "cs.brown.edu";
-    option domain-name-servers 128.148.38.200, 128.148.38.254, 128.148.38.253;
-    option ntp-servers 128.148.38.148, 128.148.33.79;
-    option broadcast-address 128.148.33.255;
-    option nis-servers 128.148.33.253, 128.148.33.254;
-
-    default-lease-time 86400;	
-    max-lease-time 86400;
-}
-
-#
-# subnet 37
-#
-subnet 128.148.37.0 netmask 255.255.255.0 {
-    option routers 128.148.37.1;
-    option domain-name "cs.brown.edu";
-    option domain-name-servers 128.148.38.200, 128.148.38.254, 128.148.38.253;
-    option ntp-servers 128.148.38.148, 128.148.33.79;
-    option broadcast-address 128.148.37.255;
-    option nis-servers 128.148.37.253, 128.148.37.254;
-
-    default-lease-time 86400;	
-    max-lease-time 86400;
-}
-
-#
-# subnet 38
-#
-subnet 128.148.38.0 netmask 255.255.255.0 {
-    option routers 128.148.38.1;
-    option domain-name "cs.brown.edu";
-    option domain-name-servers 128.148.38.200, 128.148.38.254, 128.148.38.253;
-    option ntp-servers 128.148.38.148, 128.148.33.79;
-    option broadcast-address 128.148.38.255;
-    option nis-servers 128.148.38.253, 128.148.38.254;
-
-    default-lease-time 86400;	
-    max-lease-time 86400;
-}
-
-#
-# subnet declaration for the 10.116 subnet (ilab related machines)
-#
-subnet 10.116.0.0 netmask 255.255.0.0 {
-    option routers 10.116.1.1;
+subnet [% subnet.network %] netmask [% subnet.netmask %] {
+    option routers [% subnet.gateway %];
+    [%- SWITCH subnet.vlan_num %]
+    [%-   CASE '898' %]
     option domain-name "ilab.cs.brown.edu";
-    option domain-name-servers 128.148.38.200, 128.148.38.254, 128.148.38.253; 
-    option ntp-servers 128.148.38.148, 128.148.33.79;
-    option broadcast-address 10.116.255.255;
-    option nis-servers 10.116.1.5, 10.116.1.6;
-
-    default-lease-time 86400;	
-    max-lease-time 86400;
-}
-
-#
-# subnet declaration for the 192.168.10 subnet (switch infrastructure)
-#
-subnet 192.168.10.0 netmask 255.255.255.0 {
-    option routers 192.168.10.1;
+    [%-   CASE DEFAULT %]
     option domain-name "cs.brown.edu";
-    option domain-name-servers 128.148.38.200, 128.148.38.253, 128.148.38.254; 
+    [%- END %]
+    [%- SWITCH subnet.vlan_num %]
+    [%-   CASE ['32', '892'] %]
+    option domain-name-servers 128.148.32.121;
+    option ntp-servers 128.148.128.11;
+    [%-   CASE DEFAULT %]
+    option domain-name-servers 128.148.38.200, 128.148.38.254, 128.148.38.253;
     option ntp-servers 128.148.38.148, 128.148.33.79;
-    option broadcast-address 192.168.10.255;
-    option nis-servers 128.148.38.253, 128.148.38.254;
+    [%- END %]
+    option broadcast-address [% subnet.broadcast %];
 
-    default-lease-time 86400;	
+    [%- SWITCH subnet.vlan_num %]
+    [%-   CASE '36' %]
+    default-lease-time 3600;
+    max-lease-time 10800;
+    [%-   CASE DEFAULT %]
+    default-lease-time 86400;
     max-lease-time 86400;
+    [%- END %]
+
+    [%- IF (subnet.range_start AND subnet.range_end) %]
+    range [% subnet.range_start %] [% subnet.range_end %];
+
+    [%- END -%]
 }
+
+[% END %]
 
 #
 # Statically assigned addresses

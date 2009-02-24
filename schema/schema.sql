@@ -168,6 +168,8 @@ create table net_vlans (
                               on update cascade
                               on delete cascade,
   network                   cidr not null,
+  gateway                   inet not null,
+  dhcp                      boolean not null default true,
   dynamic_dhcp_start        inet,
   dynamic_dhcp_end          inet
 ) ;

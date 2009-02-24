@@ -7,6 +7,8 @@ use warnings;
 use DBI qw(:sql_types);
 use DBD::Pg qw(:pg_types);
 
+my $debug = 0;
+
 sub new {
   my $proto = shift;
   my $class = ref($proto) || $proto;
@@ -228,9 +230,12 @@ sub insert_host {
   my $self = shift;
   my($host) = @_;
 
-  # my $file = "/tmp/test.debug.log";
-  # open (my $fh, ">>$file") or die qq{Could not open "$file": $!\n};
-  # $self->{dbh}->pg_server_trace($fh);
+  my $dbg_fh;
+  if ($debug) {
+    my $dbg_file = "/tmp/test.debug.log";
+    open ($dbg_fh, ">>$dbg_file") or die qq{Could not open "$dbg_file": $!\n};
+    $self->{dbh}->pg_server_trace($dbg_fh);
+  }
 
   my $equip_insert = $self->prepare("INSERT INTO equipment (equip_status, managed_by, name, contact) VALUES (?, ?, ?, ?)");
 
@@ -360,17 +365,22 @@ sub insert_host {
   $addr_svc_insert->finish;
   $class_comp_insert->finish;
 
-  # $self->{dbh}->pg_server_untrace;
-  # close($fh);
+  if ($debug) {
+    $self->{dbh}->pg_server_untrace;
+    close($dbg_fh);
+  }
 }
 
 sub insert_virtual_ip {
   my $self = shift;
   my($host) = @_;
 
-  # my $file = "/tmp/test.debug.log";
-  # open (my $fh, ">>$file") or die qq{Could not open "$file": $!\n};
-  # $self->{dbh}->pg_server_trace($fh);
+  my $dbg_fh;
+  if ($debug) {
+    my $dbg_file = "/tmp/test.debug.log";
+    open ($dbg_fh, ">>$dbg_file") or die qq{Could not open "$dbg_file": $!\n};
+    $self->{dbh}->pg_server_trace($dbg_fh);
+  }
 
   my $address_insert = $self->prepare("INSERT INTO net_addresses (vlan_num, ipaddr, monitored) VALUES (?, ?, ?) RETURNING id");
   $address_insert->bind_param(1, undef, SQL_INTEGER);
@@ -441,8 +451,10 @@ sub insert_virtual_ip {
 
   $addr_svc_insert->finish;
 
-  # $self->{dbh}->pg_server_untrace;
-  # close($fh);
+  if ($debug) {
+    $self->{dbh}->pg_server_untrace;
+    close($dbg_fh);
+  }
 }
 
 sub get_host_class_map {
