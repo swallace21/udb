@@ -71,49 +71,27 @@ create table equip_status_types (
   name                      text primary key
 ) ;
 
-create sequence cs_id_seq;
-
-create table purchase_orders (
-  po_num                    numeric primary key,
-  req_num                   numeric unique,
-  purchased_on              date,
-  for_by                    text,
-  vendor                    text,
-  product                   text,
-  account1                  text,
-  account2                  text,
-  account3                  text,
-  account4                  text,
-  cost1                     numeric,
-  cost2                     numeric,
-  cost3                     numeric,
-  cost4                     numeric
-) ;
-
 create table equipment (
   name                      text primary key,
   parent_equip_id           text references equipment
                               on update cascade
                               on delete cascade,
-  po_num                    integer references purchase_orders
-                              on update cascade
-                              on delete cascade,
   place_id                  integer references places
                               on update cascade
                               on delete cascade,
-  cs_id                     integer unique default nextval('cs_id_seq'),
   equip_status              text not null references equip_status_types
                               on update cascade
                               on delete restrict,
   managed_by                text not null references management_types
                               on update cascade
                               on delete restrict,
-  installed_on              date,
-  descr                     text,
-  owner                     text,
-  contact                   text,
+  brown_inv_num             text,
   serial_num                text,
-  brown_inv_num             text
+  po_num                    text,
+  purchased_on              date,
+  installed_on              date,
+  owner                     text,
+  contact                   text
 ) ;
 
 create table surplus_equipment (
@@ -539,6 +517,7 @@ create table computers (
   os                        text references os_types
                               on update cascade
                               on delete restrict,
+  pxelink                   text,
   system_model              text,
   num_cpus                  integer,
   cpu_type                  text,
@@ -549,10 +528,11 @@ create table computers (
   other_drives              text,
   network_cards             text,
   video_cards               text,
+  os_name                   text,
   os_version                text,
+  os_dist                   text,
   info_time                 timestamp,
-  boot_time                 timestamp,
-  pxelink                   text
+  boot_time                 timestamp
 ) ;
 
 create table comp_classes (

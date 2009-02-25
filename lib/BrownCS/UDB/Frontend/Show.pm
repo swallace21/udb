@@ -42,8 +42,8 @@ sub show {
   print "\n";
   print fix_width("Hostname:", 19), $host{'hostname'}, "\n";
   print "\n";
-  print fix_width("Owner:", 19), ($host{'contact'} or 'unknown'), "\n";
   print fix_width("Location:", 19), ($host{'room'} or 'unknown'), "\n";
+  print fix_width("Primary user:", 19), ($host{'contact'} or 'unknown'), "\n";
   print "\n";
   print fix_width("Status:", 19), $host{'status'}, "\n";
   print fix_width("Managed by:", 19), $host{'managed_by'}, "\n";

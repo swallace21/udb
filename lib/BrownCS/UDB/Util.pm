@@ -21,6 +21,7 @@ our @EXPORT_OK = qw(
   fmt_time
   get_date
   ipv4_n2x
+  fix_date
 );
 
 our %EXPORT_TAGS = ("all" => [@EXPORT_OK]);
@@ -169,6 +170,60 @@ sub fix_width {
   my $spaces = ' ' x ($width - length($str));
   return ($str . $spaces);
 };
+
+sub fix_date {
+  my($orig) = shift;
+  my($month, $day, $year);
+
+  if ( $orig =~ m%^\d+/\d+$% ) {
+    ($month, $year) = ($orig =~ m%^(\d+)/(\d+)$% );
+    $year = &fix_year($year);
+    return "$year-$month-01";
+  }
+
+  if ( $orig =~ m%\d+-\d+-\d+$% ) {
+    ($month, $day, $year) = ( $orig =~ m%(\d+)-(\d+)-(\d+)$% );
+    $year = &fix_year($year);
+    return "$year-$month-$day";
+  }
+
+  if ( $orig =~ m%^\d+-[A-Za-z]+-\d+$% ) {
+    ($day, $month, $year) = ( $orig =~ m%^(\d+)-([A-Za-z]+)-(\d+)$% );
+    $year = &fix_year($year);
+    $month = &fix_month($month);
+    return "$year-$month-$day";
+  }
+  return undef;
+}
+
+sub fix_month {
+  my($month) = shift;
+
+  if ( $month =~ /Jun/ ) {
+    6;
+  }
+  elsif ( $month =~ /May/) {
+    5;
+  }
+  else {
+    '';
+  }
+}
+
+sub fix_year {
+  my($year) = shift;
+
+  if ( $year > 100 ) {
+    return $year;
+  }
+
+  if ( $year =~ /^0/ ) {
+    $year = '20' . $year;
+  }
+  else {
+    $year = '19' . $year;
+  }
+}
 
 1;
 __END__

@@ -1,6 +1,8 @@
-#!/usr/local/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
+
 use DBI;
 use Getopt::Std;
 use vars qw($opt_d $opt_v);

@@ -48,7 +48,6 @@ sub start {
 sub create {
   my $self = shift;
   my ($table, $field, $value) = @_;
-  my $id;
 
   my $sth_insert = $self->prepare("insert into $table ($field) values (?)");
   my $sth_select = $self->prepare("select $field from $table where $field = ?");
@@ -70,6 +69,26 @@ sub get_service_id {
   my $self = shift;
   my ($service) = @_;
   return $self->create("net_services", "service", $service);
+}
+
+sub get_location_id {
+  my $self = shift;
+  my($room) = shift;
+
+  my $id;
+
+  my $sth_insert = $self->prepare("insert into places (city, building, room) values (?, ?, ?)");
+
+  my $sth_select = $self->prepare("select id from places where 'room' = ?");
+  $sth_select->execute($room);
+  $sth_select->bind_columns(\$id);
+
+  if ($sth_select->rows == 0) {
+    $sth_insert->execute("Providence", "CIT", $room);
+    return $self->{dbh}->last_insert_id(undef, undef, "places", undef);
+  } else {
+    return $id;
+  }
 }
 
 sub get_all_ips {

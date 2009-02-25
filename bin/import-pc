@@ -1,0 +1,176 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+use Pod::Usage;
+use Data::Dumper;
+
+use DBI qw(:sql_types);
+use DBD::Pg qw(:pg_types);
+use File::Temp qw(:mktemp);
+
+use FindBin qw($RealBin);
+use lib "$RealBin/../lib";
+use BrownCS::UDB;
+use BrownCS::UDB::Util qw(:all);
+
+# Print a simple help message.
+sub usage {
+  my ($exit_status) = @_;
+  pod2usage({ -exitval => $exit_status, -verbose => 1});
+}
+
+my $help = 0;
+my $username = $ENV{'USER'};
+my $udb = BrownCS::UDB->new;
+
+GetOptions ('help|h|?' => \$help,
+            'u' => \$username) or usage(2);
+usage(1) if $help;
+
+my $password = &ask_password;
+
+$udb->start($username, $password);
+
+#$udb->{dbh}->trace(1);
+
+# o Hostname
+# o Description
+# o Brown inv. #
+# - Upgrade serial #
+# o Serial #
+# - Upgrade PO #
+# o Purchase Order#
+# o  remarks
+# o  remarks
+# o Purchase date
+# o  remarks
+# o  remarks
+# Ethernet addr
+# o Installation Date
+# o  remarks
+# o  remarks
+# o Location
+# o Configuration
+# o remarks
+# o remarks
+# o Type
+# o User(s)	
+
+my($id, $result);
+
+my $filename = mktemp("/tmp/udbXXXXX");
+system("index -f cat pc '' > $filename");
+open(FH, $filename);
+
+my $first_line = <FH>;
+my $debug = 0;
+
+my $dbg_fh;
+if ($debug) {
+  my $dbg_file = "/tmp/test.debug.log";
+  open ($dbg_fh, ">>$dbg_file") or die qq{Could not open "$dbg_file": $!\n};
+  $udb->{dbh}->pg_server_trace($dbg_fh);
+}
+
+while ( <FH> ) {
+  my ($hostname, $desc, $brown_inv, $ug_serial, $serial, $ug_po, $po1, $po2,
+    $po3, $purchase_date, $puch_rem1, $puch_rem2, $ether,  $install_date,
+    $inst_rem1, $inst_rem2, $location, $config, $conf_rem1, $conf_rem2,
+    $type, $users) = split(/\t/);
+
+  #print "updating $hostname\n";
+
+  $result = $udb->get_host($hostname);
+  if ( !$result ) {
+    #&insert();
+    warn "no equipment record for $hostname, skipping\n";
+    next;
+  }
+
+  my $place = $udb->get_location_id($location);
+
+  $install_date = &fix_date($install_date);
+  $purchase_date = &fix_date($purchase_date);
+
+  # owner, contact...
+
+  my $sth = $udb->prepare("update equipment set place_id = ?, brown_inv_num = ?, serial_num = ?, po_num = ?, purchased_on = ?, installed_on = ? where name = ?");
+  $sth->bind_param(5, undef, {pg_type => PG_DATE});
+  $sth->bind_param(6, undef, {pg_type => PG_DATE});
+
+  my $po = "$po1\n$po2\n$po3";
+  $sth->execute($place, $brown_inv, $serial, $po, $purchase_date, $install_date, $hostname);
+}
+
+if ($debug) {
+  $udb->{dbh}->pg_server_untrace;
+  close($dbg_fh);
+}
+
+close(FH);
+
+$udb->finish;
+
+# sub insert {
+#   $id = $db->create_id();
+#   if ( !$id ) {
+#     die "Can't get id\n";
+#   }
+#   if ( !$location ) {
+#     $location = 'unknown';
+#   }
+#   $location = $db->quote($location);
+#   $desc = $db->quote($desc);
+#   if ( $serial eq 'no s/n' || $serial eq 'n/a' || $serial eq 'none' ) {
+#     $serial = '';
+#   }
+#   $serial = $db->quote($serial);
+#   $inv = $db->quote($inv);
+#   $type = $db->quote($type);
+#   my($h) = $db->quote("index host: $hostname");
+# 
+#   $db->do("INSERT INTO equipment ( id, descr, lid, serial_num, inventory_num, usage, comment ) VALUES ($id, $desc, $location, $serial, $inv, $type, $h)");
+# }
+
+__END__
+
+=head1 NAME
+
+import-pc - import from pc
+
+=head1 SYNOPSIS
+
+index -f cat pc '' | import-pc [-u username]
+
+=head1 DESCRIPTION
+
+imports from pc
+
+=head1 OPTIONS
+
+=over
+
+=item B<-h>, B<--help>
+
+Print a help message and exit.
+
+=item B<-u>, B<--username>=user
+
+Logs onto the database server as the specified username, instead of as
+the current user.
+
+=back
+
+=head1 AUTHORS
+
+Aleks Bromfield.
+
+=head1 SEE ALSO
+
+B<udb>
+
+=cut
+
