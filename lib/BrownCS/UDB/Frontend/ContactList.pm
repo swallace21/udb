@@ -31,7 +31,7 @@ sub contact_list {
   my @hosts = $udb->all_hosts_in_class($class);
 
   foreach my $hostname (@hosts) {
-    my %host = $udb->get_host($hostname);
+    my %host = $udb->get_equip($hostname);
     my $contact = ($host{contact} or '');
     printf "%-15s%-40s%-10s\n", $hostname, "who knows", $contact;
   }

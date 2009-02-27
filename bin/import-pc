@@ -39,25 +39,13 @@ $udb->start($username, $password);
 # o Hostname
 # o Description
 # o Brown inv. #
-# - Upgrade serial #
 # o Serial #
-# - Upgrade PO #
 # o Purchase Order#
-# o  remarks
-# o  remarks
 # o Purchase date
-# o  remarks
-# o  remarks
-# Ethernet addr
 # o Installation Date
-# o  remarks
-# o  remarks
 # o Location
-# o Configuration
-# o remarks
-# o remarks
-# o Type
 # o User(s)	
+# o Comments
 
 my($id, $result);
 
@@ -76,10 +64,8 @@ if ($debug) {
 }
 
 while ( <FH> ) {
-  my ($hostname, $desc, $brown_inv, $ug_serial, $serial, $ug_po, $po1, $po2,
-    $po3, $purchase_date, $puch_rem1, $puch_rem2, $ether,  $install_date,
-    $inst_rem1, $inst_rem2, $location, $config, $conf_rem1, $conf_rem2,
-    $type, $users) = split(/\t/);
+  my ($hostname, $desc, $brown_inv, $serial, $po_num, $purchase_date,
+    $install_date, $location, $users, $comments) = split(/\t/);
 
   #print "updating $hostname\n";
 
@@ -101,8 +87,7 @@ while ( <FH> ) {
   $sth->bind_param(5, undef, {pg_type => PG_DATE});
   $sth->bind_param(6, undef, {pg_type => PG_DATE});
 
-  my $po = "$po1\n$po2\n$po3";
-  $sth->execute($place, $brown_inv, $serial, $po, $purchase_date, $install_date, $hostname);
+  $sth->execute($place, $brown_inv, $serial, $po_num, $purchase_date, $install_date, $hostname);
 }
 
 if ($debug) {

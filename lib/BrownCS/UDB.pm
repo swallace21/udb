@@ -125,61 +125,82 @@ sub all_hosts_in_class {
   return @hosts_in_class;
 }
 
-sub get_host {
+sub get_equip {
   my $self = shift;
-  my ($hostname) = @_;
+  my ($name) = @_;
   my %host = ();
 
-  my $comp_select = $self->prepare("select e.contact, e.equip_status, e.managed_by, c.os, c.pxelink from equipment e, computers c where e.name = ? and c.name = e.name");
+  my $equip_select = $self->prepare("select e.contact, e.equip_status, e.managed_by from equipment e where e.name = ?");
+  my $comp_select = $self->prepare("select c.os, c.pxelink from computers c where c.name = ?");
   my $place_select = $self->prepare("select p.city, p.building, p.room from places p, equipment e where e.name = ? and e.place_id = p.id");
   my $ethernet_select = $self->prepare("select ni.ethernet from equipment e, net_interfaces ni where e.name = ? and e.name = ni.equip_name");
   my $ip_addr_select = $self->prepare("select na.ipaddr from equipment e, net_addresses_net_interfaces nani, net_interfaces ni, net_addresses na where e.name = ? and e.name = ni.equip_name and nani.net_interfaces_id = ni.id and nani.net_addresses_id = na.id");
   my $classes_select = $self->prepare("select cc.class from comp_classes cc, computers c, comp_classes_computers ccc where c.name = ? and ccc.comp_class = cc.class and ccc.computer = c.name");
   my $aliases_select = $self->prepare("select nde.dns_name from net_dns_entries nde, net_addresses_net_interfaces nani, net_interfaces ni, net_addresses na where ni.equip_name = ? and nani.net_interfaces_id = ni.id and nani.net_addresses_id = na.id and na.id = nde.address and nde.authoritative = false");
 
-  $host{hostname} = $hostname;
+  $host{name} = $name;
 
-  $comp_select->execute($hostname);
-  $comp_select->bind_columns(\$host{contact}, \$host{status}, \$host{managed_by}, \$host{os_type}, \$host{pxelink});
-  $comp_select->fetch;
+  $equip_select->execute($name);
+  $equip_select->bind_columns(\$host{contact}, \$host{status}, \$host{managed_by});
+  $equip_select->fetch;
 
-  if ($comp_select->rows == 0) {
+  if ($equip_select->rows == 0) {
     return ();
   }
 
-  $place_select->execute($hostname);
+  $place_select->execute($name);
   $place_select->bind_columns(\$host{city}, \$host{building}, \$host{room});
   $place_select->fetch;
 
-  $ethernet_select->execute($hostname);
-  $ethernet_select->bind_columns(\$host{ethernet});
-  $ethernet_select->fetch;
-
-  $ip_addr_select->execute($hostname);
-  $ip_addr_select->bind_columns(\$host{ip_addr});
-  $ip_addr_select->fetch;
-
-  $host{aliases} = [];
-  my $alias;
-  $aliases_select->execute($hostname);
-  $aliases_select->bind_columns(\$alias);
-  while ($aliases_select->fetch) {
-    if ($alias ne $hostname) {
-      push @{$host{aliases}}, $alias;
-    }
-  }
+  $comp_select->execute($name);
+  $comp_select->bind_columns(\$host{os_type}, \$host{pxelink});
+  $comp_select->fetch;
+  $host{is_comp} = $comp_select->rows;
 
   $host{classes} = [];
   my $class;
-  $classes_select->execute($hostname);
+  $classes_select->execute($name);
   $classes_select->bind_columns(\$class);
   while ($classes_select->fetch) {
-    if ($class ne $hostname) {
+    if ($class ne $name) {
       push @{$host{classes}}, $class;
     }
   }
 
+  $ethernet_select->execute($name);
+  $ethernet_select->bind_columns(\$host{ethernet});
+  $ethernet_select->fetch;
+  $host{has_network} = $ethernet_select->rows;
+
+  $ip_addr_select->execute($name);
+  $ip_addr_select->bind_columns(\$host{ip_addr});
+  $ip_addr_select->fetch;
+
+  $host{has_ip} = $ip_addr_select->rows;
+
+  $host{aliases} = [];
+  my $alias;
+  $aliases_select->execute($name);
+  $aliases_select->bind_columns(\$alias);
+  while ($aliases_select->fetch) {
+    if ($alias ne $name) {
+      push @{$host{aliases}}, $alias;
+    }
+  }
+
   return %host;
+}
+
+sub get_host {
+  my $self = shift;
+  my ($hostname) = @_;
+  my %host = $self->get_equip($hostname);
+
+  if ($host{is_comp}) {
+    return %host;
+  } else {
+    return ();
+  } 
 }
 
 sub finish {

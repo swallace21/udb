@@ -12,16 +12,41 @@ use DBD::Pg qw(:pg_types);
 
 use BrownCS::UDB::Util qw(:all);
 
+my $field_names = {
+  'name'       => "Name",
+  'room'       => "Location",
+  'contact'    => "Primary user",
+  'status'     => "Status",
+  'managed_by' => "Managed by",
+  'os_type'    => "OS",      
+  'ethernet'   => "MAC address",
+  'ip_addr'    => "IP address",
+  'classes'    => "Classes", 
+};
+
 # Print a simple help message.
 sub usage {
   my ($exit_status) = @_;
   pod2usage({ -exitval => $exit_status, -verbose => 1});
 }
 
-sub sort_fieldnames {
-  return -1 if($a eq 'hostname');
-  return 1 if($b eq 'hostname');
-  return $a cmp $b;
+sub print_field {
+  my ($host, $name) = @_;
+  my $val = $host->{$name};
+  if (defined $val) {
+    if ((ref($val) eq "ARRAY")) {
+      if (scalar(@$val) == 0) {
+        printf "%-18s %s\n", $field_names->{$name}, '---';
+      } else {
+        print $field_names->{$name}, ":\n";
+        foreach my $item (sort @{$val}) {
+          print "  - $item\n";
+        }
+      }
+    } else {
+      printf "%-18s %s\n", $field_names->{$name}, $host->{$name};
+    }
+  }
 }
 
 sub show {
@@ -30,32 +55,29 @@ sub show {
     usage(2);
   }
 
-  my $hostname = shift @ARGV;
+  my $name = shift @ARGV;
 
-  my %host = $udb->get_host($hostname);
+  my %host = $udb->get_equip($name);
 
   if (not %host) {
-    print "No record for host $hostname.\n";
+    print "No record for device $name.\n";
     exit(2);
   }
 
+  print_field(\%host, 'name');
   print "\n";
-  print fix_width("Hostname:", 19), $host{'hostname'}, "\n";
+  print_field(\%host, 'room');
+  print_field(\%host, 'contact');
   print "\n";
-  print fix_width("Location:", 19), ($host{'room'} or 'unknown'), "\n";
-  print fix_width("Primary user:", 19), ($host{'contact'} or 'unknown'), "\n";
+  print_field(\%host, 'status');
+  print_field(\%host, 'managed_by');
   print "\n";
-  print fix_width("Status:", 19), $host{'status'}, "\n";
-  print fix_width("Managed by:", 19), $host{'managed_by'}, "\n";
-  print fix_width("OS:", 19), $host{'os_type'}, "\n";
+  print_field(\%host, 'os_type');
   print "\n";
-  print fix_width("MAC address:", 19), $host{'ethernet'}, "\n";
-  print fix_width("IP address:", 19), $host{'ip_addr'}, "\n";
+  print_field(\%host, 'ethernet');
+  print_field(\%host, 'ip_addr');
   print "\n";
-  print "Classes: \n";
-  foreach my $class (sort @{$host{classes}}) {
-    print "  - $class\n";
-  }
+  print_field(\%host, 'classes');
 }
 
 1;
@@ -63,17 +85,17 @@ __END__
 
 =head1 NAME
 
-cdb-show - Print out a summary of a host
+cdb-show - Print out information about a piece of equipment
 
 =head1 SYNOPSIS
 
-cdb-show [-u username] hostname
+cdb-show [-u username] name
 
 =head1 DESCRIPTION
 
-cdb-show queries the UDB database for information about a host, and
-prints it out to the console. It is designed to resemble the old I<cdb
-profile> command.
+cdb-show queries the UDB database for information about a piece of
+equipment, and prints it out to the console. It is designed to resemble
+the old I<cdb profile> or I<index pc> commands.
 
 =head1 OPTIONS
 

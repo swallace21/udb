@@ -7,6 +7,7 @@ use warnings;
 use Term::ReadKey;
 use Term::ReadLine;
 use File::Temp qw(tempfile);
+use Crypt::Simple;
 
 use Exporter qw(import);
 
@@ -57,13 +58,31 @@ sub edit {
 # ask_password :: void -> string
 # Prompt the user for a password and return it.
 sub ask_password {
-  print STDERR "Password: ";
-  ReadMode 'noecho';
-  my $password = ReadLine 0;
-  chomp $password;
-  ReadMode 'normal';
-  print STDERR "\n";
-
+  my $old_umask = umask(0077);
+  my $username = $ENV{'USER'};
+  my $enc_password;
+  my $password;
+  my $filename = "/tmp/udb_cc.$username";
+  if (-r $filename) {
+    open(FH, $filename);
+    $enc_password = <FH>;
+    chomp $enc_password;
+    $password = decrypt($enc_password);
+    close(FH);
+  } else {
+    print STDERR "Password: ";
+    ReadMode 'noecho';
+    $password = ReadLine 0;
+    chomp $password;
+    ReadMode 'normal';
+    print STDERR "\n";
+    print STDERR "\n";
+  }
+  $enc_password = encrypt($password);
+  open(FH, ">$filename");
+  print FH "$enc_password\n";
+  close(FH);
+  umask($old_umask);
   return $password;
 }
 
@@ -234,7 +253,7 @@ BrownCS::UDB::Util - utility functions
 
 =head1 SYNOPSIS
 
-  use BrownCS::Util qw(ask_password confirm ask);
+  use BrownCS::Util qw(:all);
 
 =head1 DESCRIPTION
 

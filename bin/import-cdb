@@ -51,6 +51,7 @@ $udb->{dbh}->do("DELETE FROM management_types;");
 $udb->{dbh}->do("DELETE FROM routing_types;");
 $udb->{dbh}->do("DELETE FROM dns_regions;");
 $udb->{dbh}->do("DELETE FROM os_types;");
+$udb->{dbh}->do("DELETE FROM places;");
 
 print "done.\n";
 

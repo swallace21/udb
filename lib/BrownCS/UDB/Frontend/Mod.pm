@@ -27,7 +27,7 @@ sub mod {
   my $hostname = shift @ARGV;
 
   my $comp_db = BrownCS::UDB::DbBase::Comp->new;
-  my %old_comp = $udb->get_host($hostname);
+  my %old_comp = $udb->get_equip($hostname);
   my $comp = $comp_db->str2hash(&edit($comp_db->hash2str(\%old_comp)));
 
   if ($verbose) {
