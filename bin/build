@@ -31,16 +31,14 @@ my $verbose = 0;
 GetOptions ('help|h|?' => \$help, 
             'n|dryrun' => \$dry_run,
             'v|verbose' => \$verbose,
-            'u' => \$username) or usage(2);
+            'u|username=s' => \$username) or usage(2);
 usage(1) if $help;
 
 if (@ARGV > 0) {
   usage(2);
 }
 
-my $password = &ask_password;
-
-$udb->start($username, $password);
+$udb->start($username);
 
 my $tt = Template->new({INCLUDE_PATH => "$RealBin/../templates"}) || die "$Template::ERROR\n";
 

@@ -4,8 +4,12 @@ use 5.010000;
 use strict;
 use warnings;
 
+use Crypt::Simple;
+
 use DBI qw(:sql_types);
 use DBD::Pg qw(:pg_types);
+
+use BrownCS::UDB::Util qw(:all);
 
 my $debug = 0;
 
@@ -32,7 +36,27 @@ sub prepare {
 
 sub start {
   my $self = shift;
-  my ($username, $password) = @_;
+  my ($username) = @_;
+
+  my $old_umask = umask(0077);
+  my $enc_password;
+  my $password;
+  my $filename = "/tmp/udb_cc.$username";
+  if (-r $filename) {
+    open(FH, $filename);
+    $enc_password = <FH>;
+    chomp $enc_password;
+    $password = decrypt($enc_password);
+    close(FH);
+  } else {
+    $password = &ask_password;
+  }
+  $enc_password = encrypt($password);
+  open(FH, ">$filename");
+  print FH "$enc_password\n";
+  close(FH);
+  umask($old_umask);
+
   $self->{dbh} = DBI->connect("dbi:Pg:dbname=udb;host=sysdb", $username, $password, {AutoCommit=>0, pg_errorlevel=>2}) or die "Couldn't connect to database: " . DBI->errstr;
 
   my $all_aliases_select = $self->prepare("select fqdn_brown(dns_name, domain) from net_dns_entries");
@@ -338,15 +362,22 @@ sub insert_host {
     $monitored = 1;
   }
 
-  # create an equipment entry...
-
-  $equip_insert->execute("deployed", "tstaff", $hostname, $contact);
-  $equip_insert->finish;
-
   my $os = $host->{'os_type'};
   if (($os eq "other") or ($os eq "") or ($os eq "windows")) {
     $os = undef;
   }
+
+  my $equip_status = "deployed";
+  if (defined $os and (($os eq "linux-xen") or ($os eq "linux64-xen"))) {
+    $equip_status = "virtual";
+  }
+
+  my $managed_by = "tstaff";
+
+  # create an equipment entry...
+
+  $equip_insert->execute($equip_status, $managed_by, $hostname, $contact);
+  $equip_insert->finish;
 
   my $pxelink = $host->{'pxelink'};
   if ((defined $pxelink) and ($pxelink eq "")) {
@@ -556,7 +587,7 @@ BrownCS::UDB - the Universal DataBase
   use BrownCS::UDB;
 
   my $udb = BrownCS::UDB->new;
-  $udb->start;
+  $udb->start($username);
 
   my @hosts = $udb->all_hosts_in_class($class);
   # ...

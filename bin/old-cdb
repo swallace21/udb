@@ -285,7 +285,7 @@ my $username = $ENV{'USER'};
 GetOptions ('help|h|?' => \$help, 
             'v|verbose' => \$verbose,
             'version' => \$version,
-            'u' => \$username) or usage(2);
+            'u|username=s' => \$username) or usage(2);
 usage(1) if $help;
 
 if ($version) {
@@ -313,8 +313,7 @@ $SIG{'TERM'} = \&sighandler;
 
 if(defined($g_cdb_commands{$ARGV[0]})) {
   $g_cmdname = shift(@ARGV);
-  my $password = &ask_password;
-  $udb->start($username, $password);
+  $udb->start($username);
   $g_status = &{ $g_cdb_commands{$g_cmdname}{'fn'} }(@ARGV);
   $udb->finish;
   exit($g_status);

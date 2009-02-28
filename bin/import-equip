@@ -26,12 +26,10 @@ my $username = $ENV{'USER'};
 my $udb = BrownCS::UDB->new;
 
 GetOptions ('help|h|?' => \$help,
-            'u' => \$username) or usage(2);
+            'u|username=s' => \$username) or usage(2);
 usage(1) if $help;
 
-my $password = &ask_password;
-
-$udb->start($username, $password);
+$udb->start($username);
 
 #$udb->{dbh}->trace(1);
 

@@ -114,7 +114,7 @@ my $username = $ENV{'USER'};
 GetOptions ('help|h|?' => \$help, 
             'v|verbose' => \$verbose,
             'n|dryrun' => \$dryrun,
-            'u' => \$username) or usage(1, 0);
+            'u|username=s' => \$username) or usage(1, 0);
 usage(0, 0) if $help;
 
 my $cmd = shift;
@@ -141,10 +141,8 @@ if(defined($udb_commands{$cmd})) {
   usage(2);
 }
 
-my $password = &ask_password;
-
 my $udb = BrownCS::UDB->new;
-$udb->start($username, $password);
+$udb->start($username);
 
 $fn->($udb, $verbose, $dryrun, @ARGV);
 
