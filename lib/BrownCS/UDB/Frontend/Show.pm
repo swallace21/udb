@@ -36,7 +36,7 @@ sub print_field {
   if (defined $val) {
     if ((ref($val) eq "ARRAY")) {
       if (scalar(@$val) == 0) {
-        printf "%-18s %s\n", $field_names->{$name}, '---';
+        printf "%-18s %s\n", ($field_names->{$name} . ':'), '---';
       } else {
         print $field_names->{$name}, ":\n";
         foreach my $item (sort @{$val}) {
@@ -44,7 +44,7 @@ sub print_field {
         }
       }
     } else {
-      printf "%-18s %s\n", $field_names->{$name}, $host->{$name};
+      printf "%-18s %s\n", ($field_names->{$name} . ':'), $host->{$name};
     }
   }
 }
@@ -65,18 +65,13 @@ sub show {
   }
 
   print_field(\%host, 'name');
-  print "\n";
   print_field(\%host, 'room');
   print_field(\%host, 'contact');
-  print "\n";
   print_field(\%host, 'status');
   print_field(\%host, 'managed_by');
-  print "\n";
   print_field(\%host, 'os_type');
-  print "\n";
   print_field(\%host, 'ethernet');
   print_field(\%host, 'ip_addr');
-  print "\n";
   print_field(\%host, 'classes');
 }
 

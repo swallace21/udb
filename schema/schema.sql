@@ -209,6 +209,7 @@ create table net_switches (
                               on update cascade
                               on delete cascade,
   primary key (name),
+  fqdn                      text not null,
   num_ports                 integer not null,
   num_blades                integer,
   switch_type               text not null,
@@ -224,12 +225,16 @@ create table net_ports (
                               on update cascade
                               on delete cascade,
   port_num                  integer not null,
-  wall_plate                text unique not null,
+  wall_plate                text not null,
   last_changed              timestamp not null default now(),
   blade_num                 integer,
   unique (switch, port_num, blade_num),
   check (port_num >= 0 and port_num <= num_ports(switch))
 ) ;
+
+create unique index idx_wall_ports on net_ports (
+  wall_plate
+) where wall_plate != 'MR';
 
 create table net_interfaces (
   id                        serial primary key,
@@ -536,12 +541,17 @@ create table computers (
 ) ;
 
 create table comp_classes (
-  class                     text primary key
+  id                        serial primary key,
+  name                      text not null,
+  os                        text references os_types
+                              on update cascade
+                              on delete cascade,
+  unique (name, os)
 ) ;
 
 -- join tables {{{
 create table comp_classes_computers (
-  comp_class                text not null references comp_classes
+  comp_class                integer not null references comp_classes
                               on update cascade
                               on delete cascade,
   computer                  text not null references computers

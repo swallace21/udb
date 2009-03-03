@@ -59,13 +59,13 @@ sub start {
 
   $self->{dbh} = DBI->connect("dbi:Pg:dbname=udb;host=sysdb", $username, $password, {AutoCommit=>0, pg_errorlevel=>2}) or die "Couldn't connect to database: " . DBI->errstr;
 
-  my $all_aliases_select = $self->prepare("select fqdn_brown(dns_name, domain) from net_dns_entries");
-  my $all_classes_select = $self->prepare("select cc.class from comp_classes cc");
-  my $all_comps_select = $self->prepare("select os, pxelink from computers");
-  my $all_equip_select = $self->prepare("select contact, equip_status from equipment");
-  my $all_ethernet_select = $self->prepare("select ethernet from net_interfaces");
-
   #$self->{dbh}->trace(2);
+
+  if ($debug) {
+    my $dbg_file = "/tmp/test.debug.log";
+    open ($self->{dbg_fh}, ">>$dbg_file") or die qq{Could not open "$dbg_file": $!\n};
+    $self->{dbh}->pg_server_trace($self->{dbg_fh});
+  }
 
 }
 
@@ -85,8 +85,24 @@ sub create {
 
 sub get_class_id {
   my $self = shift;
-  my ($class) = @_;
-  $self->create("comp_classes", "class", $class);
+  my ($name, $os) = @_;
+
+  my $id;
+
+  my $sth_insert = $self->prepare("insert into comp_classes (name, os) values (?, ?)");
+
+  my $sth_select = $self->prepare("select id from comp_classes where name = ? and os = ?");
+  $sth_select->execute($name, $os);
+  $sth_select->bind_columns(\$id);
+
+  if ($sth_select->rows == 0) {
+    $sth_insert->execute($name, $os);
+    $id = $self->{dbh}->last_insert_id(undef, undef, "comp_classes", undef);
+    return $id;
+  } else {
+    $sth_select->fetch;
+    return $id;
+  }
 }
 
 sub get_service_id {
@@ -103,7 +119,7 @@ sub get_location_id {
 
   my $sth_insert = $self->prepare("insert into places (city, building, room) values (?, ?, ?)");
 
-  my $sth_select = $self->prepare("select id from places where 'room' = ?");
+  my $sth_select = $self->prepare("select id from places where room = ?");
   $sth_select->execute($room);
   $sth_select->bind_columns(\$id);
 
@@ -111,6 +127,7 @@ sub get_location_id {
     $sth_insert->execute("Providence", "CIT", $room);
     return $self->{dbh}->last_insert_id(undef, undef, "places", undef);
   } else {
+    $sth_select->fetch;
     return $id;
   }
 }
@@ -133,13 +150,13 @@ sub get_all_ips {
 
 sub all_hosts_in_class {
   my $self = shift;
-  my ($class) = @_;
+  my ($name, $os) = @_;
   my @hosts_in_class = ();
   my $host;
 
-  my $all_hosts_in_class_select = $self->prepare("select c.name from comp_classes cc, computers c, comp_classes_computers ccc where ccc.comp_class = cc.class and ccc.computer = c.name and cc.class = ?");
+  my $all_hosts_in_class_select = $self->prepare("select c.name from comp_classes cc, computers c, comp_classes_computers ccc where ccc.comp_class = cc.id and ccc.computer = c.name and cc.name = ? and cc.os = ?");
 
-  $all_hosts_in_class_select->execute($class);
+  $all_hosts_in_class_select->execute($name, $os);
   $all_hosts_in_class_select->bind_columns(\$host);
   
   while ($all_hosts_in_class_select->fetch) {
@@ -159,7 +176,7 @@ sub get_equip {
   my $place_select = $self->prepare("select p.city, p.building, p.room from places p, equipment e where e.name = ? and e.place_id = p.id");
   my $ethernet_select = $self->prepare("select ni.ethernet from equipment e, net_interfaces ni where e.name = ? and e.name = ni.equip_name");
   my $ip_addr_select = $self->prepare("select na.ipaddr from equipment e, net_addresses_net_interfaces nani, net_interfaces ni, net_addresses na where e.name = ? and e.name = ni.equip_name and nani.net_interfaces_id = ni.id and nani.net_addresses_id = na.id");
-  my $classes_select = $self->prepare("select cc.class from comp_classes cc, computers c, comp_classes_computers ccc where c.name = ? and ccc.comp_class = cc.class and ccc.computer = c.name");
+  my $classes_select = $self->prepare("select cc.name from comp_classes cc, computers c, comp_classes_computers ccc where c.name = ? and ccc.comp_class = cc.id and ccc.computer = c.name and cc.os = ?");
   my $aliases_select = $self->prepare("select nde.dns_name from net_dns_entries nde, net_addresses_net_interfaces nani, net_interfaces ni, net_addresses na where ni.equip_name = ? and nani.net_interfaces_id = ni.id and nani.net_addresses_id = na.id and na.id = nde.address and nde.authoritative = false");
 
   $host{name} = $name;
@@ -181,16 +198,18 @@ sub get_equip {
   $comp_select->fetch;
   $host{is_comp} = $comp_select->rows;
 
-  $host{classes} = [];
-  my $class;
-  $classes_select->execute($name);
-  $classes_select->bind_columns(\$class);
-  while ($classes_select->fetch) {
-    if ($class ne $name) {
-      push @{$host{classes}}, $class;
+  if ($host{is_comp}) {
+    $host{classes} = [];
+    my $class;
+    $classes_select->execute($name, $host{os_type});
+    $classes_select->bind_columns(\$class);
+    while ($classes_select->fetch) {
+      if ($class ne $name) {
+        push @{$host{classes}}, $class;
+      }
     }
   }
-
+  
   $ethernet_select->execute($name);
   $ethernet_select->bind_columns(\$host{ethernet});
   $ethernet_select->fetch;
@@ -231,6 +250,11 @@ sub finish {
   my $self = shift;
   foreach my $sth (@{$self->{sths}}) {
     $sth->finish;
+  }
+
+  if ($debug) {
+    $self->{dbh}->pg_server_untrace;
+    close($self->{dbg_fh});
   }
 
   if ($self->{dbh}) {
@@ -297,13 +321,6 @@ sub get_vlan {
 sub insert_host {
   my $self = shift;
   my($host) = @_;
-
-  my $dbg_fh;
-  if ($debug) {
-    my $dbg_file = "/tmp/test.debug.log";
-    open ($dbg_fh, ">>$dbg_file") or die qq{Could not open "$dbg_file": $!\n};
-    $self->{dbh}->pg_server_trace($dbg_fh);
-  }
 
   my $equip_insert = $self->prepare("INSERT INTO equipment (equip_status, managed_by, name, contact) VALUES (?, ?, ?, ?)");
 
@@ -422,8 +439,8 @@ sub insert_host {
         $self->get_service_id($_);
         $addr_svc_insert->execute($address_id, $_);
       } else {
-        $self->get_class_id($_);
-        $class_comp_insert->execute($_, $hostname);
+        my $class_id = $self->get_class_id($_, $os);
+        $class_comp_insert->execute($class_id, $hostname);
       }
     }
   }
@@ -431,22 +448,11 @@ sub insert_host {
   $addr_svc_insert->finish;
   $class_comp_insert->finish;
 
-  if ($debug) {
-    $self->{dbh}->pg_server_untrace;
-    close($dbg_fh);
-  }
 }
 
 sub insert_virtual_ip {
   my $self = shift;
   my($host) = @_;
-
-  my $dbg_fh;
-  if ($debug) {
-    my $dbg_file = "/tmp/test.debug.log";
-    open ($dbg_fh, ">>$dbg_file") or die qq{Could not open "$dbg_file": $!\n};
-    $self->{dbh}->pg_server_trace($dbg_fh);
-  }
 
   my $address_insert = $self->prepare("INSERT INTO net_addresses (vlan_num, ipaddr, monitored) VALUES (?, ?, ?) RETURNING id");
   $address_insert->bind_param(1, undef, SQL_INTEGER);
@@ -517,16 +523,12 @@ sub insert_virtual_ip {
 
   $addr_svc_insert->finish;
 
-  if ($debug) {
-    $self->{dbh}->pg_server_untrace;
-    close($dbg_fh);
-  }
 }
 
 sub get_host_class_map {
   my $self = shift;
 
-  my $sth = $self->prepare("select c.name, cc.class from comp_classes cc, computers c, comp_classes_computers ccc where ccc.comp_class = cc.class and ccc.computer = c.name");
+  my $sth = $self->prepare("select c.name, cc.name from comp_classes cc, computers c, comp_classes_computers ccc where ccc.comp_class = cc.id and ccc.computer = c.name");
   $sth->execute();
   my $array_ref = $sth->fetchall_arrayref({});
 
@@ -540,6 +542,45 @@ sub get_host_class_map {
   }
   
   return $host_classes;
+}
+
+sub insert_switch {
+  my $self = shift;
+  my($switch) = @_;
+
+  # create an equipment entry...
+
+  my $equip_insert = $self->prepare("INSERT INTO equipment (name, equip_status, managed_by, contact, place_id) VALUES (?, ?, ?, ?, ?)");
+
+  my $fqdn = $switch->{'fqdn'};
+
+  my @split_fqdn = split(/\./, $fqdn);
+  my $name = $split_fqdn[0];
+
+  my $equip_status = "deployed";
+  my $managed_by = "cis";
+  my $contact = 'help@brown.edu';
+  my $location = $switch->{'location'};
+  my $place = $self->get_location_id($location);
+  
+  $equip_insert->execute($name, $equip_status, $managed_by, $contact, $place);
+  $equip_insert->finish;
+
+  # and a net_switches entry...
+
+  my $switch_insert = $self->prepare("INSERT INTO net_switches (name, fqdn, num_ports, num_blades, switch_type, port_prefix, connection, username, pass) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+
+  my $num_ports = $switch->{'numports'};
+  my $num_blades = $switch->{'numblades'};
+  my $switch_type = $switch->{'type'};
+  my $port_prefix = $switch->{'prefix'};
+  my $connection = $switch->{'mode'};
+  my $username = $switch->{'user'};
+  my $pass = $switch->{'login'};
+
+  $switch_insert->execute($name, $fqdn, $num_ports, $num_blades, $switch_type, $port_prefix, $connection, $username, $pass);
+  $switch_insert->finish;
+
 }
 
 # sub find_unused_ip {
@@ -589,7 +630,7 @@ BrownCS::UDB - the Universal DataBase
   my $udb = BrownCS::UDB->new;
   $udb->start($username);
 
-  my @hosts = $udb->all_hosts_in_class($class);
+  my @hosts = $udb->all_hosts_in_class($class, $os);
   # ...
  
   $udb->finish;
