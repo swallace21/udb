@@ -203,14 +203,6 @@ define service{
 }
 
 define service{
- name mailman_template
- use service_template
- service_description MAILMAN
- check_command check-mailman
- register 0
-}
-
-define service{
  name spamd_template
  use service_template
  service_description SPAMD
@@ -365,11 +357,6 @@ define service{
 [%  CASE 'ssh' %]
 define service{
         use                             ssh_template
-        host_name                       [% host.hostname %]
-}
-[%  CASE 'mailman' %]
-define service{
-        use                             mailman_template
         host_name                       [% host.hostname %]
 }
 [%  CASE 'sge' %]
