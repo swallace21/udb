@@ -235,15 +235,6 @@ define service{
 }
 
 define service{
- name flexlm_template
- use service_template
- service_description FLEXLM
- check_command check-flexlm
- event_handler restart-flexlm
- register 0
-}
-
-define service{
  name diskusage_template
  use service_template
  register 0
@@ -386,11 +377,6 @@ define service{
         use                             sge_template
         host_name                       [% host.hostname %]
 }
-[%  CASE 'flexlm' %]
-define service{
-        use                             flexlm_template
-        host_name                       [% host.hostname %]
-}
 [%  CASE 'ldap' %]
 define service{
         use                             ldap_template
@@ -404,16 +390,6 @@ define service{
 [%  CASE 'krb' %]
 define service{
         use                             krb_template
-        host_name                       [% host.hostname %]
-}
-[%  CASE 'spamassassin' %]
-define service{
-        use                             spamd_template
-        host_name                       [% host.hostname %]
-}
-
-define service{
-        use                             ypbind_template
         host_name                       [% host.hostname %]
 }
 

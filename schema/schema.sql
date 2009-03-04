@@ -280,10 +280,10 @@ create table net_ports_net_vlans (
   net_ports_id              integer not null references net_ports
                               on update cascade
                               on delete cascade,
-  net_vlans_id              integer not null references net_vlans
+  vlan_num                  integer not null references net_vlans
                               on update cascade
                               on delete cascade,
-  primary key               (net_ports_id, net_vlans_id)
+  primary key               (net_ports_id, vlan_num)
 ) ;
 
 create table net_addresses_net_interfaces (
