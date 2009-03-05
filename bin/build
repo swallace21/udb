@@ -49,6 +49,7 @@ my $tt = Template->new({INCLUDE_PATH => "$RealBin/../templates"}) || die "$Templ
 &build_nagios_services;
 &build_wpkg_hosts;
 &build_dns;
+&build_finger_data;
 &build_ypmake;
 
 END {
@@ -465,6 +466,14 @@ sub build_dns {
     }
   }
 
+}
+
+sub build_finger_data {
+  my $file = $dry_run ? '/tmp/finger_data' : '/u/system/sysadmin/data';
+  my $PATH_TMPFILE = $file . '.tmp';
+  my $vars = {filename => $file, date => get_date(), dbh => $udb->{dbh}};
+  $tt->process('finger_data.tt2', $vars, $PATH_TMPFILE) || die $tt->error(), "\n";
+  maybe_rename($PATH_TMPFILE, $file);
 }
 
 sub build_ypmake {

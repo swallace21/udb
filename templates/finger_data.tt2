@@ -1,0 +1,4 @@
+[%- USE DBI( dbh = dbh ) -%]
+[% FOREACH host IN DBI.query("select e.name, e.contact, p.room, c.system_model from equipment e, computers c, places p where e.name = c.name and e.place_id = p.id order by name") -%]
+[% host.name.fix_width(10) %]	[% host.contact.fix_width(18) %]	[% host.room.fix_width(10) %]	[% host.system_model %]
+[% END -%]

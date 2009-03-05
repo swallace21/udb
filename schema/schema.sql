@@ -91,7 +91,8 @@ create table equipment (
   purchased_on              date,
   installed_on              date,
   owner                     text,
-  contact                   text
+  contact                   text,
+  protected                 boolean not null default false
 ) ;
 
 create table surplus_equipment (

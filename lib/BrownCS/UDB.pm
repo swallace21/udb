@@ -171,13 +171,15 @@ sub get_equip {
   my ($name) = @_;
   my %host = ();
 
-  my $equip_select = $self->prepare("select e.contact, e.equip_status, e.managed_by from equipment e where e.name = ?");
+  my $aliases_select = $self->prepare("select nde.dns_name from net_dns_entries nde, net_addresses_net_interfaces nani, net_interfaces ni, net_addresses na where ni.equip_name = ? and nani.net_interfaces_id = ni.id and nani.net_addresses_id = na.id and na.id = nde.address and nde.authoritative = false");
+  my $classes_select = $self->prepare("select cc.name from comp_classes cc, computers c, comp_classes_computers ccc where c.name = ? and ccc.comp_class = cc.id and ccc.computer = c.name and cc.os = ?");
   my $comp_select = $self->prepare("select c.os, c.pxelink, c.system_model, c.num_cpus, c.cpu_type, c.cpu_speed, c.memory, c.hard_drives, c.total_disk, c.other_drives, c.network_cards, c.video_cards, c.os_name, c.os_version, c.os_dist, c.info_time, c.boot_time from computers c where c.name = ?");
-  my $place_select = $self->prepare("select p.city, p.building, p.room from places p, equipment e where e.name = ? and e.place_id = p.id");
+  my $equip_select = $self->prepare("select e.contact, e.equip_status, e.managed_by from equipment e where e.name = ?");
+  my $iface_select = $self->prepare("select ni.ethernet, np.switch, np.port_num, np.blade_num, np.wall_plate from equipment e, net_interfaces ni, net_ports np where e.name = ? and e.name = ni.equip_name and ni.port_id = np.id");
   my $ethernet_select = $self->prepare("select ni.ethernet from equipment e, net_interfaces ni where e.name = ? and e.name = ni.equip_name");
   my $ip_addr_select = $self->prepare("select na.ipaddr from equipment e, net_addresses_net_interfaces nani, net_interfaces ni, net_addresses na where e.name = ? and e.name = ni.equip_name and nani.net_interfaces_id = ni.id and nani.net_addresses_id = na.id");
-  my $classes_select = $self->prepare("select cc.name from comp_classes cc, computers c, comp_classes_computers ccc where c.name = ? and ccc.comp_class = cc.id and ccc.computer = c.name and cc.os = ?");
-  my $aliases_select = $self->prepare("select nde.dns_name from net_dns_entries nde, net_addresses_net_interfaces nani, net_interfaces ni, net_addresses na where ni.equip_name = ? and nani.net_interfaces_id = ni.id and nani.net_addresses_id = na.id and na.id = nde.address and nde.authoritative = false");
+  my $place_select = $self->prepare("select p.city, p.building, p.room from places p, equipment e where e.name = ? and e.place_id = p.id");
+  my $switch_select = $self->prepare("select ns.fqdn, ns.num_ports, ns.num_blades, ns.switch_type, ns.port_prefix, ns.connection, ns.username, ns.pass from net_switches ns where ns.name = ?");
 
   $host{name} = $name;
 
@@ -214,17 +216,43 @@ sub get_equip {
       }
     }
   }
-  
-  $ethernet_select->execute($name);
-  $ethernet_select->bind_columns(\$host{ethernet});
-  $ethernet_select->fetch;
-  $host{has_network} = $ethernet_select->rows;
 
+  $switch_select->execute($name);
+  $switch_select->bind_columns(\$host{fqdn}, \$host{num_ports},
+    \$host{num_blades}, \$host{switch_type}, \$host{port_prefix},
+    \$host{connection}, \$host{username}, \$host{pass});
+  $switch_select->fetch;
+  $host{is_switch} = $switch_select->rows;
+
+  $host{interfaces} = [];
+  my %interface = ();
+  $iface_select->execute($name);
+  $iface_select->bind_columns(\$interface{ethernet},
+    \$interface{'switch'}, \$interface{port_num}, \$interface{blade_num},
+    \$interface{wall_plate});
+  while ($iface_select->fetch) {
+    push @{$host{interfaces}}, \%interface;
+  }
+
+  if ($iface_select->rows == 0) {
+    $ethernet_select->execute($name);
+    $ethernet_select->bind_columns(\$interface{ethernet});
+    $interface{'switch'} = undef;
+    $interface{'port_num'} = undef;
+    $interface{'blade_num'} = undef;
+    $interface{'wall_plate'} = undef;
+    while ($ethernet_select->fetch) {
+      push @{$host{interfaces}}, \%interface;
+    }
+  }
+
+  $host{ip_addr} = [];
+  my $ip_addr; 
   $ip_addr_select->execute($name);
-  $ip_addr_select->bind_columns(\$host{ip_addr});
-  $ip_addr_select->fetch;
-
-  $host{has_ip} = $ip_addr_select->rows;
+  $ip_addr_select->bind_columns(\$ip_addr);
+  while ($ip_addr_select->fetch) {
+    push @{$host{ip_addr}}, $ip_addr;
+  }
 
   $host{aliases} = [];
   my $alias;
@@ -327,6 +355,8 @@ sub insert_host {
   my $self = shift;
   my($host) = @_;
 
+  my $protected = 0;
+
   my $equip_insert = $self->prepare("INSERT INTO equipment (equip_status, managed_by, name, contact) VALUES (?, ?, ?, ?)");
 
   my $comp_insert = $self->prepare("INSERT INTO computers (name, os, pxelink) VALUES (?, ?, ?)");
@@ -394,6 +424,10 @@ sub insert_host {
     $equip_status = "virtual";
   }
 
+  if (defined $os and (($os eq "linux-server") or ($os eq "linux64-server"))) {
+    $protected = 1;
+  }
+
   my $managed_by = "tstaff";
 
   # create an equipment entry...
@@ -443,6 +477,7 @@ sub insert_host {
         s/^service\.//;
         $self->get_service_id($_);
         $addr_svc_insert->execute($address_id, $_);
+        $protected = 1;
       } else {
         my $class_id = $self->get_class_id($_, $os);
         $class_comp_insert->execute($class_id, $hostname);
@@ -452,6 +487,12 @@ sub insert_host {
 
   $addr_svc_insert->finish;
   $class_comp_insert->finish;
+
+  if ($protected) {
+    my $sth = $self->prepare("update equipment set protected = true where name = ?");
+    $sth->execute($hostname);
+    $sth->finish;
+  }
 
 }
 

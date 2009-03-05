@@ -15,7 +15,7 @@ use BrownCS::UDB::Util qw(:all);
 my $fields = {
   'name' => {
     'desc' => "Name",
-    'views' => [],
+    'views' => ['hostname'],
   },
   'room' => {
     'desc' => "Location",
@@ -33,12 +33,16 @@ my $fields = {
     'desc' => "Managed by",
     'views' => ['admin'],
   },
+  'interfaces' => {
+    'desc' => "Network interfaces",
+    'views' => ['hw', 'net'],
+  },
   'ethernet' => {
     'desc' => "MAC address",
     'views' => ['hw', 'net'],
   },
   'ip_addr' => {
-    'desc' => "IP address",
+    'desc' => "IP address(es)",
     'views' => ['sw', 'net'],
   },
   'classes' => {
@@ -113,6 +117,38 @@ my $fields = {
     'desc' => "Last boot time (reported)",
     'views' => ['sw', 'hw'],
   },
+  'fqdn' => {
+    'desc' => "Domain name",
+    'views' => ['net'],
+  },
+  'num_ports' => {
+    'desc' => "# of ports",
+    'views' => ['net'],
+  },
+  'num_blades' => {
+    'desc' => "# of blades",
+    'views' => ['net'],
+  },
+  'switch_type' => {
+    'desc' => "Switch type",
+    'views' => ['net'],
+  },
+  'port_prefix' => {
+    'desc' => "Port prefix",
+    'views' => ['net'],
+  },
+  'connection' => {
+    'desc' => "Connection type",
+    'views' => ['net'],
+  },
+  'username' => {
+    'desc' => "Username",
+    'views' => [],
+  },
+  'pass' => {
+    'desc' => "Password",
+    'views' => [],
+  },
 };
 
 # Print a simple help message.
@@ -121,23 +157,49 @@ sub usage {
   pod2usage({ -exitval => $exit_status, -verbose => 1});
 }
 
-sub print_field {
-  my ($host, $name) = @_;
-  my $val = $host->{$name};
-  if (defined $val) {
+sub print_hash {
+  my ($view, $prefix, $hash) = @_;
+
+  foreach my $key (sort(keys %{$hash})) {
+
+    my $views_ref = $fields->{$key}->{views};
+    my $val = $hash->{$key};
+
+    next if (($view ne 'all') and not (grep { $_ =~ /^$view$/ } @{$views_ref}));
+    next if not defined $val;
+
     if ((ref($val) eq "ARRAY")) {
-      if (scalar(@$val) == 0) {
-        printf "%-18s %s\n", ($fields->{$name}->{desc} . ':'), '---';
-      } else {
-        print $fields->{$name}->{desc}, ":\n";
-        foreach my $item (sort @{$val}) {
-          print "  - $item\n";
-        }
+      if (%{$fields->{$key}} and (scalar(@{$val}) > 0)) {
+        print $prefix, $fields->{$key}->{desc}, ":\n";
+        print_array($view, ($prefix."  "), $val);
       }
+    } elsif ((ref($val) eq "HASH")) {
+      print_hash($view, ($prefix."  "), $val);
     } else {
-      printf "%-18s %s\n", ($fields->{$name}->{desc} . ':'), $host->{$name};
+      if (%{$fields->{$key}}) {
+        printf "%s%s: %s\n", $prefix, $fields->{$key}->{desc}, $val;
+      }
     }
   }
+
+}
+
+sub print_array {
+  my ($view, $prefix, $array) = @_;
+
+  foreach my $item (sort @{$array}) {
+
+    next if not defined $item;
+
+    if ((ref($item) eq "ARRAY")) {
+      print_array($view, ($prefix."* "), $item);
+    } elsif ((ref($item) eq "HASH")) {
+      print_hash($view, ($prefix."* "), $item);
+    } else {
+      printf "%s- %s\n", $prefix, $item;
+    }
+  }
+
 }
 
 sub show {
@@ -156,14 +218,9 @@ sub show {
     exit(2);
   }
 
-  print_field(\%host, 'name');
+  print_hash('hostname', '', \%host);
+  print_hash($view, '', \%host);
 
-  foreach my $field (sort (keys %{$fields})) {
-    my $views_ref = $fields->{$field}->{views};
-    if (($view eq 'all') or (grep { $_ =~ /^$view$/ } @{$views_ref})) {
-      print_field(\%host, $field);
-    }
-  }
 }
 
 1;
