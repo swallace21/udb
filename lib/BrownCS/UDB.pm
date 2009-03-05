@@ -172,7 +172,7 @@ sub get_equip {
   my %host = ();
 
   my $equip_select = $self->prepare("select e.contact, e.equip_status, e.managed_by from equipment e where e.name = ?");
-  my $comp_select = $self->prepare("select c.os, c.pxelink from computers c where c.name = ?");
+  my $comp_select = $self->prepare("select c.os, c.pxelink, c.system_model, c.num_cpus, c.cpu_type, c.cpu_speed, c.memory, c.hard_drives, c.total_disk, c.other_drives, c.network_cards, c.video_cards, c.os_name, c.os_version, c.os_dist, c.info_time, c.boot_time from computers c where c.name = ?");
   my $place_select = $self->prepare("select p.city, p.building, p.room from places p, equipment e where e.name = ? and e.place_id = p.id");
   my $ethernet_select = $self->prepare("select ni.ethernet from equipment e, net_interfaces ni where e.name = ? and e.name = ni.equip_name");
   my $ip_addr_select = $self->prepare("select na.ipaddr from equipment e, net_addresses_net_interfaces nani, net_interfaces ni, net_addresses na where e.name = ? and e.name = ni.equip_name and nani.net_interfaces_id = ni.id and nani.net_addresses_id = na.id");
@@ -194,7 +194,12 @@ sub get_equip {
   $place_select->fetch;
 
   $comp_select->execute($name);
-  $comp_select->bind_columns(\$host{os_type}, \$host{pxelink});
+  $comp_select->bind_columns(\$host{os_type}, \$host{pxelink},
+    \$host{system_model}, \$host{num_cpus}, \$host{cpu_type},
+    \$host{cpu_speed}, \$host{memory}, \$host{hard_drives},
+    \$host{total_disk}, \$host{other_drives}, \$host{network_cards},
+    \$host{video_cards}, \$host{os_name}, \$host{os_version},
+    \$host{os_dist}, \$host{info_time}, \$host{boot_time});
   $comp_select->fetch;
   $host{is_comp} = $comp_select->rows;
 

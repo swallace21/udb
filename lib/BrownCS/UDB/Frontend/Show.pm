@@ -12,16 +12,107 @@ use DBD::Pg qw(:pg_types);
 
 use BrownCS::UDB::Util qw(:all);
 
-my $field_names = {
-  'name'       => "Name",
-  'room'       => "Location",
-  'contact'    => "Primary user",
-  'status'     => "Status",
-  'managed_by' => "Managed by",
-  'os_type'    => "OS",      
-  'ethernet'   => "MAC address",
-  'ip_addr'    => "IP address",
-  'classes'    => "Classes", 
+my $fields = {
+  'name' => {
+    'desc' => "Name",
+    'views' => [],
+  },
+  'room' => {
+    'desc' => "Location",
+    'views' => ['admin'],
+  },
+  'contact' => {
+    'desc' => "Primary user",
+    'views' => ['admin'],
+  },
+  'status' => {
+    'desc' => "Status",
+    'views' => ['admin'],
+  },
+  'managed_by' => {
+    'desc' => "Managed by",
+    'views' => ['admin'],
+  },
+  'ethernet' => {
+    'desc' => "MAC address",
+    'views' => ['hw', 'net'],
+  },
+  'ip_addr' => {
+    'desc' => "IP address",
+    'views' => ['sw', 'net'],
+  },
+  'classes' => {
+    'desc' => "Classes",
+    'views' => ['sw'],
+  },
+  'os_type' => {
+    'desc' => "OS",
+    'views' => ['sw'],
+  },
+  'pxelink' => {
+    'desc' => "PXE link",
+    'views' => ['sw'],
+  },
+  'system_model' => {
+    'desc' => "System model (reported)",
+    'views' => ['hw'],
+  },
+  'num_cpus' => {
+    'desc' => "# of CPUs (reported)",
+    'views' => ['hw'],
+  },
+  'cpu_type' => {
+    'desc' => "CPU type (reported)",
+    'views' => ['hw'],
+  },
+  'cpu_speed' => {
+    'desc' => "CPU speed (reported)",
+    'views' => ['hw'],
+  },
+  'memory' => {
+    'desc' => "Memory (reported)",
+    'views' => ['hw'],
+  },
+  'hard_drives' => {
+    'desc' => "Hard drives (reported)",
+    'views' => ['hw'],
+  },
+  'total_disk' => {
+    'desc' => "Total disk (reported)",
+    'views' => ['hw'],
+  },
+  'other_drives' => {
+    'desc' => "Other drives (reported)",
+    'views' => ['hw'],
+  },
+  'network_cards' => {
+    'desc' => "Network cards (reported)",
+    'views' => ['hw'],
+  },
+  'video_cards' => {
+    'desc' => "Video cards (reported)",
+    'views' => ['hw'],
+  },
+  'os_name' => {
+    'desc' => "OS name (reported)",
+    'views' => ['sw'],
+  },
+  'os_name' => {
+    'desc' => "OS version (reported)",
+    'views' => ['sw'],
+  },
+  'os_name' => {
+    'desc' => "OS dist (reported)",
+    'views' => ['sw'],
+  },
+  'info_time' => {
+    'desc' => "Last report time",
+    'views' => ['sw', 'hw'],
+  },
+  'boot_time' => {
+    'desc' => "Last boot time (reported)",
+    'views' => ['sw', 'hw'],
+  },
 };
 
 # Print a simple help message.
@@ -36,25 +127,26 @@ sub print_field {
   if (defined $val) {
     if ((ref($val) eq "ARRAY")) {
       if (scalar(@$val) == 0) {
-        printf "%-18s %s\n", ($field_names->{$name} . ':'), '---';
+        printf "%-18s %s\n", ($fields->{$name}->{desc} . ':'), '---';
       } else {
-        print $field_names->{$name}, ":\n";
+        print $fields->{$name}->{desc}, ":\n";
         foreach my $item (sort @{$val}) {
           print "  - $item\n";
         }
       }
     } else {
-      printf "%-18s %s\n", ($field_names->{$name} . ':'), $host->{$name};
+      printf "%-18s %s\n", ($fields->{$name}->{desc} . ':'), $host->{$name};
     }
   }
 }
 
 sub show {
   my ($udb, $verbose, $dryrun, @ARGV) = @_;
-  if (@ARGV == 0) {
+  if (@ARGV != 2) {
     usage(2);
   }
 
+  my $view = shift @ARGV;
   my $name = shift @ARGV;
 
   my %host = $udb->get_equip($name);
@@ -65,14 +157,13 @@ sub show {
   }
 
   print_field(\%host, 'name');
-  print_field(\%host, 'room');
-  print_field(\%host, 'contact');
-  print_field(\%host, 'status');
-  print_field(\%host, 'managed_by');
-  print_field(\%host, 'os_type');
-  print_field(\%host, 'ethernet');
-  print_field(\%host, 'ip_addr');
-  print_field(\%host, 'classes');
+
+  foreach my $field (sort (keys %{$fields})) {
+    my $views_ref = $fields->{$field}->{views};
+    if (($view eq 'all') or (grep { $_ =~ /^$view$/ } @{$views_ref})) {
+      print_field(\%host, $field);
+    }
+  }
 }
 
 1;
