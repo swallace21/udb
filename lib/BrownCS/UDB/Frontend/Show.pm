@@ -149,6 +149,22 @@ my $fields = {
     'desc' => "Password",
     'views' => [],
   },
+  'switch' => {
+    'desc' => "Switch",
+    'views' => ['net'],
+  },
+  'port_num' => {
+    'desc' => "Port #",
+    'views' => ['net'],
+  },
+  'blade_num' => {
+    'desc' => "Blade #",
+    'views' => ['net'],
+  },
+  'wall_plate' => {
+    'desc' => "Wall plate",
+    'views' => ['net'],
+  },
 };
 
 # Print a simple help message.
@@ -187,17 +203,27 @@ sub print_hash {
 sub print_array {
   my ($view, $prefix, $array) = @_;
 
+  my $end_list;
+
   foreach my $item (sort @{$array}) {
 
     next if not defined $item;
 
     if ((ref($item) eq "ARRAY")) {
-      print_array($view, ($prefix."* "), $item);
+      $end_list = 1;
+      print "$prefix--\n";
+      print_array($view, ($prefix."| "), $item);
     } elsif ((ref($item) eq "HASH")) {
-      print_hash($view, ($prefix."* "), $item);
+      $end_list = 1;
+      print "$prefix--\n";
+      print_hash($view, ($prefix."| "), $item);
     } else {
       printf "%s- %s\n", $prefix, $item;
     }
+  }
+
+  if ($end_list) {
+    print "$prefix--\n";
   }
 
 }

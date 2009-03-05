@@ -4,6 +4,8 @@
 
 -- {{{
 
+set role tstaff;
+
 create language plpgsql;
 
 create table log_db_export (
