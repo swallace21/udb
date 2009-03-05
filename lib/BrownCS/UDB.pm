@@ -11,7 +11,7 @@ use DBD::Pg qw(:pg_types);
 
 use BrownCS::UDB::Util qw(:all);
 
-my $debug = 1;
+my $debug = 0;
 
 sub new {
   my $proto = shift;
