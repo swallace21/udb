@@ -1,10 +1,10 @@
-package BrownCS::UDB::Frontend::Show;
+package BrownCS::UDB::View;
 
 use strict;
 use warnings;
 
 use Exporter qw(import);
-our @EXPORT_OK = qw(show);
+our @EXPORT_OK = qw(print_record);
 
 use Pod::Usage;
 use DBI qw(:sql_types);
@@ -167,13 +167,7 @@ my $fields = {
   },
 };
 
-# Print a simple help message.
-sub usage {
-  my ($exit_status) = @_;
-  pod2usage({ -exitval => $exit_status, -verbose => 1});
-}
-
-sub print_hash {
+sub print_record {
   my ($view, $prefix, $hash) = @_;
 
   foreach my $key (sort(keys %{$hash})) {
@@ -190,7 +184,7 @@ sub print_hash {
         print_array($view, ($prefix."  "), $val);
       }
     } elsif ((ref($val) eq "HASH")) {
-      print_hash($view, ($prefix."  "), $val);
+      print_record($view, ($prefix."  "), $val);
     } else {
       if (%{$fields->{$key}}) {
         printf "%s%s: %s\n", $prefix, $fields->{$key}->{desc}, $val;
@@ -216,7 +210,7 @@ sub print_array {
     } elsif ((ref($item) eq "HASH")) {
       $end_list = 1;
       print "$prefix--\n";
-      print_hash($view, ($prefix."| "), $item);
+      print_record($view, ($prefix."| "), $item);
     } else {
       printf "%s- %s\n", $prefix, $item;
     }
@@ -227,67 +221,4 @@ sub print_array {
   }
 
 }
-
-sub show {
-  my ($udb, $verbose, $dryrun, @ARGV) = @_;
-  if (@ARGV != 2) {
-    usage(2);
-  }
-
-  my $view = shift @ARGV;
-  my $name = shift @ARGV;
-
-  my %host = $udb->get_equip($name);
-
-  if (not %host) {
-    print "No record for device $name.\n";
-    exit(2);
-  }
-
-  print_hash('hostname', '', \%host);
-  print_hash($view, '', \%host);
-
-}
-
-1;
-__END__
-
-=head1 NAME
-
-cdb-show - Print out information about a piece of equipment
-
-=head1 SYNOPSIS
-
-cdb-show [-u username] name
-
-=head1 DESCRIPTION
-
-cdb-show queries the UDB database for information about a piece of
-equipment, and prints it out to the console. It is designed to resemble
-the old I<cdb profile> or I<index pc> commands.
-
-=head1 OPTIONS
-
-=over
-
-=item B<-h>, B<--help>
-
-Print a help message and exit.
-
-=item B<-u>, B<--username>=user
-
-Logs onto the database server as the specified username, instead of as
-the current user.
-
-=back
-
-=head1 AUTHORS
-
-Aleks Bromfield.
-
-=head1 SEE ALSO
-
-B<udb>
-
-=cut
 

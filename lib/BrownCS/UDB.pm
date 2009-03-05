@@ -148,6 +148,24 @@ sub get_all_ips {
   return %ip_addrs;
 }
 
+sub all_hosts_in_room {
+  my $self = shift;
+  my ($room) = @_;
+  my @hosts_in_room = ();
+  my $host;
+
+  my $all_hosts_in_room_select = $self->prepare("select e.name from places p, equipment e where e.place_id = p.id and p.room = ?");
+
+  $all_hosts_in_room_select->execute($room);
+  $all_hosts_in_room_select->bind_columns(\$host);
+  
+  while ($all_hosts_in_room_select->fetch) {
+    push @hosts_in_room, $host;
+  }
+
+  return @hosts_in_room;
+}
+
 sub all_hosts_in_class {
   my $self = shift;
   my ($name, $os) = @_;

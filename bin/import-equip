@@ -294,9 +294,11 @@ while ( <FH> ) {
 
   $result = $udb->get_host($hostname);
   if ( !$result ) {
-    #&insert();
-    warn "no equipment record for $hostname, skipping\n";
-    next;
+    # create an equipment entry...
+    my $equip_insert = $udb->prepare("INSERT INTO equipment (equip_status, managed_by, name, contact) VALUES (?, ?, ?, ?)");
+    my $managed_by = "tstaff";
+    $equip_insert->execute('spare', 'tstaff', $hostname, $users);
+    $equip_insert->finish;
   }
 
   my $place = $udb->get_location_id($location);

@@ -1,0 +1,143 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+use Pod::Usage;
+use DBI qw(:sql_types);
+use DBD::Pg qw(:pg_types);
+use Data::Dumper;
+
+use FindBin qw($RealBin);
+use lib "$RealBin/../lib";
+use BrownCS::UDB;
+use BrownCS::UDB::Util qw(:all);
+use BrownCS::UDB::DbBase::Comp qw($attrs);
+
+# Print a simple help message.
+sub usage {
+  my ($exit_status) = @_;
+  pod2usage({ -exitval => $exit_status, -verbose => 1});
+}
+
+my $help = 0;
+my $verbose = 0;
+my $dryrun = 0;
+my $username = $ENV{'USER'};
+
+GetOptions ('help|h|?' => \$help, 
+            'v|verbose' => \$verbose,
+            'n|dryrun' => \$dryrun,
+            'u|username=s' => \$username) or usage(1);
+usage(0) if $help;
+
+my $udb = BrownCS::UDB->new;
+$udb->start($username);
+
+if (@ARGV != 1) {
+  usage(2);
+}
+
+my $hostname;
+
+if (@ARGV > 1) {
+  usage(2);
+} elsif (@ARGV > 0) {
+  $hostname = shift;
+}
+
+my $comp_db = BrownCS::UDB::DbBase::Comp->new;
+
+my %comp = (
+  "hostname" => $hostname,
+  "status" => "deployed",
+);
+
+foreach my $attr (@{$comp_db->{attrs}}) {
+  my $name = shift (@{$attr});
+  my $type = shift (@{$attr});
+  my $reqd = shift (@{$attr});
+  my $full = shift (@{$attr});
+  my $cmts = join(" ", @{(shift @{$attr})});
+
+  next if ($reqd ne 'req');
+
+  if ($type eq 'string') {
+    $comp{$name} = &ask($cmts);
+  } elsif ($type eq 'choice') {
+    $comp{$name} = &choose($cmts, [
+      {
+        'key' => "1key",
+        'name' => "1name",
+        'desc' => "description of item 1",
+      },
+      {
+        'key' => "2key",
+        'name' => "2name",
+        'desc' => "description of item 2",
+      },
+      {
+        'key' => "3key",
+        'name' => "3name",
+        'desc' => "description of item 3",
+      },
+      ]);
+  } elsif ($type eq 'list') {
+    $comp{$name} = &ask($cmts);
+  }
+}
+
+if ($verbose) {
+  print Dumper(%comp);
+}
+
+die;
+
+my $comp = $comp_db->str2hash(&edit($comp_db->hash2str(\%comp)));
+  
+END {
+  if (defined $udb) {
+    $udb->finish;
+  }
+}
+
+__END__
+
+=head1 NAME
+
+udb-add - Add a host to UDB
+
+=head1 SYNOPSIS
+
+udb-add [-u username] hostname
+
+=head1 DESCRIPTION
+
+adds one or more hosts to the database
+
+=head1 OPTIONS
+
+=over
+
+=item B<-h>, B<--help>
+
+Print a help message and exit.
+
+=item B<-u>, B<--username>=user
+
+Logs onto the database server as the specified username, instead of as
+the current user.
+
+=back
+
+=head1 AUTHORS
+
+Aleks Bromfield.
+
+=head1 SEE ALSO
+
+B<udb>
+
+=cut
+

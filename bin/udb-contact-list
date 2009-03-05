@@ -1,0 +1,98 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+use Pod::Usage;
+use DBI qw(:sql_types);
+use DBD::Pg qw(:pg_types);
+
+use FindBin qw($RealBin);
+use lib "$RealBin/../lib";
+use BrownCS::UDB;
+use BrownCS::UDB::Util qw(:all);
+
+# Print a simple help message.
+sub usage {
+  my ($exit_status) = @_;
+  pod2usage({ -exitval => $exit_status, -verbose => 1});
+}
+
+my $help = 0;
+my $verbose = 0;
+my $dryrun = 0;
+my $username = $ENV{'USER'};
+
+GetOptions ('help|h|?' => \$help, 
+            'v|verbose' => \$verbose,
+            'n|dryrun' => \$dryrun,
+            'u|username=s' => \$username) or usage(1);
+usage(0) if $help;
+
+my $udb = BrownCS::UDB->new;
+$udb->start($username);
+
+if (@ARGV != 1) {
+  usage(2);
+}
+
+my $class = shift @ARGV;
+
+printf "%-15s%-40s%-10s\n\n", "MACHINE", "SERVICES", "CONTACTS";
+
+my @hosts = $udb->all_hosts_in_room($class);
+
+foreach my $hostname (@hosts) {
+  my %host = $udb->get_equip($hostname);
+  my $contact = ($host{contact} or '');
+  printf "%-15s%-40s%-10s\n", $hostname, "who knows", $contact;
+}
+
+END {
+  if (defined $udb) {
+    $udb->finish;
+  }
+}
+
+__END__
+
+=head1 NAME
+
+udb-contact-list - Print out a contact list for all hosts in a class
+
+=head1 SYNOPSIS
+
+udb-contact-list [-u username] classname
+
+=head1 DESCRIPTION
+
+udb-contact-list queries the UDB database for all hosts in a class, and
+prints out a contact list which is designed to be posted in the machine
+rooms. It is designed to resemble the old I<contact-list> command.
+
+=head1 OPTIONS
+
+=over
+
+=item B<-h>, B<--help>
+
+Print a help message and exit.
+
+=item B<-u>, B<--username>=user
+
+Logs onto the database server as the specified username, instead of as
+the current user.
+
+=back
+
+=head1 AUTHORS
+
+Aleks Bromfield.
+
+=head1 SEE ALSO
+
+B<udb>
+
+=cut
+
