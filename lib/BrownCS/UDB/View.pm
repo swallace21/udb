@@ -165,6 +165,10 @@ my $fields = {
     'desc' => "Wall plate",
     'views' => ['net'],
   },
+  'services' => {
+    'desc' => "Services",
+    'views' => ['sw'],
+  },
 };
 
 sub print_record {

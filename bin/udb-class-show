@@ -57,16 +57,16 @@ __END__
 
 =head1 NAME
 
-udb-class-show - Print out a list of all hosts in a class
+udb-class-show - Print out a list of all computers in a class
 
 =head1 SYNOPSIS
 
-udb-class-show [-u username] class
+udb-class-show [-u username] <class>
 
 =head1 DESCRIPTION
 
-udb-class-show queries the UDB database for all members of a given host
-class. It is designed to resemble the old I<cdb classlist> command.
+udb-class-show queries the UDB database for all computers that belong to
+a given class.
 
 =head1 OPTIONS
 

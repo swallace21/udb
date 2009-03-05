@@ -54,15 +54,15 @@ __END__
 
 =head1 NAME
 
-udb-delete - delete a host from UDB
+udb-delete - delete a device from UDB
 
 =head1 SYNOPSIS
 
-udb-delete [-u username] hostname
+udb-delete [-u username] <device>
 
 =head1 DESCRIPTION
 
-deletes one or more hosts from the database
+deletes one or more devices from the database
 
 =head1 OPTIONS
 

@@ -7,6 +7,7 @@ use Getopt::Long;
 use Pod::Usage;
 use DBI qw(:sql_types);
 use DBD::Pg qw(:pg_types);
+use Data::Dumper;
 
 use FindBin qw($RealBin);
 use lib "$RealBin/../lib";
@@ -39,14 +40,15 @@ if (@ARGV != 1) {
 
 my $class = shift @ARGV;
 
-printf "%-15s%-40s%-10s\n\n", "MACHINE", "SERVICES", "CONTACTS";
+printf "%-18s%-40s%-10s\n\n", "MACHINE", "SERVICES", "CONTACTS";
 
 my @hosts = $udb->all_hosts_in_room($class);
 
 foreach my $hostname (@hosts) {
   my %host = $udb->get_equip($hostname);
   my $contact = ($host{contact} or '');
-  printf "%-15s%-40s%-10s\n", $hostname, "who knows", $contact;
+  my $services = join(",",@{$host{services}});
+  printf "%-18s%-40s%-10s\n", $hostname, $services, $contact;
 }
 
 END {
@@ -59,15 +61,15 @@ __END__
 
 =head1 NAME
 
-udb-contact-list - Print out a contact list for all hosts in a class
+udb-contact-list - Print out a contact list for all devices in a room
 
 =head1 SYNOPSIS
 
-udb-contact-list [-u username] classname
+udb-contact-list [-u username] <room>
 
 =head1 DESCRIPTION
 
-udb-contact-list queries the UDB database for all hosts in a class, and
+udb-contact-list queries the UDB database for all devices in a room, and
 prints out a contact list which is designed to be posted in the machine
 rooms. It is designed to resemble the old I<contact-list> command.
 

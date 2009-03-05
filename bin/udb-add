@@ -39,18 +39,18 @@ if (@ARGV != 1) {
   usage(2);
 }
 
-my $hostname;
+my $name;
 
 if (@ARGV > 1) {
   usage(2);
 } elsif (@ARGV > 0) {
-  $hostname = shift;
+  $name = shift;
 }
 
 my $comp_db = BrownCS::UDB::DbBase::Comp->new;
 
 my %comp = (
-  "hostname" => $hostname,
+  "hostname" => $name,
   "status" => "deployed",
 );
 
@@ -106,15 +106,15 @@ __END__
 
 =head1 NAME
 
-udb-add - Add a host to UDB
+udb-add - Add a device to UDB
 
 =head1 SYNOPSIS
 
-udb-add [-u username] hostname
+udb-add [-u username] <device>
 
 =head1 DESCRIPTION
 
-adds one or more hosts to the database
+adds one or more devices to the database
 
 =head1 OPTIONS
 

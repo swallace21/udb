@@ -5,12 +5,14 @@ use warnings;
 
 use Getopt::Long;
 use Pod::Usage;
+use DBI qw(:sql_types);
+use DBD::Pg qw(:pg_types);
 
 use FindBin qw($RealBin);
 use lib "$RealBin/../lib";
 use BrownCS::UDB;
 use BrownCS::UDB::Util qw(:all);
-use BrownCS::UDB::View qw(print_record);
+use BrownCS::UDB::DbBase::Comp;
 
 # Print a simple help message.
 sub usage {
@@ -32,22 +34,19 @@ usage(0) if $help;
 my $udb = BrownCS::UDB->new;
 $udb->start($username);
 
-if (@ARGV != 2) {
+if (@ARGV != 1) {
   usage(2);
 }
 
-my $view = shift @ARGV;
-my $name = shift @ARGV;
+my $hostname = shift @ARGV;
 
-my %host = $udb->get_equip($name);
+my $comp_db = BrownCS::UDB::DbBase::Comp->new;
+my %old_comp = $udb->get_equip($hostname);
+my $comp = $comp_db->str2hash(&edit($comp_db->hash2str(\%old_comp)));
 
-if (not %host) {
-  print "No record for device $name.\n";
-  exit(2);
+if ($verbose) {
+  print Dumper(%$comp);
 }
-
-print_record('hostname', '', \%host);
-print_record($view, '', \%host);
 
 END {
   if (defined $udb) {
@@ -59,17 +58,15 @@ __END__
 
 =head1 NAME
 
-udb-show - Print out information about a device
+udb-modify - Perform maintenance on an existing device record in UDB
 
 =head1 SYNOPSIS
 
-udb-show [-u username] <view-mode> <device>
+udb-modify [-u username] <device>
 
 =head1 DESCRIPTION
 
-udb-show queries the UDB database for information about a piece of
-equipment, and prints it out to the console. It is designed to resemble
-the old I<cdb profile> or I<index pc> commands.
+Perform maintenance on an existing device record in UDB.
 
 =head1 OPTIONS
 

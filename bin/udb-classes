@@ -56,17 +56,16 @@ __END__
 
 =head1 NAME
 
-udb-classes - Print out the classes a host belongs to
+udb-classes - Print out the classes a computer belongs to
 
 =head1 SYNOPSIS
 
-udb-classes [-u username] hostname
+udb-classes [-u username] <hostname>
 
 =head1 DESCRIPTION
 
-udb-classes queries the UDB database for the list of classes that a host
-belongs to, and prints it out to the console. It is designed to resemble
-the old I<cdb classes> command.
+udb-classes queries the UDB database for the list of classes that a
+computer belongs to, and prints it out to the console.
 
 =head1 OPTIONS
 

@@ -197,6 +197,7 @@ sub get_equip {
   my $ethernet_select = $self->prepare("select ni.ethernet from equipment e, net_interfaces ni where e.name = ? and e.name = ni.equip_name");
   my $ip_addr_select = $self->prepare("select na.ipaddr from equipment e, net_addresses_net_interfaces nani, net_interfaces ni, net_addresses na where e.name = ? and e.name = ni.equip_name and nani.net_interfaces_id = ni.id and nani.net_addresses_id = na.id");
   my $place_select = $self->prepare("select p.city, p.building, p.room from places p, equipment e where e.name = ? and e.place_id = p.id");
+  my $service_select = $self->prepare("select nans.net_services_id from equipment e, net_addresses_net_interfaces nani, net_interfaces ni, net_addresses na, net_addresses_net_services nans where e.name = ?  and e.name = ni.equip_name and nani.net_interfaces_id = ni.id and nani.net_addresses_id = na.id and nans.net_addresses_id = na.id");
   my $switch_select = $self->prepare("select ns.fqdn, ns.num_ports, ns.num_blades, ns.switch_type, ns.port_prefix, ns.connection, ns.username, ns.pass from net_switches ns where ns.name = ?");
 
   $host{name} = $name;
@@ -279,6 +280,16 @@ sub get_equip {
   while ($aliases_select->fetch) {
     if ($alias ne $name) {
       push @{$host{aliases}}, $alias;
+    }
+  }
+
+  $host{services} = [];
+  my $service;
+  $service_select->execute($name);
+  $service_select->bind_columns(\$service);
+  while ($service_select->fetch) {
+    if ($service ne $name) {
+      push @{$host{services}}, $service;
     }
   }
 

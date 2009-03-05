@@ -12,13 +12,54 @@ use FindBin qw($RealBin);
 use lib "$RealBin/../lib";
 use BrownCS::UDB;
 use BrownCS::UDB::Util qw(:all);
-use BrownCS::UDB::DbBase::Comp;
+
+my %tasks = (
+  'rename' => {
+    'fn' => \&rename,
+    'desc' => "Rename",
+  },
+  'give' => {
+    'fn' => \&give,
+    'desc' => "Change this computer's primary user",
+  },
+  'move' => {
+    'fn' => \&move,
+    'desc' => "Move",
+  },
+  'spare' => {
+    'fn' => \&spare,
+    'desc' => "Remove (make this computer spare)",
+  },
+  'surplus' => {
+    'fn' => \&surplus,
+    'desc' => "Surplus",
+  },
+  'install-os' => {
+    'fn' => \&install_os,
+    'desc' => "Install a new OS",
+  },
+  'change-os' => {
+    'fn' => \&change_os,
+    'desc' => "Change the software configuration",
+  },
+  'subnet' => {
+    'fn' => \&change_subnet,
+    'desc' => "Change the subnet",
+  },
+  'mac' => {
+    'fn' => \&change_ethernet,
+    'desc' => "Change the MAC address",
+  },
+);
 
 # Print a simple help message.
 sub usage {
   my ($exit_status) = @_;
   pod2usage({ -exitval => $exit_status, -verbose => 1});
 }
+
+# Flush output immediately
+$|++;
 
 my $help = 0;
 my $verbose = 0;
@@ -34,19 +75,59 @@ usage(0) if $help;
 my $udb = BrownCS::UDB->new;
 $udb->start($username);
 
+# sighandler :: void -> void
+# Clean up and quit if we receive a signal.
+sub sighandler {
+  print "\n*** Termination signal received\n";
+  $udb->finish;
+  exit(0);
+}
+
+# Install signal handlers
+$SIG{'INT'} = \&sighandler;
+$SIG{'HUP'} = \&sighandler;
+$SIG{'TERM'} = \&sighandler;
+
 if (@ARGV != 1) {
   usage(2);
 }
 
 my $hostname = shift @ARGV;
 
-my $comp_db = BrownCS::UDB::DbBase::Comp->new;
-my %old_comp = $udb->get_equip($hostname);
-my $comp = $comp_db->str2hash(&edit($comp_db->hash2str(\%old_comp)));
-
-if ($verbose) {
-  print Dumper(%$comp);
+if ($udb->is_protected($hostname)) {
+  print "This device is protected!\n";
+  print "Do not modify this entry unless you know what you're doing.\n";
+  exit(0);
 }
+
+print "UDB Menu\n";
+print "--------\n\n";
+
+foreach my $menu_item (sort(keys %tasks)) {
+  my $desc = $tasks{$menu_item}->{desc};
+  printf "  %-10s %s\n", $menu_item, $desc;
+}
+
+printf "  %-10s %s\n\n", 'exit', "Exit";
+
+my $choice;
+my $task;
+
+while (not $task) {
+  print "> ";
+  $choice = <STDIN>;
+  if (not $choice) {
+    print "\n";
+    exit(0);
+  }
+  chomp($choice);
+  if ($choice =~ /(exit|quit)/i) {
+    exit(0);
+  }
+  $task = $tasks{$choice};
+}
+
+&{$task->{fn}};
 
 END {
   if (defined $udb) {
@@ -54,19 +135,122 @@ END {
   }
 }
 
+sub verify_hostname {
+  my($value) = @_;
+
+  if($value !~ /^[a-zA-Z]([a-zA-Z0-9\-]*[a-zA-Z0-9])?$/) {
+    warn "Invalid hostname.\n";
+    return 0;
+  }
+
+  # if(defined($g_cdb_include_hosts{$key})) {
+  #   warn "$PNAME: Hostname \"$key\" is already defined as a name or alias in ",
+  #     $cdb_map_includes{'hosts'}, "\n";
+  #   return 0;
+  # }
+
+  return 1;
+}
+
+sub get_new {
+  my ($maybe, $desc, $verify_proc) = @_;
+
+  return if (($maybe) and (not confirm("Do you want to change the $desc? ",0)));
+
+  my $answer;
+  while (1) {
+    my $answer = ask("Enter the new $desc (blank for no change):",'');
+    last if ($answer eq '');
+    next if not &$verify_proc($answer);
+    last;
+  }
+  return $answer;
+}
+
+sub yes {
+  return 1;
+}
+
+sub get_new_name {
+  my ($maybe) = @_;
+  return get_new($maybe, "device name", \&verify_hostname);
+}
+
+sub get_new_user {
+  my ($maybe) = @_;
+  return get_new($maybe, "primary user or contact person", \&yes);
+}
+
+sub get_new_os {
+  my ($maybe) = @_;
+  return get_new($maybe, "OS type", \&yes);
+}
+
+sub get_new_location {
+  my ($maybe) = @_;
+  return get_new($maybe, "location", \&yes);
+}
+
+sub rename {
+  my $new_name = &get_new_name(0);
+  print "SQL: rename $hostname to $new_name\n";
+}
+
+sub give {
+  my $new_user = &get_new_user(0);
+  my $new_os = &get_new_os(1);
+  my $new_name = &get_new_name(1);
+  my $new_location = &get_new_location(1);
+}
+
+sub move {
+  my $new_location = &get_new_location(0);
+  my $new_user = &get_new_user(1);
+  # Which ethernet port?
+  # Confirm IP/subnet change
+}
+
+sub spare {
+  # delete associated net_addresses, &c
+  print "You removed the computer from active use! You're so awesome!\n";
+}
+
+sub surplus {
+  # delete associated net_addresses, &c
+  # ask for kathy's info
+}
+
+sub install_os {
+  # What OS?
+  # ask about classes
+}
+
+sub change_os {
+  # ask about classes
+}
+
+sub change_subnet {
+  # What subnet?
+  # Random IP
+}
+
+sub change_ethernet {
+  # What ethernet?
+}
+
 __END__
 
 =head1 NAME
 
-udb-add - Add a host to UDB
+udb-modify - Perform maintenance on an existing device record in UDB
 
 =head1 SYNOPSIS
 
-udb-add [-u username] hostname
+udb-modify [-u username] <device>
 
 =head1 DESCRIPTION
 
-adds one or more hosts to the database
+Perform maintenance on an existing device record in UDB.
 
 =head1 OPTIONS
 

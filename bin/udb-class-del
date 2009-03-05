@@ -58,15 +58,15 @@ __END__
 
 =head1 NAME
 
-udb-class-del - Delete one or more hosts from a class
+udb-class-del - Delete one or more computers from a class
 
 =head1 SYNOPSIS
 
-udb-class-del [-u username] classname hostname [hostname ...]
+udb-class-del [-u username] <classname> [<hostname> ...]
 
 =head1 DESCRIPTION
 
-deletes one or more hosts from a class
+deletes one or more computers from a class
 
 =head1 OPTIONS
 

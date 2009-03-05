@@ -30,49 +30,7 @@ my $MK_MODTIME = 0;
 my $MK_BLDTIME = 1;
 my $ADMINHOST = "adminhost";
 
-# Declare hash of subcommands and the corresponding function
 
-my %g_cdb_commands = (
-  'insert' => {
-    'fn' => \&cdb_insert,
-    'desc' => ["insert a new host record"],
-    'usage' => "$PNAME insert",
-    'common' => 1,
-  },
-  'delete' => {
-    'fn' => \&cdb_delete,
-    'desc' => ["delete one or more host records"],
-    'usage' => "$PNAME delete HOST...",
-    'common' => 1,
-  },
-  'modify' => {
-    'fn' => \&cdb_modify,
-    'desc' => ["modify a host record"],
-    'usage' => "$PNAME modify HOST [FIELD=VALUE]...",
-    'common' => 1,
-  },
-);
-
-# Declare hash of active database fields and a corresponding description
-
-my %g_cdb_fields = (
-  'hostname' => 'Canonical host name',
-  'ip_addr' => 'IP address',
-  'ethernet' => 'Ethernet address',
-  'os_type' => 'Operating system type',
-  'comment' => 'Comments',
-  'contact' => 'Primary contact for this host',
-  'classes' => 'Classes for unattended installation',
-  'pxelink' => 'Image to use for net installs',
-);
-
-# sighandler :: void -> void
-# Clean up and quit if we receive a signal.
-sub sighandler {
-  print "\n*** Termination signal received\n";
-  $udb->finish;
-  exit(0);
-}
 
 #
 # FUNCTION: modify_record
@@ -126,41 +84,6 @@ sub modify_record {
   return $modified;
 }
 
-#
-# FUNCTION: cdb_delete
-#    DESCR: Delete the specified records from the database.
-#
-
-sub cdb_delete {
-  my(@args) = @_;
-  my($mkstate);
-
-  if(@args == 0) {
-    warn "Usage: cdb delete [hostname ...]\n";
-    return 2;
-  }
-
-  foreach $host (@args) {
-    if(defined($cdb_by_hostname->{$host})) {
-      delete $cdb_by_hostname->{$host};
-      $g_modified = 1;
-    } else {
-      warn "$PNAME: No record exists for host \"$host\"\n";
-    }
-  }
-
-  if($g_modified) {
-    printflush('STDOUT', "Writing database file ... ") if($opt_v);
-    write_db($cdb_by_hostname);
-    printflush('STDOUT', "done\n") if($opt_v);
-
-    $mkstate = load_make_state($PATH_MKFILE);
-    foreach $map (keys(%g_cdb_maps)) { touch_make_state($mkstate, $map); }
-    write_make_state($mkstate, $PATH_MKFILE);
-  }
-
-  return 0;
-}
 
 #
 # FUNCTION: cdb_modify
@@ -253,71 +176,4 @@ sub cdb_modify {
   printflush('STDOUT', "done\n");
   return 0;
 }
-
-# print out extended help
-
-sub cdb_help {
-
-  if (@_ == 1) {
-    command_help($ARGV[0]);
-  } else {
-    print $USAGE;
-    print "options:\n\n";
-    print "  -V Display version info\n";
-    print "  -v Set verbose mode\n\n";
-    print "  -u Specify username (default is current user)\n\n";
-    print "all commands:\n\n";
-    foreach $k (sort(keys(%g_cdb_commands))) {
-      print "  $k\t" , $g_cdb_commands{$k}{'desc'}[0] , "\n";
-    }
-    print "\n";
-  }
-  return 0;
-}
-
-# Parse the command-line, load the database file, and execute a command
-
-my $help = 0;
-my $verbose = 0;
-my $version = 0;
-my $username = $ENV{'USER'};
-
-GetOptions ('help|h|?' => \$help, 
-            'v|verbose' => \$verbose,
-            'version' => \$version,
-            'u|username=s' => \$username) or usage(2);
-usage(1) if $help;
-
-if ($version) {
-  print $VERSION;
-  exit(0);
-}
-
-if (@ARGV == 0) {
-  usage(0);
-}
-
-# Load the configuration file and perform some checking on it
-
-die "$PNAME: $PATH_CFFILE: $!\n" unless(-f("$PATH_CFFILE"));
-eval('require("$PATH_CFFILE");');
-die "$PNAME: Failed to load $PATH_CFFILE: $@\n" if($@);
-
-# Install signal handlers
-
-$SIG{'INT'} = \&sighandler;
-$SIG{'HUP'} = \&sighandler;
-$SIG{'TERM'} = \&sighandler;
-
-# Execute the appropriate subcommand
-
-if(defined($g_cdb_commands{$ARGV[0]})) {
-  $g_cmdname = shift(@ARGV);
-  $udb->start($username);
-  $g_status = &{ $g_cdb_commands{$g_cmdname}{'fn'} }(@ARGV);
-  $udb->finish;
-  exit($g_status);
-}
-
-die "$PNAME: Invalid command -- $ARGV[0]\n$USAGE";
 
