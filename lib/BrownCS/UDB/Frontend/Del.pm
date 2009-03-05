@@ -23,7 +23,13 @@ sub del {
   }
 
   my $hostname = shift @ARGV;
-  $udb->{dbh}->do(q{delete from equipment where name = ?}, undef, $hostname);
+
+  if ($udb->is_protected($hostname)) {
+    print "This device is protected!\n";
+    print "Do not modify or delete this entry unless you know what you're doing.\n";
+  } else {
+    $udb->{dbh}->do(q{delete from equipment where name = ?}, undef, $hostname);
+  }
 }
 
 1;

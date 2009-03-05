@@ -45,158 +45,158 @@ our $cdb_by_hostname;
 eval('require "/u/system/lib/switch_cfg.pl";');
 our ($sp_switches, $sp_hosts);
 
-# print "deleting old data... ";
-# 
-# $udb->{dbh}->do("DELETE FROM equipment;");
-# $udb->{dbh}->do("DELETE FROM computers;");
-# $udb->{dbh}->do("DELETE FROM net_interfaces;");
-# $udb->{dbh}->do("DELETE FROM net_addresses;");
-# $udb->{dbh}->do("DELETE FROM net_addresses_net_interfaces;");
-# $udb->{dbh}->do("DELETE FROM net_dns_entries;");
-# $udb->{dbh}->do("DELETE FROM comp_classes;");
-# $udb->{dbh}->do("DELETE FROM comp_classes_computers;");
-# $udb->{dbh}->do("DELETE FROM net_zones;");
-# $udb->{dbh}->do("DELETE FROM net_vlans;");
-# $udb->{dbh}->do("DELETE FROM equip_status_types;");
-# $udb->{dbh}->do("DELETE FROM management_types;");
-# $udb->{dbh}->do("DELETE FROM routing_types;");
-# $udb->{dbh}->do("DELETE FROM dns_regions;");
-# $udb->{dbh}->do("DELETE FROM os_types;");
-# $udb->{dbh}->do("DELETE FROM places;");
-# $udb->{dbh}->do("DELETE FROM net_switches;");
-# 
-# print "done.\n";
-# 
-# print "adjusting sequences... ";
-# 
-# $udb->{dbh}->do("alter sequence dns_serial_num_seq restart with 6680;");
-# 
-# print "done.\n";
-# 
-# print "populating static tables... ";
-# 
-# sub domain_insert {
-#   my ($table, $desc) = @_;
-#   my $sth = $udb->prepare("INSERT INTO $table (name) VALUES (?)");
-#   $sth->execute($desc);
-# }
-# 
-# sub os_insert {
-#   my ($desc, $pxe) = @_;
-#   my $sth = $udb->prepare("INSERT INTO os_types (name, pxe_boot) VALUES (?, ?)");
-#   $sth->execute($desc, $pxe);
-# }
-# 
-# domain_insert("equip_status_types", "deployed"),
-# domain_insert("equip_status_types", "spare"),
-# domain_insert("equip_status_types", "surplus"),
-# domain_insert("equip_status_types", "virtual"),
-# 
-# domain_insert("management_types", "tstaff"),
-# domain_insert("management_types", "cis"),
-# domain_insert("management_types", "user"),
-# 
-# domain_insert("routing_types", "standard");
-# domain_insert("routing_types", "private");
-# domain_insert("routing_types", "DMZ");
-# domain_insert("routing_types", "special");
-# 
-# domain_insert("dns_regions", "internal");
-# domain_insert("dns_regions", "external");
-# 
-# os_insert("linux", 1);
-# os_insert("linux64", 1);
-# os_insert("linux-server", 1);
-# os_insert("linux64-server", 1);
-# os_insert("linux-xen", 1);
-# os_insert("linux64-xen", 1);
-# 
-# os_insert("dualboot", 0);
-# os_insert("linksys", 0);
-# os_insert("osx", 0);
-# os_insert("solaris", 0);
-# os_insert("vista", 0);
-# os_insert("vista64", 0);
-# os_insert("winxp", 0);
-# os_insert("winxp64", 0);
-# 
-# my $zone_insert = $udb->{dbh}->prepare("INSERT INTO net_zones (zone_manager, equip_manager, routing_type, name, dynamic_dhcp) VALUES (?, ?, ?, ?, ?)");
-# $zone_insert->bind_param(5, undef, {pg_type => PG_BOOL});
-# 
-# my $vlan_insert = $udb->{dbh}->prepare("INSERT INTO net_vlans (zone, vlan_num, network, dhcp, gateway) VALUES (?, ?, ?, ?, ?)");
-# $vlan_insert->bind_param(2, undef, SQL_INTEGER);
-# $vlan_insert->bind_param(3, undef, {pg_type => PG_CIDR});
-# $vlan_insert->bind_param(4, undef, {pg_type => PG_BOOL});
-# $vlan_insert->bind_param(5, undef, {pg_type => PG_INET});
-# 
-# my $vlan_dhcp_insert = $udb->{dbh}->prepare("INSERT INTO net_vlans (zone, vlan_num, network, dhcp, dynamic_dhcp_start, dynamic_dhcp_end, gateway) VALUES (?, ?, ?, ?, ?, ?, ?)");
-# $vlan_dhcp_insert->bind_param(2, undef, SQL_INTEGER); 
-# $vlan_dhcp_insert->bind_param(3, undef, {pg_type => PG_CIDR});
-# $vlan_dhcp_insert->bind_param(4, undef, {pg_type => PG_BOOL});
-# $vlan_dhcp_insert->bind_param(5, undef, {pg_type => PG_INET});
-# $vlan_dhcp_insert->bind_param(6, undef, {pg_type => PG_INET});
-# $vlan_dhcp_insert->bind_param(7, undef, {pg_type => PG_INET});
-# 
-# $zone_insert->execute("tstaff", "tstaff", "DMZ", "tstaff-dmz", 0);
-# $zone_insert->execute("tstaff", "tstaff", "private", "tstaff-private", 0);
-# $zone_insert->execute("tstaff", "tstaff", "standard", "tstaff-standard", 0);
-# $zone_insert->execute("tstaff", "user", "DMZ", "user-dmz", 0);
-# $zone_insert->execute("tstaff", "user", "private", "cs166", 0);
-# $zone_insert->execute("tstaff", "user", "special", "outside", 0);
-# $zone_insert->execute("tstaff", "user", "special", "ipsec", 0);
-# $zone_insert->execute("tstaff", "user", "standard", "user-standard", 1);
-# $zone_insert->execute("cis", "user", "special", "jj-oshean", 0);
-# $zone_insert->execute("cis", "user", "special", "techhouse", 0);
-# $zone_insert->execute("cis", "cis", "special", "cis-switches", 0);
-# 
-# $vlan_insert->execute("tstaff-dmz", 32, "128.148.32.0/25", 1, "128.148.32.1");
-# $vlan_insert->execute("tstaff-private", 192, "192.168.1.0/24", 0, "192.168.1.1");
-# $vlan_insert->execute("tstaff-private", 898, "10.116.0.0/16", 1, "10.116.1.1");
-# $vlan_insert->execute("tstaff-private", 897, "192.168.10.0/24", 1, "192.168.10.1");
-# $vlan_insert->execute("tstaff-standard", 31, "128.148.31.0/24", 1, "128.148.31.1");
-# $vlan_insert->execute("tstaff-standard", 33, "128.148.33.0/24", 1, "128.148.33.1");
-# $vlan_insert->execute("tstaff-standard", 37, "128.148.37.0/24", 1, "128.148.37.1");
-# $vlan_insert->execute("tstaff-standard", 38, "128.148.38.0/24", 1, "128.148.38.1");
-# $vlan_insert->execute("user-dmz", 892, "128.148.32.128/25", 1, "128.148.32.129");
-# $vlan_insert->execute("cs166", 893, "192.168.100.0/24", 0, "192.168.100.1");
-# $vlan_insert->execute("outside", 34, "128.148.34.0/24", 0, "128.148.34.1");
-# $vlan_insert->execute("jj-oshean", 698, "198.7.242.32/28", 1, "198.7.242.34");
-# $vlan_insert->execute("techhouse", 360, "138.16.60.0/24", 1, "138.16.60.1");
-# $vlan_insert->execute("ipsec", 885, "10.117.0.0/16", 0, "10.117.1.1");
-# $vlan_insert->execute("cis-switches", 653, "10.115.1.0/24", 1, "10.115.1.1");
-# 
-# $vlan_dhcp_insert->execute("user-standard", 36, "128.148.36.0/24", 1, "128.148.36.100", "128.148.36.254", "128.148.36.1");
-# 
-# print "done.\n";
-# 
-# print "importing equipment from cdb... ";
-# 
-# while ( my ($key, $data) = each(%$cdb_by_hostname) ) {
-#   if ($data->{'status'} ne 'disabled') {
-#     if ($data->{'ethernet'} ne '' ) {
-#       print "adding host " . $data->{hostname} . "\n";
-#       $udb->insert_host($data);
-#     } elsif ($data->{'prim_grp'} eq 'switch') {
-#       # skip
-#     } elsif ($data->{'prim_grp'} eq 'dhcp-placeholder') {
-#       # skip
-#     } else {
-#       print "adding virtual IP " . $data->{hostname} . "\n";
-#       $udb->insert_virtual_ip($data);
-#     }
-#   }
-# }
-# 
-# print "done.\n";
-#  
-# print "importing equipment from switchport... ";
-#  
-# while ( my ($key, $data) = each(%$sp_switches) ) {
-#   print "adding switch $key\n";
-#   $udb->insert_switch($data);
-# }
-# 
-# print "done.\n";
+print "deleting old data... ";
+
+$udb->{dbh}->do("DELETE FROM equipment;");
+$udb->{dbh}->do("DELETE FROM computers;");
+$udb->{dbh}->do("DELETE FROM net_interfaces;");
+$udb->{dbh}->do("DELETE FROM net_addresses;");
+$udb->{dbh}->do("DELETE FROM net_addresses_net_interfaces;");
+$udb->{dbh}->do("DELETE FROM net_dns_entries;");
+$udb->{dbh}->do("DELETE FROM comp_classes;");
+$udb->{dbh}->do("DELETE FROM comp_classes_computers;");
+$udb->{dbh}->do("DELETE FROM net_zones;");
+$udb->{dbh}->do("DELETE FROM net_vlans;");
+$udb->{dbh}->do("DELETE FROM equip_status_types;");
+$udb->{dbh}->do("DELETE FROM management_types;");
+$udb->{dbh}->do("DELETE FROM routing_types;");
+$udb->{dbh}->do("DELETE FROM dns_regions;");
+$udb->{dbh}->do("DELETE FROM os_types;");
+$udb->{dbh}->do("DELETE FROM places;");
+$udb->{dbh}->do("DELETE FROM net_switches;");
+
+print "done.\n";
+
+print "adjusting sequences... ";
+
+$udb->{dbh}->do("alter sequence dns_serial_num_seq restart with 6680;");
+
+print "done.\n";
+
+print "populating static tables... ";
+
+sub domain_insert {
+  my ($table, $desc) = @_;
+  my $sth = $udb->prepare("INSERT INTO $table (name) VALUES (?)");
+  $sth->execute($desc);
+}
+
+sub os_insert {
+  my ($desc, $pxe) = @_;
+  my $sth = $udb->prepare("INSERT INTO os_types (name, pxe_boot) VALUES (?, ?)");
+  $sth->execute($desc, $pxe);
+}
+
+domain_insert("equip_status_types", "deployed"),
+domain_insert("equip_status_types", "spare"),
+domain_insert("equip_status_types", "surplus"),
+domain_insert("equip_status_types", "virtual"),
+
+domain_insert("management_types", "tstaff"),
+domain_insert("management_types", "cis"),
+domain_insert("management_types", "user"),
+
+domain_insert("routing_types", "standard");
+domain_insert("routing_types", "private");
+domain_insert("routing_types", "DMZ");
+domain_insert("routing_types", "special");
+
+domain_insert("dns_regions", "internal");
+domain_insert("dns_regions", "external");
+
+os_insert("linux", 1);
+os_insert("linux64", 1);
+os_insert("linux-server", 1);
+os_insert("linux64-server", 1);
+os_insert("linux-xen", 1);
+os_insert("linux64-xen", 1);
+
+os_insert("dualboot", 0);
+os_insert("linksys", 0);
+os_insert("osx", 0);
+os_insert("solaris", 0);
+os_insert("vista", 0);
+os_insert("vista64", 0);
+os_insert("winxp", 0);
+os_insert("winxp64", 0);
+
+my $zone_insert = $udb->{dbh}->prepare("INSERT INTO net_zones (zone_manager, equip_manager, routing_type, name, dynamic_dhcp) VALUES (?, ?, ?, ?, ?)");
+$zone_insert->bind_param(5, undef, {pg_type => PG_BOOL});
+
+my $vlan_insert = $udb->{dbh}->prepare("INSERT INTO net_vlans (zone, vlan_num, network, dhcp, gateway) VALUES (?, ?, ?, ?, ?)");
+$vlan_insert->bind_param(2, undef, SQL_INTEGER);
+$vlan_insert->bind_param(3, undef, {pg_type => PG_CIDR});
+$vlan_insert->bind_param(4, undef, {pg_type => PG_BOOL});
+$vlan_insert->bind_param(5, undef, {pg_type => PG_INET});
+
+my $vlan_dhcp_insert = $udb->{dbh}->prepare("INSERT INTO net_vlans (zone, vlan_num, network, dhcp, dynamic_dhcp_start, dynamic_dhcp_end, gateway) VALUES (?, ?, ?, ?, ?, ?, ?)");
+$vlan_dhcp_insert->bind_param(2, undef, SQL_INTEGER); 
+$vlan_dhcp_insert->bind_param(3, undef, {pg_type => PG_CIDR});
+$vlan_dhcp_insert->bind_param(4, undef, {pg_type => PG_BOOL});
+$vlan_dhcp_insert->bind_param(5, undef, {pg_type => PG_INET});
+$vlan_dhcp_insert->bind_param(6, undef, {pg_type => PG_INET});
+$vlan_dhcp_insert->bind_param(7, undef, {pg_type => PG_INET});
+
+$zone_insert->execute("tstaff", "tstaff", "DMZ", "tstaff-dmz", 0);
+$zone_insert->execute("tstaff", "tstaff", "private", "tstaff-private", 0);
+$zone_insert->execute("tstaff", "tstaff", "standard", "tstaff-standard", 0);
+$zone_insert->execute("tstaff", "user", "DMZ", "user-dmz", 0);
+$zone_insert->execute("tstaff", "user", "private", "cs166", 0);
+$zone_insert->execute("tstaff", "user", "special", "outside", 0);
+$zone_insert->execute("tstaff", "user", "special", "ipsec", 0);
+$zone_insert->execute("tstaff", "user", "standard", "user-standard", 1);
+$zone_insert->execute("cis", "user", "special", "jj-oshean", 0);
+$zone_insert->execute("cis", "user", "special", "techhouse", 0);
+$zone_insert->execute("cis", "cis", "special", "cis-switches", 0);
+
+$vlan_insert->execute("tstaff-dmz", 32, "128.148.32.0/25", 1, "128.148.32.1");
+$vlan_insert->execute("tstaff-private", 192, "192.168.1.0/24", 0, "192.168.1.1");
+$vlan_insert->execute("tstaff-private", 898, "10.116.0.0/16", 1, "10.116.1.1");
+$vlan_insert->execute("tstaff-private", 897, "192.168.10.0/24", 1, "192.168.10.1");
+$vlan_insert->execute("tstaff-standard", 31, "128.148.31.0/24", 1, "128.148.31.1");
+$vlan_insert->execute("tstaff-standard", 33, "128.148.33.0/24", 1, "128.148.33.1");
+$vlan_insert->execute("tstaff-standard", 37, "128.148.37.0/24", 1, "128.148.37.1");
+$vlan_insert->execute("tstaff-standard", 38, "128.148.38.0/24", 1, "128.148.38.1");
+$vlan_insert->execute("user-dmz", 892, "128.148.32.128/25", 1, "128.148.32.129");
+$vlan_insert->execute("cs166", 893, "192.168.100.0/24", 0, "192.168.100.1");
+$vlan_insert->execute("outside", 34, "128.148.34.0/24", 0, "128.148.34.1");
+$vlan_insert->execute("jj-oshean", 698, "198.7.242.32/28", 1, "198.7.242.34");
+$vlan_insert->execute("techhouse", 360, "138.16.60.0/24", 1, "138.16.60.1");
+$vlan_insert->execute("ipsec", 885, "10.117.0.0/16", 0, "10.117.1.1");
+$vlan_insert->execute("cis-switches", 653, "10.115.1.0/24", 1, "10.115.1.1");
+
+$vlan_dhcp_insert->execute("user-standard", 36, "128.148.36.0/24", 1, "128.148.36.100", "128.148.36.254", "128.148.36.1");
+
+print "done.\n";
+
+print "importing equipment from cdb... ";
+
+while ( my ($key, $data) = each(%$cdb_by_hostname) ) {
+  if ($data->{'status'} ne 'disabled') {
+    if ($data->{'ethernet'} ne '' ) {
+      print "adding host " . $data->{hostname} . "\n";
+      $udb->insert_host($data);
+    } elsif ($data->{'prim_grp'} eq 'switch') {
+      # skip
+    } elsif ($data->{'prim_grp'} eq 'dhcp-placeholder') {
+      # skip
+    } else {
+      print "adding virtual IP " . $data->{hostname} . "\n";
+      $udb->insert_virtual_ip($data);
+    }
+  }
+}
+
+print "done.\n";
+ 
+print "importing equipment from switchport... ";
+ 
+while ( my ($key, $data) = each(%$sp_switches) ) {
+  print "adding switch $key\n";
+  $udb->insert_switch($data);
+}
+
+print "done.\n";
 
 print "importing ports from switchport... ";
  

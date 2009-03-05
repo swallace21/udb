@@ -629,6 +629,21 @@ sub insert_switch {
 
 }
 
+sub is_protected {
+  my $self = shift;
+  my ($name) = @_;
+
+  my $sth = $self->prepare("select e.protected from equipment e where e.name = ?");
+
+  my $protected = 0;
+
+  $sth->execute($name);
+  $sth->bind_columns(\$protected);
+  $sth->fetch;
+
+  return $protected;
+}
+
 # sub find_unused_ip {
 #   my($ip_addr) = @_;
 #   my(%ip_addrs) = ();
