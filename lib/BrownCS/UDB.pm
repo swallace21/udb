@@ -13,6 +13,10 @@ use BrownCS::UDB::Util qw(:all);
 
 my $debug = 0;
 
+#
+# Constructor
+# 
+
 sub new {
   my $proto = shift;
   my $class = ref($proto) || $proto;
@@ -38,7 +42,6 @@ sub start {
   my $self = shift;
   my ($username) = @_;
 
-  my $old_umask = umask(0077);
   my $enc_password;
   my $password;
   my $filename = "/tmp/udb_cc.$username";
@@ -48,16 +51,25 @@ sub start {
     chomp $enc_password;
     $password = decrypt($enc_password);
     close(FH);
-  } else {
-    $password = &ask_password;
   }
+
+  while (! ($self->{dbh} = DBI->connect("dbi:Pg:dbname=udb;host=sysdb", $username, $password, {AutoCommit=>0, PrintError=>0}))) {
+    if ($debug) {
+      print "Error connecting to database. Try again.\n";
+      print DBI->errstr if $debug;
+    }
+    $password = &ask_password;
+    if (not $password) {
+      exit(0);
+    }
+  };
+  
+  my $old_umask = umask(0077);
   $enc_password = encrypt($password);
   open(FH, ">$filename");
   print FH "$enc_password\n";
   close(FH);
   umask($old_umask);
-
-  $self->{dbh} = DBI->connect("dbi:Pg:dbname=udb;host=sysdb", $username, $password, {AutoCommit=>0, pg_errorlevel=>2}) or die "Couldn't connect to database: " . DBI->errstr;
 
   #$self->{dbh}->trace(2);
 
@@ -68,6 +80,27 @@ sub start {
   }
 
 }
+
+sub finish {
+  my $self = shift;
+  foreach my $sth (@{$self->{sths}}) {
+    $sth->finish;
+  }
+
+  if ($debug) {
+    $self->{dbh}->pg_server_untrace;
+    close($self->{dbg_fh});
+  }
+
+  if ($self->{dbh}) {
+    $self->{dbh}->commit;
+    $self->{dbh}->disconnect;
+  }
+}
+
+#
+# Utilities
+#
 
 sub create {
   my $self = shift;
@@ -82,6 +115,46 @@ sub create {
     $sth_insert->execute($value);
   }
 }
+
+sub get_id {
+  my $self = shift;
+  my ($table, $field, $value) = @_;
+  my $id;
+
+  my $sth_select = $self->prepare("select id from $table where $field = ?");
+
+  $sth_select->execute($value);
+
+  if ($sth_select->rows == 0) {
+    die "Can't find entry in $table where $field = $value!\n";
+  } else {
+    $id = $sth_select->fetchrow_arrayref()->[0];
+  }
+
+  return $id;
+}
+
+sub get_field {
+  my $self = shift;
+  my ($table, $field, $value) = @_;
+  my $id;
+
+  my $sth_select = $self->prepare("select $field from $table where id = ?");
+
+  $sth_select->execute($value);
+
+  if ($sth_select->rows == 0) {
+    die "Can't find entry in $table where id = $value!\n";
+  } else {
+    $id = $sth_select->fetchrow_arrayref()->[0];
+  }
+
+  return $id;
+}
+
+#
+# Single-record queries
+#
 
 sub get_class_id {
   my $self = shift;
@@ -130,58 +203,6 @@ sub get_location_id {
     $sth_select->fetch;
     return $id;
   }
-}
-
-sub get_all_ips {
-  my $self = shift;
-  my %ip_addrs = ();
-  my $addr;
-
-  my $sth = $self->prepare("select ipaddr from net_addresses");
-  $sth->execute;
-  $sth->bind_columns(\$addr);
-
-  while ($sth->fetch) {
-    $ip_addrs{$addr} = 1;
-  }
-
-  return %ip_addrs;
-}
-
-sub all_hosts_in_room {
-  my $self = shift;
-  my ($room) = @_;
-  my @hosts_in_room = ();
-  my $host;
-
-  my $all_hosts_in_room_select = $self->prepare("select e.name from places p, equipment e where e.place_id = p.id and p.room = ?");
-
-  $all_hosts_in_room_select->execute($room);
-  $all_hosts_in_room_select->bind_columns(\$host);
-  
-  while ($all_hosts_in_room_select->fetch) {
-    push @hosts_in_room, $host;
-  }
-
-  return @hosts_in_room;
-}
-
-sub all_hosts_in_class {
-  my $self = shift;
-  my ($name, $os) = @_;
-  my @hosts_in_class = ();
-  my $host;
-
-  my $all_hosts_in_class_select = $self->prepare("select c.name from comp_classes cc, computers c, comp_classes_computers ccc where ccc.comp_class = cc.id and ccc.computer = c.name and cc.name = ? and cc.os = ?");
-
-  $all_hosts_in_class_select->execute($name, $os);
-  $all_hosts_in_class_select->bind_columns(\$host);
-  
-  while ($all_hosts_in_class_select->fetch) {
-    push @hosts_in_class, $host;
-  }
-
-  return @hosts_in_class;
 }
 
 sub get_equip {
@@ -308,59 +329,6 @@ sub get_host {
   } 
 }
 
-sub finish {
-  my $self = shift;
-  foreach my $sth (@{$self->{sths}}) {
-    $sth->finish;
-  }
-
-  if ($debug) {
-    $self->{dbh}->pg_server_untrace;
-    close($self->{dbg_fh});
-  }
-
-  if ($self->{dbh}) {
-    $self->{dbh}->commit;
-    $self->{dbh}->disconnect;
-  }
-}
-
-sub get_id {
-  my $self = shift;
-  my ($table, $field, $value) = @_;
-  my $id;
-
-  my $sth_select = $self->prepare("select id from $table where $field = ?");
-
-  $sth_select->execute($value);
-
-  if ($sth_select->rows == 0) {
-    die "Can't find entry in $table where $field = $value!\n";
-  } else {
-    $id = $sth_select->fetchrow_arrayref()->[0];
-  }
-
-  return $id;
-}
-
-sub get_field {
-  my $self = shift;
-  my ($table, $field, $value) = @_;
-  my $id;
-
-  my $sth_select = $self->prepare("select $field from $table where id = ?");
-
-  $sth_select->execute($value);
-
-  if ($sth_select->rows == 0) {
-    die "Can't find entry in $table where id = $value!\n";
-  } else {
-    $id = $sth_select->fetchrow_arrayref()->[0];
-  }
-
-  return $id;
-}
-
 sub get_vlan {
   my $self = shift;
   my ($ip) = @_;
@@ -379,6 +347,132 @@ sub get_vlan {
 
   return $vlan_id;
 }
+
+sub is_protected {
+  my $self = shift;
+  my ($name) = @_;
+
+  my $sth = $self->prepare("select e.protected from equipment e where e.name = ?");
+
+  my $protected = 0;
+
+  $sth->execute($name);
+  $sth->bind_columns(\$protected);
+  $sth->fetch;
+
+  return $protected;
+}
+
+# sub find_unused_ip {
+#   my($ip_addr) = @_;
+#   my(%ip_addrs) = ();
+#   my(@nibbles, $addr);
+# 
+#   $ip_addr =~ s/\s+//g;
+#   @nibbles = split(/\./, $ip_addr);
+#   foreach $i (0 .. $#nibbles) { $nibbles[$i] =~ s/^0(.+)$/$1/; }
+#   return join('.', @nibbles) if($nibbles[3] ne '*');
+# 
+#   # Build hash of used IP addresses to avoid for '*' replacement
+#   %ip_addrs = get_all_ips;
+#   
+#   # Strip trailing nibble, which is '*'
+# 
+#   pop(@nibbles);
+# 
+#   # Try all values for $nibbles[3] in ascending order from 2 to 254.
+#   # 255 is the broadcast address, 0 is the network address, and 1 we reserve
+#   # so it can be manually assigned by sysadmins to routers.
+# 
+#   for($i = 2; $i < 255; $i++) {
+#     $addr = join('.', @nibbles) . ".$i";
+#     print "Trying $addr ...\n" if($opt_v);
+#     next if(defined($ip_addrs{$addr}));
+#     next if(defined($g_cdb_include_ip_addrs{$addr}));
+#     return $addr;
+#   }
+# 
+#   die "$PNAME ERROR: No addresses are available for the $nibbles[2] subnet\n";
+# }
+
+#
+# Multi-record queries
+#
+
+sub get_all_ips {
+  my $self = shift;
+  my %ip_addrs = ();
+  my $addr;
+
+  my $sth = $self->prepare("select ipaddr from net_addresses");
+  $sth->execute;
+  $sth->bind_columns(\$addr);
+
+  while ($sth->fetch) {
+    $ip_addrs{$addr} = 1;
+  }
+
+  return %ip_addrs;
+}
+
+sub all_hosts_in_room {
+  my $self = shift;
+  my ($room) = @_;
+  my @hosts_in_room = ();
+  my $host;
+
+  my $all_hosts_in_room_select = $self->prepare("select e.name from places p, equipment e where e.place_id = p.id and p.room = ?");
+
+  $all_hosts_in_room_select->execute($room);
+  $all_hosts_in_room_select->bind_columns(\$host);
+  
+  while ($all_hosts_in_room_select->fetch) {
+    push @hosts_in_room, $host;
+  }
+
+  return @hosts_in_room;
+}
+
+sub all_hosts_in_class {
+  my $self = shift;
+  my ($name, $os) = @_;
+  my @hosts_in_class = ();
+  my $host;
+
+  my $all_hosts_in_class_select = $self->prepare("select c.name from comp_classes cc, computers c, comp_classes_computers ccc where ccc.comp_class = cc.id and ccc.computer = c.name and cc.name = ? and cc.os = ?");
+
+  $all_hosts_in_class_select->execute($name, $os);
+  $all_hosts_in_class_select->bind_columns(\$host);
+  
+  while ($all_hosts_in_class_select->fetch) {
+    push @hosts_in_class, $host;
+  }
+
+  return @hosts_in_class;
+}
+
+sub get_host_class_map {
+  my $self = shift;
+
+  my $sth = $self->prepare("select c.name, cc.name from comp_classes cc, computers c, comp_classes_computers ccc where ccc.comp_class = cc.id and ccc.computer = c.name");
+  $sth->execute();
+  my $array_ref = $sth->fetchall_arrayref({});
+
+  my $host_classes = {};
+
+  foreach my $ccc (@{$array_ref}) {
+    if (not defined @{$host_classes->{$ccc->{name}}}) {
+      $host_classes->{$ccc->{name}} = [];
+    }
+    push @{$host_classes->{$ccc->{name}}}, $ccc->{class};
+  }
+  
+  return $host_classes;
+}
+
+#
+# Inserts
+#
 
 sub insert_host {
   my $self = shift;
@@ -600,25 +694,6 @@ sub insert_virtual_ip {
 
 }
 
-sub get_host_class_map {
-  my $self = shift;
-
-  my $sth = $self->prepare("select c.name, cc.name from comp_classes cc, computers c, comp_classes_computers ccc where ccc.comp_class = cc.id and ccc.computer = c.name");
-  $sth->execute();
-  my $array_ref = $sth->fetchall_arrayref({});
-
-  my $host_classes = {};
-
-  foreach my $ccc (@{$array_ref}) {
-    if (not defined @{$host_classes->{$ccc->{name}}}) {
-      $host_classes->{$ccc->{name}} = [];
-    }
-    push @{$host_classes->{$ccc->{name}}}, $ccc->{class};
-  }
-  
-  return $host_classes;
-}
-
 sub insert_switch {
   my $self = shift;
   my($switch) = @_;
@@ -657,53 +732,6 @@ sub insert_switch {
   $switch_insert->finish;
 
 }
-
-sub is_protected {
-  my $self = shift;
-  my ($name) = @_;
-
-  my $sth = $self->prepare("select e.protected from equipment e where e.name = ?");
-
-  my $protected = 0;
-
-  $sth->execute($name);
-  $sth->bind_columns(\$protected);
-  $sth->fetch;
-
-  return $protected;
-}
-
-# sub find_unused_ip {
-#   my($ip_addr) = @_;
-#   my(%ip_addrs) = ();
-#   my(@nibbles, $addr);
-# 
-#   $ip_addr =~ s/\s+//g;
-#   @nibbles = split(/\./, $ip_addr);
-#   foreach $i (0 .. $#nibbles) { $nibbles[$i] =~ s/^0(.+)$/$1/; }
-#   return join('.', @nibbles) if($nibbles[3] ne '*');
-# 
-#   # Build hash of used IP addresses to avoid for '*' replacement
-#   %ip_addrs = get_all_ips;
-#   
-#   # Strip trailing nibble, which is '*'
-# 
-#   pop(@nibbles);
-# 
-#   # Try all values for $nibbles[3] in ascending order from 2 to 254.
-#   # 255 is the broadcast address, 0 is the network address, and 1 we reserve
-#   # so it can be manually assigned by sysadmins to routers.
-# 
-#   for($i = 2; $i < 255; $i++) {
-#     $addr = join('.', @nibbles) . ".$i";
-#     print "Trying $addr ...\n" if($opt_v);
-#     next if(defined($ip_addrs{$addr}));
-#     next if(defined($g_cdb_include_ip_addrs{$addr}));
-#     return $addr;
-#   }
-# 
-#   die "$PNAME ERROR: No addresses are available for the $nibbles[2] subnet\n";
-# }
 
 
 1;
