@@ -5,14 +5,12 @@ use warnings;
 
 use Getopt::Long;
 use Pod::Usage;
-use DBI qw(:sql_types);
-use DBD::Pg qw(:pg_types);
-use YAML::Tiny qw(Load Dump);
 
 use FindBin qw($RealBin);
 use lib "$RealBin/../lib";
 use BrownCS::UDB;
 use BrownCS::UDB::Util qw(:all);
+use BrownCS::UDB::Verify qw(verify_mac);
 
 # Print a simple help message.
 sub usage {
@@ -34,14 +32,47 @@ usage(0) if $help;
 my $udb = BrownCS::UDB->new;
 $udb->start($username);
 
-if (@ARGV != 1) {
+if ((@ARGV < 1) or (@ARGV > 2)) {
   usage(2);
 }
 
-my $name = shift @ARGV;
+my $hostname = shift @ARGV;
+my $new_mac = shift @ARGV;
 
-my $old_device = $udb->get_equip($name);
-my $new_device = Load(&edit(Dump($old_device)));
+if ($udb->is_protected($hostname)) {
+  print "This device is protected!\n";
+  print "Do not modify or delete this entry unless you know what you're doing.\n";
+  exit(1);
+}
+
+my $iface_count;
+
+my $iface_select_sth = $udb->prepare("select count(id) from net_interfaces where equip_name = ?");
+$iface_select_sth->execute($hostname);
+$iface_select_sth->bind_columns(\$iface_count);
+$iface_select_sth->fetch;
+
+if ($iface_count < 1) {
+  print "No networked device with this name exists.\n";
+  exit(1);
+} elsif ($iface_count > 1) {
+  print "This device has more than one network card.\n";
+  print "Do not modify or delete this entry unless you know what you're doing.\n";
+  exit(1);
+}
+
+if (not $new_mac) {
+  $new_mac = get_new(0, "MAC address", \&verify_mac);
+} elsif (not verify_mac($new_mac)) {
+  exit(1);
+}
+
+if (not $new_mac) {
+  exit(0);
+}
+
+my $sth = $udb->prepare("update net_interfaces set ethernet = ? where equip_name = ?");
+$sth->execute($new_mac, $hostname);
 
 END {
   if (defined $udb) {

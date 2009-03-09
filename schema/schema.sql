@@ -87,14 +87,15 @@ create table equipment (
   managed_by                text not null references management_types
                               on update cascade
                               on delete restrict,
+  protected                 boolean not null default false,
+  purchased_on              date,
+  installed_on              date,
   brown_inv_num             text,
   serial_num                text,
   po_num                    text,
-  purchased_on              date,
-  installed_on              date,
   owner                     text,
   contact                   text,
-  protected                 boolean not null default false
+  comments                  text
 ) ;
 
 create table surplus_equipment (
@@ -247,7 +248,7 @@ create table net_interfaces (
   port_id                   integer references net_ports
                               on update cascade
                               on delete set null,
-  ethernet                  macaddr not null,
+  ethernet                  macaddr unique,
   primary_address           integer references net_addresses
                               on update cascade
                               on delete set null,

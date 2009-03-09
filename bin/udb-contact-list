@@ -40,15 +40,16 @@ if (@ARGV != 1) {
 
 my $class = shift @ARGV;
 
-printf "%-18s%-40s%-10s\n\n", "MACHINE", "SERVICES", "CONTACTS";
+printf "%-18s%-10s%-18s%-40s\n\n", "MACHINE", "SERVICES", "CONTACT", "DESCRIPTION";
 
-my @hosts = $udb->all_hosts_in_room($class);
+my @devices = $udb->all_hosts_in_room($class);
 
-foreach my $hostname (@hosts) {
-  my %host = $udb->get_equip($hostname);
-  my $contact = ($host{contact} or '');
-  my $services = join(",",@{$host{services}});
-  printf "%-18s%-40s%-10s\n", $hostname, $services, $contact;
+foreach my $name (@devices) {
+  my $device = $udb->get_equip($name);
+  my $comments = ($device->{comments} or '');
+  my $contact = ($device->{contact} or '');
+  my $services = join(",",@{$device->{services}});
+  printf "%-18s%-10s%-18s%-40s\n", $name, $services, $contact, $comments;
 }
 
 END {

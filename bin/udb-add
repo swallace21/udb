@@ -5,15 +5,11 @@ use warnings;
 
 use Getopt::Long;
 use Pod::Usage;
-use DBI qw(:sql_types);
-use DBD::Pg qw(:pg_types);
-use Data::Dumper;
 
 use FindBin qw($RealBin);
 use lib "$RealBin/../lib";
 use BrownCS::UDB;
 use BrownCS::UDB::Util qw(:all);
-use BrownCS::UDB::DbBase::Comp qw($attrs);
 
 # Print a simple help message.
 sub usage {
@@ -39,63 +35,17 @@ if (@ARGV != 1) {
   usage(2);
 }
 
-my $name;
+my $hostname = shift @ARGV;
 
-if (@ARGV > 1) {
-  usage(2);
-} elsif (@ARGV > 0) {
-  $name = shift;
+if ($udb->is_protected($hostname)) {
+  print "This device is protected!\n";
+  print "Do not modify or delete this entry unless you know what you're doing.\n";
+  exit(1);
 }
 
-my $comp_db = BrownCS::UDB::DbBase::Comp->new;
+my $new_name = &get_new_name(0);
+print "SQL: rename $hostname to $new_name\n";
 
-my %comp = (
-  "hostname" => $name,
-  "status" => "deployed",
-);
-
-foreach my $attr (@{$comp_db->{attrs}}) {
-  my $name = shift (@{$attr});
-  my $type = shift (@{$attr});
-  my $reqd = shift (@{$attr});
-  my $full = shift (@{$attr});
-  my $cmts = join(" ", @{(shift @{$attr})});
-
-  next if ($reqd ne 'req');
-
-  if ($type eq 'string') {
-    $comp{$name} = &ask($cmts);
-  } elsif ($type eq 'choice') {
-    $comp{$name} = &choose($cmts, [
-      {
-        'key' => "1key",
-        'name' => "1name",
-        'desc' => "description of item 1",
-      },
-      {
-        'key' => "2key",
-        'name' => "2name",
-        'desc' => "description of item 2",
-      },
-      {
-        'key' => "3key",
-        'name' => "3name",
-        'desc' => "description of item 3",
-      },
-      ]);
-  } elsif ($type eq 'list') {
-    $comp{$name} = &ask($cmts);
-  }
-}
-
-if ($verbose) {
-  print Dumper(%comp);
-}
-
-die;
-
-my $comp = $comp_db->str2hash(&edit($comp_db->hash2str(\%comp)));
-  
 END {
   if (defined $udb) {
     $udb->finish;

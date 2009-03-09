@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use Exporter qw(import);
-our @EXPORT_OK = qw(print_record);
+our @EXPORT_OK = qw(filter_record);
 
 use Pod::Usage;
 use DBI qw(:sql_types);
@@ -13,10 +13,6 @@ use DBD::Pg qw(:pg_types);
 use BrownCS::UDB::Util qw(:all);
 
 my $fields = {
-  'name' => {
-    'desc' => "Name",
-    'views' => ['hostname'],
-  },
   'room' => {
     'desc' => "Location",
     'views' => ['admin'],
@@ -62,7 +58,7 @@ my $fields = {
     'views' => ['hw'],
   },
   'num_cpus' => {
-    'desc' => "# of CPUs (reported)",
+    'desc' => "Number of CPUs (reported)",
     'views' => ['hw'],
   },
   'cpu_type' => {
@@ -122,11 +118,11 @@ my $fields = {
     'views' => ['net'],
   },
   'num_ports' => {
-    'desc' => "# of ports",
+    'desc' => "Number of ports",
     'views' => ['net'],
   },
   'num_blades' => {
-    'desc' => "# of blades",
+    'desc' => "Number of blades",
     'views' => ['net'],
   },
   'switch_type' => {
@@ -154,11 +150,11 @@ my $fields = {
     'views' => ['net'],
   },
   'port_num' => {
-    'desc' => "Port #",
+    'desc' => "Port number",
     'views' => ['net'],
   },
   'blade_num' => {
-    'desc' => "Blade #",
+    'desc' => "Blade number",
     'views' => ['net'],
   },
   'wall_plate' => {
@@ -169,59 +165,52 @@ my $fields = {
     'desc' => "Services",
     'views' => ['sw'],
   },
+  'comments' => {
+    'desc' => "Comments",
+    'views' => ['admin'],
+  },
 };
 
-sub print_record {
-  my ($view, $prefix, $hash) = @_;
+sub filter_record {
+  my ($view, $old) = @_;
 
-  foreach my $key (sort(keys %{$hash})) {
+  if ((ref($old) eq "ARRAY")) {
 
-    my $views_ref = $fields->{$key}->{views};
-    my $val = $hash->{$key};
-
-    next if (($view ne 'all') and not (grep { $_ =~ /^$view$/ } @{$views_ref}));
-    next if not defined $val;
-
-    if ((ref($val) eq "ARRAY")) {
-      if (%{$fields->{$key}} and (scalar(@{$val}) > 0)) {
-        print $prefix, $fields->{$key}->{desc}, ":\n";
-        print_array($view, ($prefix."  "), $val);
-      }
-    } elsif ((ref($val) eq "HASH")) {
-      print_record($view, ($prefix."  "), $val);
+    if (scalar(@{$old}) > 0) {
+      my @new = map { filter_record($view, $_) } @{$old};
+      return \@new;
     } else {
-      if (%{$fields->{$key}}) {
-        printf "%s%s: %s\n", $prefix, $fields->{$key}->{desc}, $val;
-      }
+      return ();
     }
-  }
 
-}
+  } elsif ((ref($old) eq "HASH")) {
 
-sub print_array {
-  my ($view, $prefix, $array) = @_;
+    my $new = {};
 
-  my $end_list;
+    foreach my $key (sort(keys %{$old})) {
 
-  foreach my $item (sort @{$array}) {
+      my $views_ref = $fields->{$key}->{views};
+      next if (($view ne 'all') and not (grep { $_ =~ /^$view$/ } @{$views_ref}));
 
-    next if not defined $item;
+      my $val = $old->{$key};
+      next if not defined $val;
 
-    if ((ref($item) eq "ARRAY")) {
-      $end_list = 1;
-      print "$prefix--\n";
-      print_array($view, ($prefix."| "), $item);
-    } elsif ((ref($item) eq "HASH")) {
-      $end_list = 1;
-      print "$prefix--\n";
-      print_record($view, ($prefix."| "), $item);
-    } else {
-      printf "%s- %s\n", $prefix, $item;
+      my $new_key = $fields->{$key}->{desc};
+      next if not defined $new_key;
+
+      my $new_val = filter_record($view, $val);
+      next if not defined $new_val;
+
+      $new->{$new_key} = $new_val;
+
     }
-  }
 
-  if ($end_list) {
-    print "$prefix--\n";
+    return $new;
+
+  } else {
+
+    return $old;
+
   }
 
 }

@@ -212,11 +212,11 @@ while ( my ($key, $data) = each(%$sp_hosts) ) {
 
   my ($port_num, $blade_num);
   if ($data->{"port"} =~ /(\d+)\/0\/(\d+)/) {
-    $port_num = $1;
-    $blade_num = $2;
+    $blade_num = $1;
+    $port_num = $2;
   } elsif ($data->{"port"} =~ /(\d+)\/(\d+)/) {
-    $port_num = $1;
-    $blade_num = $2;
+    $blade_num = $1;
+    $port_num = $2;
   } elsif ($data->{"port"} =~ /(\d+)/) {
     $port_num = $1;
   } else {
@@ -278,8 +278,6 @@ print "importing index pc... ";
 # o User(s)	
 # o Comments
 
-my($id, $result);
-
 my $filename = mktemp("/tmp/udbXXXXX");
 system("index -f cat pc '' > $filename");
 open(FH, $filename);
@@ -287,18 +285,24 @@ open(FH, $filename);
 my $first_line = <FH>;
 
 while ( <FH> ) {
-  my ($hostname, $desc, $brown_inv, $serial, $po_num, $purchase_date,
+  my ($name, $desc, $brown_inv, $serial, $po_num, $purchase_date,
     $install_date, $location, $users, $comments) = split(/\t/);
 
-  #print "updating $hostname\n";
+  print "updating $name\n";
 
-  $result = $udb->get_host($hostname);
-  if ( !$result ) {
+  my $device = $udb->get_equip($name);
+  if ( !$device ) {
     # create an equipment entry...
     my $equip_insert = $udb->prepare("INSERT INTO equipment (equip_status, managed_by, name, contact) VALUES (?, ?, ?, ?)");
     my $managed_by = "tstaff";
-    $equip_insert->execute('spare', 'tstaff', $hostname, $users);
+    $equip_insert->execute('spare', 'tstaff', $name, $users);
     $equip_insert->finish;
+  } elsif ($device->{comments}) {
+    chomp($comments);
+    if ($comments ne '') {
+      $comments .= ", ";
+    }
+    $comments .= $device->{comments};
   }
 
   my $place = $udb->get_location_id($location);
@@ -308,16 +312,70 @@ while ( <FH> ) {
 
   # owner, contact...
 
-  my $sth = $udb->prepare("update equipment set place_id = ?, brown_inv_num = ?, serial_num = ?, po_num = ?, purchased_on = ?, installed_on = ? where name = ?");
+  my $sth = $udb->prepare("update equipment set place_id = ?, brown_inv_num = ?, serial_num = ?, po_num = ?, purchased_on = ?, installed_on = ?, comments = ? where name = ?");
   $sth->bind_param(5, undef, {pg_type => PG_DATE});
   $sth->bind_param(6, undef, {pg_type => PG_DATE});
 
-  $sth->execute($place, $brown_inv, $serial, $po_num, $purchase_date, $install_date, $hostname);
+  $sth->execute($place, $brown_inv, $serial, $po_num, $purchase_date, $install_date, $comments, $name);
 }
 
 close(FH);
 
 print "done.\n";
+
+# # surplus index db
+# 
+# print "importing index surplus... ";
+# 
+# # o Hostname
+# # o Description
+# # o Brown inv. #
+# # o Serial #
+# # o Purchase Order#
+# # o Purchase date
+# # o Installation Date
+# # o Location
+# # o User(s)	
+# # o Comments
+# 
+# my($id, $result);
+# 
+# my $filename = mktemp("/tmp/udbXXXXX");
+# system("index -f cat surplus '' > $filename");
+# open(FH, $filename);
+# 
+# my $first_line = <FH>;
+# 
+# while ( <FH> ) {
+#   my ($hostname, $desc, $brown_inv, $serial, $po_num, $purchase_date,
+#     $install_date, $location, $users, $comments) = split(/\t/);
+# 
+#   print "updating $hostname\n";
+# 
+#   $result = $udb->get_host($hostname);
+#   if ( !$result ) {
+#     # create an equipment entry...
+#     my $equip_insert = $udb->prepare("INSERT INTO equipment (equip_status, managed_by, name, contact) VALUES (?, ?, ?, ?)");
+#     my $managed_by = "tstaff";
+#     $equip_insert->execute('spare', 'tstaff', $hostname, $users);
+#     $equip_insert->finish;
+#   }
+# 
+#   my $place = $udb->get_location_id($location);
+# 
+#   $install_date = &fix_date($install_date);
+#   $purchase_date = &fix_date($purchase_date);
+# 
+#   # owner, contact...
+# 
+#   my $sth = $udb->prepare("update equipment set place_id = ?, brown_inv_num = ?, serial_num = ?, po_num = ?, purchased_on = ?, installed_on = ?, comments = ? where name = ?");
+#   $sth->bind_param(5, undef, {pg_type => PG_DATE});
+#   $sth->bind_param(6, undef, {pg_type => PG_DATE});
+# 
+#   $sth->execute($place, $brown_inv, $serial, $po_num, $purchase_date, $install_date, $hostname, $comments);
+# }
+# 
+# close(FH);
 
 $udb->finish;
 

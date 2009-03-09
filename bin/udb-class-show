@@ -34,12 +34,13 @@ usage(0) if $help;
 my $udb = BrownCS::UDB->new;
 $udb->start($username);
 
-if (@ARGV != 1) {
+if (@ARGV != 2) {
   usage(2);
 }
 
 my $class = shift @ARGV;
-my @hosts = $udb->all_hosts_in_class($class);
+my $os = shift @ARGV;
+my @hosts = $udb->all_hosts_in_class($class, $os);
 if (not @hosts) {
   print STDERR "No such class $class.\n";
   exit(2);
@@ -61,12 +62,12 @@ udb-class-show - Print out a list of all computers in a class
 
 =head1 SYNOPSIS
 
-udb-class-show [-u username] <class>
+udb-class-show [-u username] <class> <os>
 
 =head1 DESCRIPTION
 
 udb-class-show queries the UDB database for all computers that belong to
-a given class.
+a given class and OS.
 
 =head1 OPTIONS
 

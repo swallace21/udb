@@ -10,39 +10,71 @@ use FindBin qw($RealBin);
 
 my %udb_commands = (
   'add' => {
-    'desc' => ["\t\tadd a new host"],
+    'desc' => "add a new device",
     'common' => 1,
   },
   'class-add' => {
-    'desc' => ["\tadd one or more hosts to a class"],
+    'desc' => "add one or more computers to a class",
     'common' => 0,
   },
   'class-del' => {
-    'desc' => ["\tremove one or more hosts from a class"],
+    'desc' => "remove one or more computers from a class",
     'common' => 0,
   },
   'classes' => {
-    'desc' => ["\tlist the classes to which the host belongs"],
+    'desc' => "list the classes to which the computers belongs",
     'common' => 0,
   },
   'class-show' => {
-    'desc' => ["\tlist the members of a class"],
+    'desc' => "list the members of a class",
     'common' => 0,
   },
   'contact-list' => {
-    'desc' => ["print out a contact list for all hosts in a class"],
+    'desc' => "print out a contact list for all devices in a class",
     'common' => 0,
   },
   'delete' => {
-    'desc' => ["\tdelete a host"],
-    'common' => 1,
+    'desc' => "delete a device",
+    'common' => 0,
   },
-  'modify' => {
-    'desc' => ["\tmodify a host"],
-    'common' => 1,
+  'edit' => {
+    'desc' => "modify a device record in a text editor",
+    'common' => 0,
   },
   'show' => {
-    'desc' => ["\tprint a summary of a host"],
+    'desc' => "print a summary of a device",
+    'common' => 1,
+  },
+  'rename' => {
+    'desc' => "rename a device",
+    'common' => 1,
+  },
+  'move' => {
+    'desc' => "move a device to a new location",
+    'common' => 1,
+  },
+  'disable' => {
+    'desc' => "disable (make a device spare)",
+    'common' => 1,
+  },
+  'surplus' => {
+    'desc' => "surplus a device",
+    'common' => 1,
+  },
+  'change-os' => {
+    'desc' => "change a computer's software configuration",
+    'common' => 1,
+  },
+  'change-subnet' => {
+    'desc' => "change a networked device's subnet",
+    'common' => 1,
+  },
+  'change-mac' => {
+    'desc' => "change a networked device's MAC address",
+    'common' => 1,
+  },
+  'change-owner' => {
+    'desc' => "change a device's primary user",
     'common' => 1,
   },
 );
@@ -56,18 +88,19 @@ sub usage {
     if (not $long) {
       next if not $udb_commands{$k}{'common'};
     }
-    print "    $k\t" . $udb_commands{$k}{'desc'}[0] . "\n";
+    printf("    %-18s%s\n", $k, $udb_commands{$k}{'desc'});
   }
   print "\nSee 'udb help COMMAND' for more information on a specific command.\n";
   exit($exit_status);
 }
 
 my $help = 0;
-my $verbose = 0;
-my $dryrun = 0;
-my $username = $ENV{'USER'};
+my $debug = 0;
 
-GetOptions ('help|h|?' => \$help) or usage(1, 0);
+GetOptions (
+  'help|h|?' => \$help,
+  'debug' => \$debug,
+) or usage(1, 0);
 
 my $cmd = shift;
 
@@ -84,6 +117,11 @@ if (($cmd eq 'help') or $help) {
   } else {
     usage(0, 1);
   }
+}
+
+if ($cmd eq 'change') {
+  my $cmd2 = shift;
+  $cmd = "$cmd-$cmd2";
 }
 
 if (not defined($udb_commands{$cmd})) {

@@ -11,7 +11,7 @@ use DBD::Pg qw(:pg_types);
 
 use BrownCS::UDB::Util qw(:all);
 
-my $debug = 0;
+my $debug = 1;
 
 #
 # Constructor
@@ -53,7 +53,7 @@ sub start {
     close(FH);
   }
 
-  while (! ($self->{dbh} = DBI->connect("dbi:Pg:dbname=udb;host=sysdb", $username, $password, {AutoCommit=>0, PrintError=>0}))) {
+  while (! ($self->{dbh} = DBI->connect("dbi:Pg:dbname=udb;host=sysdb", $username, $password, {AutoCommit=>0, PrintError=>1}))) {
     if ($debug) {
       print "Error connecting to database. Try again.\n";
       print DBI->errstr if $debug;
@@ -184,6 +184,12 @@ sub get_service_id {
   return $self->create("net_services", "service", $service);
 }
 
+sub get_interface_id {
+  my $self = shift;
+  my ($ethernet) = @_;
+  return $self->create("net_interfaces", "ethernet", $ethernet);
+}
+
 sub get_location_id {
   my $self = shift;
   my($room) = shift;
@@ -208,23 +214,24 @@ sub get_location_id {
 sub get_equip {
   my $self = shift;
   my ($name) = @_;
-  my %host = ();
+  my $device = {};
 
   my $aliases_select = $self->prepare("select nde.dns_name from net_dns_entries nde, net_addresses_net_interfaces nani, net_interfaces ni, net_addresses na where ni.equip_name = ? and nani.net_interfaces_id = ni.id and nani.net_addresses_id = na.id and na.id = nde.address and nde.authoritative = false");
   my $classes_select = $self->prepare("select cc.name from comp_classes cc, computers c, comp_classes_computers ccc where c.name = ? and ccc.comp_class = cc.id and ccc.computer = c.name and cc.os = ?");
   my $comp_select = $self->prepare("select c.os, c.pxelink, c.system_model, c.num_cpus, c.cpu_type, c.cpu_speed, c.memory, c.hard_drives, c.total_disk, c.other_drives, c.network_cards, c.video_cards, c.os_name, c.os_version, c.os_dist, c.info_time, c.boot_time from computers c where c.name = ?");
-  my $equip_select = $self->prepare("select e.contact, e.equip_status, e.managed_by from equipment e where e.name = ?");
-  my $iface_select = $self->prepare("select ni.ethernet, np.switch, np.port_num, np.blade_num, np.wall_plate from equipment e, net_interfaces ni, net_ports np where e.name = ? and e.name = ni.equip_name and ni.port_id = np.id");
-  my $ethernet_select = $self->prepare("select ni.ethernet from equipment e, net_interfaces ni where e.name = ? and e.name = ni.equip_name");
+  my $equip_select = $self->prepare("select e.contact, e.equip_status, e.managed_by, e.comments from equipment e where e.name = ?");
+  my $iface_select = $self->prepare("select ni.id, ni.ethernet, np.switch, np.port_num, np.blade_num, np.wall_plate from equipment e, net_interfaces ni, net_ports np where e.name = ? and e.name = ni.equip_name and ni.port_id = np.id");
+  my $ethernet_select = $self->prepare("select ni.id, ni.ethernet from equipment e, net_interfaces ni where e.name = ? and e.name = ni.equip_name");
   my $ip_addr_select = $self->prepare("select na.ipaddr from equipment e, net_addresses_net_interfaces nani, net_interfaces ni, net_addresses na where e.name = ? and e.name = ni.equip_name and nani.net_interfaces_id = ni.id and nani.net_addresses_id = na.id");
   my $place_select = $self->prepare("select p.city, p.building, p.room from places p, equipment e where e.name = ? and e.place_id = p.id");
   my $service_select = $self->prepare("select nans.net_services_id from equipment e, net_addresses_net_interfaces nani, net_interfaces ni, net_addresses na, net_addresses_net_services nans where e.name = ?  and e.name = ni.equip_name and nani.net_interfaces_id = ni.id and nani.net_addresses_id = na.id and nans.net_addresses_id = na.id");
   my $switch_select = $self->prepare("select ns.fqdn, ns.num_ports, ns.num_blades, ns.switch_type, ns.port_prefix, ns.connection, ns.username, ns.pass from net_switches ns where ns.name = ?");
 
-  $host{name} = $name;
+  $device->{name} = $name;
 
   $equip_select->execute($name);
-  $equip_select->bind_columns(\$host{contact}, \$host{status}, \$host{managed_by});
+  $equip_select->bind_columns(\$device->{contact}, \$device->{status},
+    \$device->{managed_by}, \$device->{comments});
   $equip_select->fetch;
 
   if ($equip_select->rows == 0) {
@@ -232,98 +239,99 @@ sub get_equip {
   }
 
   $place_select->execute($name);
-  $place_select->bind_columns(\$host{city}, \$host{building}, \$host{room});
+  $place_select->bind_columns(\$device->{city}, \$device->{building},
+    \$device->{room});
   $place_select->fetch;
 
   $comp_select->execute($name);
-  $comp_select->bind_columns(\$host{os_type}, \$host{pxelink},
-    \$host{system_model}, \$host{num_cpus}, \$host{cpu_type},
-    \$host{cpu_speed}, \$host{memory}, \$host{hard_drives},
-    \$host{total_disk}, \$host{other_drives}, \$host{network_cards},
-    \$host{video_cards}, \$host{os_name}, \$host{os_version},
-    \$host{os_dist}, \$host{info_time}, \$host{boot_time});
+  $comp_select->bind_columns(\$device->{os_type}, \$device->{pxelink},
+    \$device->{system_model}, \$device->{num_cpus}, \$device->{cpu_type},
+    \$device->{cpu_speed}, \$device->{memory}, \$device->{hard_drives},
+    \$device->{total_disk}, \$device->{other_drives}, \$device->{network_cards},
+    \$device->{video_cards}, \$device->{os_name}, \$device->{os_version},
+    \$device->{os_dist}, \$device->{info_time}, \$device->{boot_time});
   $comp_select->fetch;
-  $host{is_comp} = $comp_select->rows;
+  $device->{is_comp} = $comp_select->rows;
 
-  if ($host{is_comp}) {
-    $host{classes} = [];
+  if ($device->{is_comp}) {
+    $device->{classes} = [];
     my $class;
-    $classes_select->execute($name, $host{os_type});
+    $classes_select->execute($name, $device->{os_type});
     $classes_select->bind_columns(\$class);
     while ($classes_select->fetch) {
       if ($class ne $name) {
-        push @{$host{classes}}, $class;
+        push @{$device->{classes}}, $class;
       }
     }
   }
 
   $switch_select->execute($name);
-  $switch_select->bind_columns(\$host{fqdn}, \$host{num_ports},
-    \$host{num_blades}, \$host{switch_type}, \$host{port_prefix},
-    \$host{connection}, \$host{username}, \$host{pass});
+  $switch_select->bind_columns(\$device->{fqdn}, \$device->{num_ports},
+    \$device->{num_blades}, \$device->{switch_type}, \$device->{port_prefix},
+    \$device->{connection}, \$device->{username}, \$device->{pass});
   $switch_select->fetch;
-  $host{is_switch} = $switch_select->rows;
+  $device->{is_switch} = $switch_select->rows;
 
-  $host{interfaces} = [];
+  $device->{interfaces} = [];
   my %interface = ();
   $iface_select->execute($name);
-  $iface_select->bind_columns(\$interface{ethernet},
+  $iface_select->bind_columns(\$interface{id}, \$interface{ethernet},
     \$interface{'switch'}, \$interface{port_num}, \$interface{blade_num},
     \$interface{wall_plate});
   while ($iface_select->fetch) {
-    push @{$host{interfaces}}, \%interface;
+    push @{$device->{interfaces}}, \%interface;
   }
 
   if ($iface_select->rows == 0) {
     $ethernet_select->execute($name);
-    $ethernet_select->bind_columns(\$interface{ethernet});
+    $ethernet_select->bind_columns(\$interface{id}, \$interface{ethernet});
     $interface{'switch'} = undef;
     $interface{'port_num'} = undef;
     $interface{'blade_num'} = undef;
     $interface{'wall_plate'} = undef;
     while ($ethernet_select->fetch) {
-      push @{$host{interfaces}}, \%interface;
+      push @{$device->{interfaces}}, \%interface;
     }
   }
 
-  $host{ip_addr} = [];
+  $device->{ip_addr} = [];
   my $ip_addr; 
   $ip_addr_select->execute($name);
   $ip_addr_select->bind_columns(\$ip_addr);
   while ($ip_addr_select->fetch) {
-    push @{$host{ip_addr}}, $ip_addr;
+    push @{$device->{ip_addr}}, $ip_addr;
   }
 
-  $host{aliases} = [];
+  $device->{aliases} = [];
   my $alias;
   $aliases_select->execute($name);
   $aliases_select->bind_columns(\$alias);
   while ($aliases_select->fetch) {
     if ($alias ne $name) {
-      push @{$host{aliases}}, $alias;
+      push @{$device->{aliases}}, $alias;
     }
   }
 
-  $host{services} = [];
+  $device->{services} = [];
   my $service;
   $service_select->execute($name);
   $service_select->bind_columns(\$service);
   while ($service_select->fetch) {
     if ($service ne $name) {
-      push @{$host{services}}, $service;
+      push @{$device->{services}}, $service;
     }
   }
 
-  return %host;
+  return $device;
 }
 
 sub get_host {
   my $self = shift;
   my ($hostname) = @_;
-  my %host = $self->get_equip($hostname);
+  my $host = $self->get_equip($hostname);
 
-  if ($host{is_comp}) {
-    return %host;
+  if ($host->{is_comp}) {
+    return $host;
   } else {
     return ();
   } 
@@ -421,7 +429,7 @@ sub all_hosts_in_room {
   my @hosts_in_room = ();
   my $host;
 
-  my $all_hosts_in_room_select = $self->prepare("select e.name from places p, equipment e where e.place_id = p.id and p.room = ?");
+  my $all_hosts_in_room_select = $self->prepare("select e.name from places p, equipment e where e.place_id = p.id and p.room = ? order by e.name");
 
   $all_hosts_in_room_select->execute($room);
   $all_hosts_in_room_select->bind_columns(\$host);
@@ -480,7 +488,7 @@ sub insert_host {
 
   my $protected = 0;
 
-  my $equip_insert = $self->prepare("INSERT INTO equipment (equip_status, managed_by, name, contact) VALUES (?, ?, ?, ?)");
+  my $equip_insert = $self->prepare("INSERT INTO equipment (equip_status, managed_by, name, contact, comments) VALUES (?, ?, ?, ?, ?)");
 
   my $comp_insert = $self->prepare("INSERT INTO computers (name, os, pxelink) VALUES (?, ?, ?)");
 
@@ -520,6 +528,9 @@ sub insert_host {
   if ((defined $ethernet) and ($ethernet eq "")) {
     $ethernet = undef;
   }
+  if ((defined $ethernet) and ($ethernet eq "0:0:0:0:0:0")) {
+    $ethernet = undef;
+  }
 
   my $ipaddr = $host->{'ip_addr'};
   my $vlan_id;
@@ -553,9 +564,14 @@ sub insert_host {
 
   my $managed_by = "tstaff";
 
+  my $comments = $host->{'comment'};
+  if (!$comments) {
+    $comments = undef;
+  }
+
   # create an equipment entry...
 
-  $equip_insert->execute($equip_status, $managed_by, $hostname, $contact);
+  $equip_insert->execute($equip_status, $managed_by, $hostname, $contact, $comments);
   $equip_insert->finish;
 
   my $pxelink = $host->{'pxelink'};

@@ -22,6 +22,7 @@ our @EXPORT_OK = qw(
   get_date
   ipv4_n2x
   fix_date
+  get_new
 );
 
 our %EXPORT_TAGS = ("all" => [@EXPORT_OK]);
@@ -222,6 +223,25 @@ sub fix_year {
   else {
     $year = '19' . $year;
   }
+}
+
+sub get_new {
+  my ($maybe, $desc, $verify_proc) = @_;
+
+  return if (($maybe) and (not confirm("Do you want to change the $desc? ",0)));
+
+  my $answer;
+  while (1) {
+    $answer = ask("Enter the new $desc (blank for no change):",'');
+    if (not defined $answer) {
+      print "\n";
+      last;
+    }
+    last if $answer eq '';
+    next if not &$verify_proc($answer);
+    last;
+  }
+  return $answer;
 }
 
 1;

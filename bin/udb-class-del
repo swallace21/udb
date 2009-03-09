@@ -39,13 +39,13 @@ if (@ARGV < 1) {
 my $class = shift @ARGV;
 my @hostnames = @ARGV;
 
-$udb->prepare("class_comp_delete", "delete from comp_classes_computers ccc using comp_classes cc, computers c where ccc.comp_classes_id = cc.id and ccc.computers_id = c.id and cc.class = ? and c.machine_name = ?");
+my $sth = $udb->prepare("delete from comp_classes_computers ccc using comp_classes cc where ccc.comp_class = cc.id and cc.name = ? and ccc.computer = ?");
 
 foreach my $hostname (@hostnames) {
   if ($verbose) {
     print "removing host $hostname from class $class\n";
   }
-  $udb->{sths}->{class_comp_delete}->execute($class, $hostname);
+  $sth->execute($class, $hostname);
 }
 
 END {
