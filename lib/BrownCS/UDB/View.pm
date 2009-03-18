@@ -14,7 +14,7 @@ use BrownCS::UDB::Util qw(:all);
 
 my $fields = {
   'room' => {
-    'desc' => "Location",
+    'desc' => "Room",
     'views' => ['admin'],
   },
   'contact' => {
@@ -37,7 +37,7 @@ my $fields = {
     'desc' => "MAC address",
     'views' => ['hw', 'net'],
   },
-  'ip_addr' => {
+  'ipaddr' => {
     'desc' => "IP address(es)",
     'views' => ['sw', 'net'],
   },
@@ -118,11 +118,11 @@ my $fields = {
     'views' => ['net'],
   },
   'num_ports' => {
-    'desc' => "Number of ports",
+    'desc' => "Ports",
     'views' => ['net'],
   },
   'num_blades' => {
-    'desc' => "Number of blades",
+    'desc' => "Blades",
     'views' => ['net'],
   },
   'switch_type' => {
@@ -164,6 +164,18 @@ my $fields = {
   'services' => {
     'desc' => "Services",
     'views' => ['sw'],
+  },
+  'place' => {
+    'desc' => "Location",
+    'views' => ['admin'],
+  },
+  'equip' => {
+    'desc' => "Equipment info",
+    'views' => ['admin'],
+  },
+  'comp' => {
+    'desc' => "Computer info",
+    'views' => ['admin'],
   },
   'comments' => {
     'desc' => "Comments",

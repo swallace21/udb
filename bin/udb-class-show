@@ -12,7 +12,6 @@ use FindBin qw($RealBin);
 use lib "$RealBin/../lib";
 use BrownCS::UDB;
 use BrownCS::UDB::Util qw(:all);
-use BrownCS::UDB::View qw(print_record);
 
 # Print a simple help message.
 sub usage {

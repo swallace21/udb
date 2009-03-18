@@ -10,6 +10,7 @@ use FindBin qw($RealBin);
 use lib "$RealBin/../lib";
 use BrownCS::UDB;
 use BrownCS::UDB::Util qw(:all);
+use BrownCS::UDB::Switch;
 
 # Print a simple help message.
 sub usage {
@@ -37,6 +38,8 @@ if (@ARGV != 1) {
 
 my $hostname = shift @ARGV;
 
+my $host = $udb->get_host(
+
 if ($udb->is_protected($hostname)) {
   print "This device is protected!\n";
   print "Do not modify or delete this entry unless you know what you're doing.\n";
@@ -45,6 +48,11 @@ if ($udb->is_protected($hostname)) {
 
 # What subnet?
 # Random IP
+
+my $switch = BrownCS::UDB::Switch->new($switch_name);
+$switch->start;
+$switch->update_port($host, $walljack, $switch, $port, $subnet);
+$switch->disconnect;
 
 END {
   if (defined $udb) {

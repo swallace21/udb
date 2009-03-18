@@ -43,11 +43,27 @@ if ($udb->is_protected($hostname)) {
   exit(1);
 }
 
-my $new_location = &get_new_location(0);
-my $new_user = &get_new_user(1);
-# Which ethernet port?
-# Confirm IP/subnet change
+my $new_room = get_new(0, "room number", \&verify_location);
+my $new_user = get_new(0, "room number", sub{1;});
+my $new_port;
 
+while ($new_port = get_new(0, "wall plate", sub{1;})) {
+
+  my $port_id = $udb->query("select np.id from net_ports np where
+    np.wall_plate = ?")->flat;
+
+  if (not $port_id) {
+    $new_port = undef;
+    next;
+  }
+
+  my @vlans = $udb->query("select npnv.vlan_num from net_ports_net_vlans
+    npnv where npnv.net_ports_id = ?")->flat;
+
+  print "vlans are: @vlans\n";
+
+}
+    
 END {
   if (defined $udb) {
     $udb->finish;
@@ -58,11 +74,11 @@ __END__
 
 =head1 NAME
 
-udb-modify - Perform maintenance on an existing device record in UDB
+udb-move - Perform maintenance on an existing device record in UDB
 
 =head1 SYNOPSIS
 
-udb-modify [-u username] <device>
+udb-move [-u username] <device>
 
 =head1 DESCRIPTION
 

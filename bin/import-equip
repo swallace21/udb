@@ -37,8 +37,6 @@ usage(1) if $help;
 
 $udb->start($username);
 
-#$udb->{dbh}->trace(2);
-
 eval('require "/tstaff/share/cdb/db.pl";');
 our $cdb_by_hostname;
 
@@ -47,29 +45,29 @@ our ($sp_switches, $sp_hosts);
 
 print "deleting old data... ";
 
-$udb->{dbh}->do("DELETE FROM equipment;");
-$udb->{dbh}->do("DELETE FROM computers;");
-$udb->{dbh}->do("DELETE FROM net_interfaces;");
-$udb->{dbh}->do("DELETE FROM net_addresses;");
-$udb->{dbh}->do("DELETE FROM net_addresses_net_interfaces;");
-$udb->{dbh}->do("DELETE FROM net_dns_entries;");
-$udb->{dbh}->do("DELETE FROM comp_classes;");
-$udb->{dbh}->do("DELETE FROM comp_classes_computers;");
-$udb->{dbh}->do("DELETE FROM net_zones;");
-$udb->{dbh}->do("DELETE FROM net_vlans;");
-$udb->{dbh}->do("DELETE FROM equip_status_types;");
-$udb->{dbh}->do("DELETE FROM management_types;");
-$udb->{dbh}->do("DELETE FROM routing_types;");
-$udb->{dbh}->do("DELETE FROM dns_regions;");
-$udb->{dbh}->do("DELETE FROM os_types;");
-$udb->{dbh}->do("DELETE FROM places;");
-$udb->{dbh}->do("DELETE FROM net_switches;");
+$udb->db->query("DELETE FROM equipment;");
+$udb->db->query("DELETE FROM computers;");
+$udb->db->query("DELETE FROM net_interfaces;");
+$udb->db->query("DELETE FROM net_addresses;");
+$udb->db->query("DELETE FROM net_addresses_net_interfaces;");
+$udb->db->query("DELETE FROM net_dns_entries;");
+$udb->db->query("DELETE FROM comp_classes;");
+$udb->db->query("DELETE FROM comp_classes_computers;");
+$udb->db->query("DELETE FROM net_zones;");
+$udb->db->query("DELETE FROM net_vlans;");
+$udb->db->query("DELETE FROM equip_status_types;");
+$udb->db->query("DELETE FROM management_types;");
+$udb->db->query("DELETE FROM routing_types;");
+$udb->db->query("DELETE FROM dns_regions;");
+$udb->db->query("DELETE FROM os_types;");
+$udb->db->query("DELETE FROM places;");
+$udb->db->query("DELETE FROM net_switches;");
 
 print "done.\n";
 
 print "adjusting sequences... ";
 
-$udb->{dbh}->do("alter sequence dns_serial_num_seq restart with 6680;");
+$udb->db->query("alter sequence dns_serial_num_seq restart with 6680;");
 
 print "done.\n";
 
@@ -121,21 +119,10 @@ os_insert("winxp", 0);
 os_insert("winxp64", 0);
 
 my $zone_insert = $udb->{dbh}->prepare("INSERT INTO net_zones (zone_manager, equip_manager, routing_type, name, dynamic_dhcp) VALUES (?, ?, ?, ?, ?)");
-$zone_insert->bind_param(5, undef, {pg_type => PG_BOOL});
 
 my $vlan_insert = $udb->{dbh}->prepare("INSERT INTO net_vlans (zone, vlan_num, network, dhcp, gateway) VALUES (?, ?, ?, ?, ?)");
-$vlan_insert->bind_param(2, undef, SQL_INTEGER);
-$vlan_insert->bind_param(3, undef, {pg_type => PG_CIDR});
-$vlan_insert->bind_param(4, undef, {pg_type => PG_BOOL});
-$vlan_insert->bind_param(5, undef, {pg_type => PG_INET});
 
 my $vlan_dhcp_insert = $udb->{dbh}->prepare("INSERT INTO net_vlans (zone, vlan_num, network, dhcp, dynamic_dhcp_start, dynamic_dhcp_end, gateway) VALUES (?, ?, ?, ?, ?, ?, ?)");
-$vlan_dhcp_insert->bind_param(2, undef, SQL_INTEGER); 
-$vlan_dhcp_insert->bind_param(3, undef, {pg_type => PG_CIDR});
-$vlan_dhcp_insert->bind_param(4, undef, {pg_type => PG_BOOL});
-$vlan_dhcp_insert->bind_param(5, undef, {pg_type => PG_INET});
-$vlan_dhcp_insert->bind_param(6, undef, {pg_type => PG_INET});
-$vlan_dhcp_insert->bind_param(7, undef, {pg_type => PG_INET});
 
 $zone_insert->execute("tstaff", "tstaff", "DMZ", "tstaff-dmz", 0);
 $zone_insert->execute("tstaff", "tstaff", "private", "tstaff-private", 0);
@@ -200,7 +187,7 @@ print "done.\n";
 
 print "importing ports from switchport... ";
  
-$udb->{dbh}->do("DELETE FROM net_ports;");
+$udb->db->query("DELETE FROM net_ports;");
 
 while ( my ($key, $data) = each(%$sp_hosts) ) {
   my $sth;
@@ -221,6 +208,11 @@ while ( my ($key, $data) = each(%$sp_hosts) ) {
     $port_num = $1;
   } else {
     die "bad format";
+  }
+
+  my $room_num;
+  if ($wall_plate =~ /^(\d+)/) {
+    $room_num = $1;
   }
 
   # insert port

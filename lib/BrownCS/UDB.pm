@@ -1,42 +1,19 @@
 package BrownCS::UDB;
-
-use 5.010000;
-use strict;
-use warnings;
+use Moose;
 
 use Crypt::Simple;
-
-use DBI qw(:sql_types);
-use DBD::Pg qw(:pg_types);
+use DBIx::Simple;
+use Data::Dumper;
 
 use BrownCS::UDB::Util qw(:all);
 
-my $debug = 1;
+has 'db' => (
+  is => 'ro',
+  isa => 'DBIx::Simple',
+  handles => [qw(query)]
+);
 
-#
-# Constructor
-# 
-
-sub new {
-  my $proto = shift;
-  my $class = ref($proto) || $proto;
-  my %args = @_;
-  my $self = {};
-
-  $self->{dbh} = undef;
-  @{$self->{sths}} = ();
-
-  bless($self, $class);
-  return $self;
-}
-
-sub prepare {
-  my $self = shift;
-  my ($st) = @_;
-  my $sth = $self->{dbh}->prepare($st);
-  push @{$self->{sths}}, $sth;
-  return $sth;
-}
+my $debug = 0;
 
 sub start {
   my $self = shift;
@@ -53,7 +30,7 @@ sub start {
     close(FH);
   }
 
-  while (! ($self->{dbh} = DBI->connect("dbi:Pg:dbname=udb;host=sysdb", $username, $password, {AutoCommit=>0, PrintError=>1}))) {
+  while (! ($self->{db} = DBIx::Simple->connect("dbi:Pg:dbname=udb;host=sysdb", $username, $password, {AutoCommit=>0, PrintError=>1}))) {
     if ($debug) {
       print "Error connecting to database. Try again.\n";
       print DBI->errstr if $debug;
@@ -71,85 +48,70 @@ sub start {
   close(FH);
   umask($old_umask);
 
-  #$self->{dbh}->trace(2);
-
   if ($debug) {
     my $dbg_file = "/tmp/test.debug.log";
     open ($self->{dbg_fh}, ">>$dbg_file") or die qq{Could not open "$dbg_file": $!\n};
-    $self->{dbh}->pg_server_trace($self->{dbg_fh});
+    $self->db->dbh->pg_server_trace($self->{dbg_fh});
+    $self->db->dbh->trace(2);
   }
 
 }
 
 sub finish {
   my $self = shift;
-  foreach my $sth (@{$self->{sths}}) {
-    $sth->finish;
-  }
 
   if ($debug) {
-    $self->{dbh}->pg_server_untrace;
+    $self->{db}->{dbh}->pg_server_untrace;
     close($self->{dbg_fh});
   }
 
-  if ($self->{dbh}) {
-    $self->{dbh}->commit;
-    $self->{dbh}->disconnect;
+  if ($self->{db}) {
+    $self->{db}->commit;
+    $self->{db}->disconnect;
   }
 }
 
 #
-# Utilities
+# Internal functions
 #
 
 sub create {
   my $self = shift;
   my ($table, $field, $value) = @_;
 
-  my $sth_insert = $self->prepare("insert into $table ($field) values (?)");
-  my $sth_select = $self->prepare("select $field from $table where $field = ?");
+  my ($result) = $self->query("select $field from $table where $field = ?",
+    $value)->flat;
 
-  $sth_select->execute($value);
-
-  if ($sth_select->rows == 0) {
-    $sth_insert->execute($value);
+  if (not $result) {
+    ($result) = $self->query("insert into $table ($field) values (?) returning
+      $field", $value)->flat;
   }
+
+  return $result;
 }
 
 sub get_id {
   my $self = shift;
-  my ($table, $field, $value) = @_;
-  my $id;
+  my ($table, $field, $fieldval) = @_;
 
-  my $sth_select = $self->prepare("select id from $table where $field = ?");
-
-  $sth_select->execute($value);
-
-  if ($sth_select->rows == 0) {
-    die "Can't find entry in $table where $field = $value!\n";
-  } else {
-    $id = $sth_select->fetchrow_arrayref()->[0];
-  }
+  my ($id) = $self->query("select id from $table where $field = ?",
+    $fieldval)->flat;
+   
+  die "Can't find entry in $table where $field = $fieldval!\n" if not $id;
 
   return $id;
 }
 
 sub get_field {
   my $self = shift;
-  my ($table, $field, $value) = @_;
-  my $id;
+  my ($table, $field, $id) = @_;
 
-  my $sth_select = $self->prepare("select $field from $table where id = ?");
+  my ($fieldval) = $self->query("select $field from $table where id = ?",
+    $id)->flat;
 
-  $sth_select->execute($value);
+  die "Can't find entry in $table where id = $id!\n" if not $fieldval;
 
-  if ($sth_select->rows == 0) {
-    die "Can't find entry in $table where id = $value!\n";
-  } else {
-    $id = $sth_select->fetchrow_arrayref()->[0];
-  }
-
-  return $id;
+  return $fieldval;
 }
 
 #
@@ -160,22 +122,15 @@ sub get_class_id {
   my $self = shift;
   my ($name, $os) = @_;
 
-  my $id;
+  my ($result) = $self->query("select id from comp_classes where name = ? and
+    os = ?", $name, $os)->flat;
 
-  my $sth_insert = $self->prepare("insert into comp_classes (name, os) values (?, ?)");
-
-  my $sth_select = $self->prepare("select id from comp_classes where name = ? and os = ?");
-  $sth_select->execute($name, $os);
-  $sth_select->bind_columns(\$id);
-
-  if ($sth_select->rows == 0) {
-    $sth_insert->execute($name, $os);
-    $id = $self->{dbh}->last_insert_id(undef, undef, "comp_classes", undef);
-    return $id;
-  } else {
-    $sth_select->fetch;
-    return $id;
+  if (not $result) {
+    ($result) = $self->query("insert into comp_classes (name, os) values (??)
+      returning id", $name, $os)->flat;
   }
+  
+  return $result;
 }
 
 sub get_service_id {
@@ -194,20 +149,11 @@ sub get_location_id {
   my $self = shift;
   my($room) = shift;
 
-  my $id;
+  my ($result) = $self->query("select id from places where room = ?", $room)->flat;
 
-  my $sth_insert = $self->prepare("insert into places (city, building, room) values (?, ?, ?)");
-
-  my $sth_select = $self->prepare("select id from places where room = ?");
-  $sth_select->execute($room);
-  $sth_select->bind_columns(\$id);
-
-  if ($sth_select->rows == 0) {
-    $sth_insert->execute("Providence", "CIT", $room);
-    return $self->{dbh}->last_insert_id(undef, undef, "places", undef);
-  } else {
-    $sth_select->fetch;
-    return $id;
+  if (not $result) {
+    ($result) = $self->query("insert into places (city, building, room) values
+      (??) returning id", "Providence", "CIT", $room)->flat;
   }
 }
 
@@ -216,157 +162,86 @@ sub get_equip {
   my ($name) = @_;
   my $device = {};
 
-  my $aliases_select = $self->prepare("select nde.dns_name from net_dns_entries nde, net_addresses_net_interfaces nani, net_interfaces ni, net_addresses na where ni.equip_name = ? and nani.net_interfaces_id = ni.id and nani.net_addresses_id = na.id and na.id = nde.address and nde.authoritative = false");
-  my $classes_select = $self->prepare("select cc.name from comp_classes cc, computers c, comp_classes_computers ccc where c.name = ? and ccc.comp_class = cc.id and ccc.computer = c.name and cc.os = ?");
-  my $comp_select = $self->prepare("select c.os, c.pxelink, c.system_model, c.num_cpus, c.cpu_type, c.cpu_speed, c.memory, c.hard_drives, c.total_disk, c.other_drives, c.network_cards, c.video_cards, c.os_name, c.os_version, c.os_dist, c.info_time, c.boot_time from computers c where c.name = ?");
-  my $equip_select = $self->prepare("select e.contact, e.equip_status, e.managed_by, e.comments from equipment e where e.name = ?");
-  my $iface_select = $self->prepare("select ni.id, ni.ethernet, np.switch, np.port_num, np.blade_num, np.wall_plate from equipment e, net_interfaces ni, net_ports np where e.name = ? and e.name = ni.equip_name and ni.port_id = np.id");
-  my $ethernet_select = $self->prepare("select ni.id, ni.ethernet from equipment e, net_interfaces ni where e.name = ? and e.name = ni.equip_name");
-  my $ip_addr_select = $self->prepare("select na.ipaddr from equipment e, net_addresses_net_interfaces nani, net_interfaces ni, net_addresses na where e.name = ? and e.name = ni.equip_name and nani.net_interfaces_id = ni.id and nani.net_addresses_id = na.id");
-  my $place_select = $self->prepare("select p.city, p.building, p.room from places p, equipment e where e.name = ? and e.place_id = p.id");
-  my $service_select = $self->prepare("select nans.net_services_id from equipment e, net_addresses_net_interfaces nani, net_interfaces ni, net_addresses na, net_addresses_net_services nans where e.name = ?  and e.name = ni.equip_name and nani.net_interfaces_id = ni.id and nani.net_addresses_id = na.id and nans.net_addresses_id = na.id");
-  my $switch_select = $self->prepare("select ns.fqdn, ns.num_ports, ns.num_blades, ns.switch_type, ns.port_prefix, ns.connection, ns.username, ns.pass from net_switches ns where ns.name = ?");
-
   $device->{name} = $name;
 
-  $equip_select->execute($name);
-  $equip_select->bind_columns(\$device->{contact}, \$device->{status},
-    \$device->{managed_by}, \$device->{comments});
-  $equip_select->fetch;
+  $device->{equip} = $self->query("select e.contact, e.equip_status as \
+    status, e.managed_by, e.comments from equipment e where e.name = ?",
+    $name)->hash;
 
-  if ($equip_select->rows == 0) {
+  if (not $device->{equip}) {
     return ();
   }
 
-  $place_select->execute($name);
-  $place_select->bind_columns(\$device->{city}, \$device->{building},
-    \$device->{room});
-  $place_select->fetch;
+  $device->{place} = $self->query("select p.city, p.building, p.room from \
+    places p, equipment e where e.name = ? and e.place_id = p.id", $name)->hash;
 
-  $comp_select->execute($name);
-  $comp_select->bind_columns(\$device->{os_type}, \$device->{pxelink},
-    \$device->{system_model}, \$device->{num_cpus}, \$device->{cpu_type},
-    \$device->{cpu_speed}, \$device->{memory}, \$device->{hard_drives},
-    \$device->{total_disk}, \$device->{other_drives}, \$device->{network_cards},
-    \$device->{video_cards}, \$device->{os_name}, \$device->{os_version},
-    \$device->{os_dist}, \$device->{info_time}, \$device->{boot_time});
-  $comp_select->fetch;
-  $device->{is_comp} = $comp_select->rows;
+  $device->{comp} = $self->query("select c.os, c.pxelink, c.system_model, \
+    c.num_cpus, c.cpu_type, c.cpu_speed, c.memory, c.hard_drives, \
+    c.total_disk, c.other_drives, c.network_cards, c.video_cards, c.os_name, \
+    c.os_version, c.os_dist, c.info_time, c.boot_time from computers c where \
+    c.name = ?", $name)->hash;
 
-  if ($device->{is_comp}) {
-    $device->{classes} = [];
-    my $class;
-    $classes_select->execute($name, $device->{os_type});
-    $classes_select->bind_columns(\$class);
-    while ($classes_select->fetch) {
-      if ($class ne $name) {
-        push @{$device->{classes}}, $class;
-      }
-    }
+  if ($device->{comp}) {
+    $device->{classes} = $self->query("select cc.name from comp_classes \
+      cc, computers c, comp_classes_computers ccc where c.name = ? and \
+      ccc.comp_class = cc.id and ccc.computer = c.name and cc.os = ?", $name,
+      $device->{comp}->{os})->flat;
   }
 
-  $switch_select->execute($name);
-  $switch_select->bind_columns(\$device->{fqdn}, \$device->{num_ports},
-    \$device->{num_blades}, \$device->{switch_type}, \$device->{port_prefix},
-    \$device->{connection}, \$device->{username}, \$device->{pass});
-  $switch_select->fetch;
-  $device->{is_switch} = $switch_select->rows;
+  $device->{'switch'} = $self->query("select ns.fqdn, ns.num_ports, \
+    ns.num_blades, ns.switch_type, ns.port_prefix, ns.connection, ns.username, \
+    ns.pass from net_switches ns where ns.name = ?", $name)->hash;
 
-  $device->{interfaces} = [];
-  my %interface = ();
-  $iface_select->execute($name);
-  $iface_select->bind_columns(\$interface{id}, \$interface{ethernet},
-    \$interface{'switch'}, \$interface{port_num}, \$interface{blade_num},
-    \$interface{wall_plate});
-  while ($iface_select->fetch) {
-    push @{$device->{interfaces}}, \%interface;
+  $device->{interfaces} = $self->query("select ni.id, ni.ethernet, \
+    np.switch, np.port_num, np.blade_num, np.wall_plate from equipment e, \
+    net_interfaces ni, net_ports np where e.name = ? and e.name = \
+    ni.equip_name and ni.port_id = np.id", $name)->hashes;
+
+  if (not $device->{interfaces}) {
+    $device->{interfaces} = $self->query("select ni.id, ni.ethernet from \
+      equipment e, net_interfaces ni where e.name = ? and e.name = \
+      ni.equip_name", $name)->hashes;
   }
 
-  if ($iface_select->rows == 0) {
-    $ethernet_select->execute($name);
-    $ethernet_select->bind_columns(\$interface{id}, \$interface{ethernet});
-    $interface{'switch'} = undef;
-    $interface{'port_num'} = undef;
-    $interface{'blade_num'} = undef;
-    $interface{'wall_plate'} = undef;
-    while ($ethernet_select->fetch) {
-      push @{$device->{interfaces}}, \%interface;
-    }
-  }
+  $device->{ipaddr} = $self->query("select na.ipaddr from equipment e, \
+    net_addresses_net_interfaces nani, net_interfaces ni, net_addresses na \
+    where e.name = ? and e.name = ni.equip_name and nani.net_interfaces_id = \
+    ni.id and nani.net_addresses_id = na.id",$name)->flat;
 
-  $device->{ip_addr} = [];
-  my $ip_addr; 
-  $ip_addr_select->execute($name);
-  $ip_addr_select->bind_columns(\$ip_addr);
-  while ($ip_addr_select->fetch) {
-    push @{$device->{ip_addr}}, $ip_addr;
-  }
 
-  $device->{aliases} = [];
-  my $alias;
-  $aliases_select->execute($name);
-  $aliases_select->bind_columns(\$alias);
-  while ($aliases_select->fetch) {
-    if ($alias ne $name) {
-      push @{$device->{aliases}}, $alias;
-    }
-  }
+  $device->{aliases} = $self->query("select nde.dns_name from \
+    net_dns_entries nde, net_addresses_net_interfaces nani, net_interfaces ni, \
+    net_addresses na where ni.equip_name = ? and nani.net_interfaces_id = \
+    ni.id and nani.net_addresses_id = na.id and na.id = nde.address and \
+    nde.authoritative = false", $name)->flat;
 
-  $device->{services} = [];
-  my $service;
-  $service_select->execute($name);
-  $service_select->bind_columns(\$service);
-  while ($service_select->fetch) {
-    if ($service ne $name) {
-      push @{$device->{services}}, $service;
-    }
-  }
+  $device->{services} = $self->query("select nans.net_services_id from \
+    equipment e, net_addresses_net_interfaces nani, net_interfaces ni, \
+    net_addresses na, net_addresses_net_services nans where e.name = ? and \
+    e.name = ni.equip_name and nani.net_interfaces_id = ni.id and \
+    nani.net_addresses_id = na.id and nans.net_addresses_id = \
+    na.id",$name)->flat;
 
   return $device;
-}
-
-sub get_host {
-  my $self = shift;
-  my ($hostname) = @_;
-  my $host = $self->get_equip($hostname);
-
-  if ($host->{is_comp}) {
-    return $host;
-  } else {
-    return ();
-  } 
 }
 
 sub get_vlan {
   my $self = shift;
   my ($ip) = @_;
 
-  my $sth = $self->prepare("select vlan_num from net_vlans v where ? << v.network");
+  my ($vlan) = $self->query("select vlan_num from net_vlans v where ? << \
+    v.network", $ip)->flat;
 
-  $sth->execute($ip);
-
-  my $vlan_id;
-
-  if ($sth->rows == 0) {
-    die "Can't find vlan for $ip!\n";
-  } else {
-    $vlan_id = $sth->fetchrow_arrayref()->[0];
-  }
-
-  return $vlan_id;
+  die "Can't find vlan for $ip!\n" if not $vlan;
+  return $vlan;
 }
 
 sub is_protected {
   my $self = shift;
   my ($name) = @_;
 
-  my $sth = $self->prepare("select e.protected from equipment e where e.name = ?");
-
-  my $protected = 0;
-
-  $sth->execute($name);
-  $sth->bind_columns(\$protected);
-  $sth->fetch;
+  my ($protected) = $self->query("select e.protected from equipment e where e.name = \
+    ?", $name)->flat;
 
   return $protected;
 }
@@ -409,73 +284,29 @@ sub is_protected {
 
 sub get_all_ips {
   my $self = shift;
-  my %ip_addrs = ();
-  my $addr;
-
-  my $sth = $self->prepare("select ipaddr from net_addresses");
-  $sth->execute;
-  $sth->bind_columns(\$addr);
-
-  while ($sth->fetch) {
-    $ip_addrs{$addr} = 1;
-  }
-
-  return %ip_addrs;
+  return $self->query("select ipaddr from net_addresses")->flat;
 }
 
 sub all_hosts_in_room {
   my $self = shift;
   my ($room) = @_;
-  my @hosts_in_room = ();
-  my $host;
-
-  my $all_hosts_in_room_select = $self->prepare("select e.name from places p, equipment e where e.place_id = p.id and p.room = ? order by e.name");
-
-  $all_hosts_in_room_select->execute($room);
-  $all_hosts_in_room_select->bind_columns(\$host);
-  
-  while ($all_hosts_in_room_select->fetch) {
-    push @hosts_in_room, $host;
-  }
-
-  return @hosts_in_room;
+  return $self->query("select e.name from places p, equipment e where \
+    e.place_id = p.id and p.room = ? order by e.name", $room)->flat;
 }
 
 sub all_hosts_in_class {
   my $self = shift;
   my ($name, $os) = @_;
-  my @hosts_in_class = ();
-  my $host;
-
-  my $all_hosts_in_class_select = $self->prepare("select c.name from comp_classes cc, computers c, comp_classes_computers ccc where ccc.comp_class = cc.id and ccc.computer = c.name and cc.name = ? and cc.os = ?");
-
-  $all_hosts_in_class_select->execute($name, $os);
-  $all_hosts_in_class_select->bind_columns(\$host);
-  
-  while ($all_hosts_in_class_select->fetch) {
-    push @hosts_in_class, $host;
-  }
-
-  return @hosts_in_class;
+  return $self->query("select c.name from comp_classes cc, computers c, \
+    comp_classes_computers ccc where ccc.comp_class = cc.id and ccc.computer = \
+    c.name and cc.name = ? and cc.os = ?", $name, $os)->flat;
 }
 
 sub get_host_class_map {
   my $self = shift;
-
-  my $sth = $self->prepare("select c.name, cc.name from comp_classes cc, computers c, comp_classes_computers ccc where ccc.comp_class = cc.id and ccc.computer = c.name");
-  $sth->execute();
-  my $array_ref = $sth->fetchall_arrayref({});
-
-  my $host_classes = {};
-
-  foreach my $ccc (@{$array_ref}) {
-    if (not defined @{$host_classes->{$ccc->{name}}}) {
-      $host_classes->{$ccc->{name}} = [];
-    }
-    push @{$host_classes->{$ccc->{name}}}, $ccc->{class};
-  }
-  
-  return $host_classes;
+  return $self->query("select c.name as name, cc.name as class from \
+    comp_classes cc, computers c, comp_classes_computers ccc where \
+    ccc.comp_class = cc.id and ccc.computer = c.name")->map_hashes("name");
 }
 
 #
@@ -488,34 +319,7 @@ sub insert_host {
 
   my $protected = 0;
 
-  my $equip_insert = $self->prepare("INSERT INTO equipment (equip_status, managed_by, name, contact, comments) VALUES (?, ?, ?, ?, ?)");
-
-  my $comp_insert = $self->prepare("INSERT INTO computers (name, os, pxelink) VALUES (?, ?, ?)");
-
-  my $address_insert = $self->prepare("INSERT INTO net_addresses (vlan_num, ipaddr, monitored) VALUES (?, ?, ?) RETURNING id");
-  $address_insert->bind_param(1, undef, SQL_INTEGER);
-  $address_insert->bind_param(2, undef, {pg_type => PG_INET});
-  $address_insert->bind_param(3, undef, {pg_type => PG_BOOL});
-
-  my $interface_insert = $self->prepare("INSERT INTO net_interfaces (equip_name, ethernet, primary_address) VALUES (?, ?, ?) RETURNING id");
-  $interface_insert->bind_param(2, undef, {pg_type => PG_MACADDR});
-  $interface_insert->bind_param(3, undef, SQL_INTEGER);
-
-  my $addr_iface_insert = $self->prepare("INSERT INTO net_addresses_net_interfaces (net_addresses_id, net_interfaces_id) VALUES (?, ?)");
-  $addr_iface_insert->bind_param(1, undef, SQL_INTEGER);
-  $addr_iface_insert->bind_param(2, undef, SQL_INTEGER);
-
-  my $dns_insert = $self->prepare("INSERT INTO net_dns_entries (dns_name, domain, address, authoritative, dns_region) VALUES (?, ?, ?, ?, ?)");
-  $dns_insert->bind_param(3, undef, SQL_INTEGER);
-  $dns_insert->bind_param(4, undef, {pg_type => PG_BOOL});
-
-  my $class_comp_insert = $self->prepare("INSERT INTO comp_classes_computers (comp_class, computer) VALUES (?,?)");
-
-  my $addr_svc_insert = $self->prepare("INSERT INTO net_addresses_net_services (net_addresses_id, net_services_id) VALUES (?, ?)");
-  $addr_svc_insert->bind_param(1, undef, SQL_INTEGER);
-
   my $hostname = $host->{'hostname'};
-
   my $contact = $host->{'contact'};
 
   $host->{'aliases'} =~ s/\s//g;
@@ -562,7 +366,7 @@ sub insert_host {
     $protected = 1;
   }
 
-  my $managed_by = "tstaff";
+  my $managed_by = $host->{'managed_by'};
 
   my $comments = $host->{'comment'};
   if (!$comments) {
@@ -571,66 +375,64 @@ sub insert_host {
 
   # create an equipment entry...
 
-  $equip_insert->execute($equip_status, $managed_by, $hostname, $contact, $comments);
-  $equip_insert->finish;
+  $self->query("INSERT INTO equipment (equip_status, managed_by, name, \
+    contact, comments) VALUES (??)", $equip_status, $managed_by, $hostname,
+    $contact, $comments);
 
   my $pxelink = $host->{'pxelink'};
   if ((defined $pxelink) and ($pxelink eq "")) {
     $pxelink = undef;
   }
 
-  $comp_insert->execute($hostname, $os, $pxelink);
-  $comp_insert->finish;
+  $self->query("INSERT INTO computers (name, os, pxelink) VALUES (??)",
+    $hostname, $os, $pxelink);
 
-  $address_insert->execute($vlan_id, $ipaddr, $monitored);
-  my $address_id = $address_insert->fetch()->[0];
-  $address_insert->finish;
+  my ($address_id) = $self->query("INSERT INTO net_addresses (vlan_num, \
+    ipaddr, monitored) VALUES (??) RETURNING id", $vlan_id, $ipaddr,
+    $monitored)->flat;
 
-  $interface_insert->execute($hostname, $ethernet, $address_id);
-  my $interface_id = $interface_insert->fetch()->[0];
-  $interface_insert->finish;
+  my ($interface_id) = $self->query("INSERT INTO net_interfaces (equip_name, \
+    ethernet, primary_address) VALUES (??) RETURNING id", $hostname, $ethernet,
+    $address_id)->flat;
 
-  $addr_iface_insert->execute($address_id, $interface_id);
-  $addr_iface_insert->finish;
+  $self->query("INSERT INTO net_addresses_net_interfaces (net_addresses_id,
+    net_interfaces_id) VALUES (??)", $address_id, $interface_id);
 
   my $domain = 'cs.brown.edu';
   if ($host->{prim_grp} eq 'ilab') {
     $domain = 'ilab.cs.brown.edu';
   }
 
-  $dns_insert->execute($hostname, $domain, $address_id, 1, "internal");
-  $dns_insert->execute($hostname, $domain, $address_id, 1, "external");
+  my $dns_query = "INSERT INTO net_dns_entries (dns_name, domain, address, authoritative, dns_region) VALUES (??)";
+
+  $self->query($dns_query, $hostname, $domain, $address_id, 1, "internal");
+  $self->query($dns_query, $hostname, $domain, $address_id, 1, "external");
 
   if ( $#aliases != -1 ) {
     foreach (@aliases) {
-      $dns_insert->execute($_, $domain, $address_id, 0, "internal");
-      $dns_insert->execute($_, $domain, $address_id, 0, "external");
+      $self->query($dns_query, $_, $domain, $address_id, 0, "internal");
+      $self->query($dns_query, $_, $domain, $address_id, 0, "external");
     }
   }
-
-  $dns_insert->finish;
 
   if ( $#classes != -1 ) {
     foreach (@classes) {
       if (/^service\./) {
         s/^service\.//;
         $self->get_service_id($_);
-        $addr_svc_insert->execute($address_id, $_);
+        $self->query("INSERT INTO net_addresses_net_services \
+          (net_addresses_id, net_services_id) VALUES (??)", $address_id, $_);
         $protected = 1;
       } else {
         my $class_id = $self->get_class_id($_, $os);
-        $class_comp_insert->execute($class_id, $hostname);
+        $self->query("INSERT INTO comp_classes_computers (comp_class, \
+          computer) VALUES (??)", $class_id, $hostname);
       }
     }
   }
 
-  $addr_svc_insert->finish;
-  $class_comp_insert->finish;
-
   if ($protected) {
-    my $sth = $self->prepare("update equipment set protected = true where name = ?");
-    $sth->execute($hostname);
-    $sth->finish;
+    $self->query("update equipment set protected = true where name = ?");
   }
 
 }
@@ -639,17 +441,11 @@ sub insert_virtual_ip {
   my $self = shift;
   my($host) = @_;
 
-  my $address_insert = $self->prepare("INSERT INTO net_addresses (vlan_num, ipaddr, monitored) VALUES (?, ?, ?) RETURNING id");
-  $address_insert->bind_param(1, undef, SQL_INTEGER);
-  $address_insert->bind_param(2, undef, {pg_type => PG_INET});
-  $address_insert->bind_param(3, undef, {pg_type => PG_BOOL});
+  my $address_insert = $self->query("INSERT INTO net_addresses (vlan_num, ipaddr, monitored) VALUES (?, ?, ?) RETURNING id");
 
-  my $dns_insert = $self->prepare("INSERT INTO net_dns_entries (dns_name, domain, address, authoritative, dns_region) VALUES (?, ?, ?, ?, ?)");
-  $dns_insert->bind_param(3, undef, SQL_INTEGER);
-  $dns_insert->bind_param(4, undef, {pg_type => PG_BOOL});
+  my $dns_insert = $self->query("INSERT INTO net_dns_entries (dns_name, domain, address, authoritative, dns_region) VALUES (?, ?, ?, ?, ?)");
 
-  my $addr_svc_insert = $self->prepare("INSERT INTO net_addresses_net_services (net_addresses_id, net_services_id) VALUES (?, ?)");
-  $addr_svc_insert->bind_param(1, undef, SQL_INTEGER);
+  my $addr_svc_insert = $self->query("INSERT INTO net_addresses_net_services (net_addresses_id, net_services_id) VALUES (?, ?)");
 
   my $hostname = $host->{'hostname'};
 
@@ -716,7 +512,7 @@ sub insert_switch {
 
   # create an equipment entry...
 
-  my $equip_insert = $self->prepare("INSERT INTO equipment (name, equip_status, managed_by, contact, place_id) VALUES (?, ?, ?, ?, ?)");
+  my $equip_insert = $self->query("INSERT INTO equipment (name, equip_status, managed_by, contact, place_id) VALUES (?, ?, ?, ?, ?)");
 
   my $fqdn = $switch->{'fqdn'};
 
@@ -734,7 +530,7 @@ sub insert_switch {
 
   # and a net_switches entry...
 
-  my $switch_insert = $self->prepare("INSERT INTO net_switches (name, fqdn, num_ports, num_blades, switch_type, port_prefix, connection, username, pass) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+  my $switch_insert = $self->query("INSERT INTO net_switches (name, fqdn, num_ports, num_blades, switch_type, port_prefix, connection, username, pass) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
   my $num_ports = $switch->{'numports'};
   my $num_blades = $switch->{'numblades'};
@@ -749,6 +545,9 @@ sub insert_switch {
 
 }
 
+no Moose;
+
+__PACKAGE__->meta->make_immutable;
 
 1;
 __END__

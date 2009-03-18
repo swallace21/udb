@@ -40,16 +40,16 @@ if (@ARGV < 1) {
 my $class = shift @ARGV;
 my @hostnames = @ARGV;
 
-my $sth = $udb->prepare("INSERT INTO comp_classes_computers (comp_class, computer) VALUES (?,?)");
-$sth->bind_param(1, undef, SQL_INTEGER);
-
 foreach my $hostname (@hostnames) {
   if ($verbose) {
     print "adding host $hostname to class $class\n";
   }
-  my $host = $udb->get_host($hostname);
-  my $class_id = $udb->get_class_id($class, $host->{os_type});
-  $sth->execute($class_id, $hostname);
+  my $host = $udb->get_equip($hostname);
+  next if not $host->{comp};
+  my $class_id = $udb->get_class_id($class, $host->{comp}->{os});
+  print "[$class_id]\n";
+  $udb->query("INSERT INTO comp_classes_computers (comp_class, computer) \
+    VALUES (??)", $class_id, $hostname);
 }
 
 END {

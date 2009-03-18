@@ -9,6 +9,7 @@ our @EXPORT_OK = qw(verify_hostname verify_mac);
 use Pod::Usage;
 use DBI qw(:sql_types);
 use DBD::Pg qw(:pg_types);
+use Net::MAC;
 
 use BrownCS::UDB::Util qw(:all);
 
@@ -26,20 +27,13 @@ sub verify_hostname {
 }
 
 sub verify_mac {
-  my ($value) = @_;
-  if (not defined $value) {
+  my ($mac_str) = @_;
+  my $mac = Net::MAC->new('mac' => $mac_str, 'die' => 0);
+  if (not $mac) {
     warn "Invalid MAC address.\n";
     return 0;
-  }
-  for ($value) {
-    if (/^([0-9a-f]{1,2}:){5}[0-9a-f]{1,2}$/) {
-      return 1;
-    } elsif (/^([0-9a-f]{4}.){2}[0-9a-f]{4}$/) {
-      return 1;
-    } else {
-      warn "Invalid MAC address.\n";
-      return 0;
-    }
+  } else {
+    return 1;
   }
 }
 

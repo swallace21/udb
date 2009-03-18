@@ -221,10 +221,13 @@ create table net_switches (
   connection                text not null default 'ssh',
   username                  text not null,
   pass                      text not null
-) ;
+);
 
 create table net_ports (
   id                        serial primary key,
+  place_id                  integer references places
+                              on update cascade
+                              on delete cascade,
   switch                    text not null references net_switches
                               on update cascade
                               on delete cascade,
@@ -233,7 +236,8 @@ create table net_ports (
   last_changed              timestamp not null default now(),
   blade_num                 integer,
   unique (switch, port_num, blade_num),
-  check (port_num >= 0 and port_num <= num_ports(switch))
+  check (port_num >= 0 and port_num <= num_ports(switch)),
+  check (wall_plate = 'MR' or place_id is not null)
 ) ;
 
 create unique index idx_wall_ports on net_ports (
@@ -287,8 +291,13 @@ create table net_ports_net_vlans (
   vlan_num                  integer not null references net_vlans
                               on update cascade
                               on delete cascade,
+  native                    boolean not null,
   primary key               (net_ports_id, vlan_num)
 ) ;
+
+create unique index port_native_vlan_index on net_ports_net_vlans (
+  net_ports_id
+) where native = true;
 
 create table net_addresses_net_interfaces (
   net_addresses_id          integer not null references net_addresses
@@ -522,7 +531,6 @@ create table computers (
   name                      text not null references equipment
                               on update cascade
                               on delete cascade,
-  primary key (name),
   os                        text references os_types
                               on update cascade
                               on delete restrict,
@@ -542,7 +550,7 @@ create table computers (
   os_dist                   text,
   info_time                 timestamp,
   boot_time                 timestamp
-) ;
+);
 
 create table comp_classes (
   id                        serial primary key,

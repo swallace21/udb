@@ -10,7 +10,6 @@ use FindBin qw($RealBin);
 use lib "$RealBin/../lib";
 use BrownCS::UDB;
 use BrownCS::UDB::Util qw(:all);
-use BrownCS::UDB::View qw(print_record);
 
 # Print a simple help message.
 sub usage {
@@ -39,13 +38,14 @@ if (@ARGV < 1) {
 my $class = shift @ARGV;
 my @hostnames = @ARGV;
 
-my $sth = $udb->prepare("delete from comp_classes_computers ccc using comp_classes cc where ccc.comp_class = cc.id and cc.name = ? and ccc.computer = ?");
-
 foreach my $hostname (@hostnames) {
   if ($verbose) {
     print "removing host $hostname from class $class\n";
   }
-  $sth->execute($class, $hostname);
+  $udb->query("delete from comp_classes_computers ccc \
+    using comp_classes cc \
+    where ccc.comp_class = cc.id and cc.name = ? and ccc.computer = ?",
+    $class, $hostname);
 }
 
 END {

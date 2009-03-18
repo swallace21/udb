@@ -45,12 +45,8 @@ if ($udb->is_protected($hostname)) {
   exit(1);
 }
 
-my $iface_count;
-
-my $iface_select_sth = $udb->prepare("select count(id) from net_interfaces where equip_name = ?");
-$iface_select_sth->execute($hostname);
-$iface_select_sth->bind_columns(\$iface_count);
-$iface_select_sth->fetch;
+my ($iface_count) = $udb->query("select count(id) from net_interfaces where \
+  equip_name = ?", $hostname)->flat;
 
 if ($iface_count < 1) {
   print "No networked device with this name exists.\n";
@@ -71,8 +67,7 @@ if (not $new_mac) {
   exit(0);
 }
 
-my $sth = $udb->prepare("update net_interfaces set ethernet = ? where equip_name = ?");
-$sth->execute($new_mac, $hostname);
+$udb->query("update net_interfaces set ethernet = ? where equip_name = ?", $new_mac, $hostname);
 
 END {
   if (defined $udb) {

@@ -38,13 +38,13 @@ if (@ARGV != 1) {
 }
 
 my $name = shift @ARGV;
-my $host = $udb->get_host($name);
-if (not $host) {
-  print STDERR "No record for device $name.\n";
-  exit(2);
-} else {
-  print join(' ',@{$host->{classes}}) . "\n";
-}
+my $host = $udb->get_equip($name);
+
+die "No record for device $name.\n" if not $host;
+
+die "Device $name is not a computer.\n" if not $host->{comp};
+
+print join(' ',@{$host->{classes}}) . "\n";
 
 END {
   if (defined $udb) {

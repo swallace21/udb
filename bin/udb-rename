@@ -10,6 +10,7 @@ use FindBin qw($RealBin);
 use lib "$RealBin/../lib";
 use BrownCS::UDB;
 use BrownCS::UDB::Util qw(:all);
+use BrownCS::UDB::Verify qw(verify_hostname);
 
 # Print a simple help message.
 sub usage {
@@ -36,6 +37,7 @@ if (@ARGV != 1) {
 }
 
 my $hostname = shift @ARGV;
+my $new_name = shift @ARGV;
 
 if ($udb->is_protected($hostname)) {
   print "This device is protected!\n";
@@ -43,8 +45,17 @@ if ($udb->is_protected($hostname)) {
   exit(1);
 }
 
-my $new_name = &get_new_name(0);
-print "SQL: rename $hostname to $new_name\n";
+if (not $new_name) {
+  $new_name = get_new(0, "name", \&verify_hostname);
+} elsif (not verify_hostname($new_name)) {
+  exit(1);
+}
+
+if (not $new_name) {
+  exit(0);
+}
+
+$udb->query("update equipment set name = ? where name = ?", $new_name, $hostname);
 
 END {
   if (defined $udb) {
@@ -56,11 +67,11 @@ __END__
 
 =head1 NAME
 
-udb-modify - Perform maintenance on an existing device record in UDB
+udb-rename - Perform maintenance on an existing device record in UDB
 
 =head1 SYNOPSIS
 
-udb-modify [-u username] <device>
+udb-rename [-u username] <device> [<new-name>]
 
 =head1 DESCRIPTION
 
