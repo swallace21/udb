@@ -5,8 +5,6 @@ use warnings;
 
 use Getopt::Long;
 use Pod::Usage;
-use DBI qw(:sql_types);
-use DBD::Pg qw(:pg_types);
 
 use FindBin qw($RealBin);
 use lib "$RealBin/../lib";
@@ -38,19 +36,15 @@ if (@ARGV != 1) {
 }
 
 my $name = shift @ARGV;
-my $host = $udb->get_equip($name);
 
-die "No record for device $name.\n" if not $host;
+my $device = $udb->db->resultset('Equipment')->find($name);
+die "No record for device $name.\n" if not $device;
 
-die "Device $name is not a computer.\n" if not $host->{comp};
+my $comp = $device->computer;
+die "Device $name is not a computer.\n" if not $comp;
 
-print join(' ',@{$host->{classes}}) . "\n";
-
-END {
-  if (defined $udb) {
-    $udb->finish;
-  }
-}
+my @classes = $comp->classes()->get_column('name')->all;
+print join(' ',@classes) . "\n";
 
 __END__
 

@@ -150,7 +150,7 @@ $vlan_insert->execute("outside", 34, "128.148.34.0/24", 0, "128.148.34.1");
 $vlan_insert->execute("jj-oshean", 698, "198.7.242.32/28", 1, "198.7.242.34");
 $vlan_insert->execute("techhouse", 360, "138.16.60.0/24", 1, "138.16.60.1");
 $vlan_insert->execute("ipsec", 885, "10.117.0.0/16", 0, "10.117.1.1");
-$vlan_insert->execute("cis-switches", 653, "10.115.1.0/24", 1, "10.115.1.1");
+$vlan_insert->execute("cis-switches", 720, "10.115.1.0/24", 1, "10.115.1.1");
 
 $vlan_dhcp_insert->execute("user-standard", 36, "128.148.36.0/24", 1, "128.148.36.100", "128.148.36.254", "128.148.36.1");
 

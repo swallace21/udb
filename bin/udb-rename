@@ -32,7 +32,7 @@ usage(0) if $help;
 my $udb = BrownCS::UDB->new;
 $udb->start($username);
 
-if (@ARGV != 1) {
+if ((@ARGV < 1) or (@ARGV > 2)) {
   usage(2);
 }
 

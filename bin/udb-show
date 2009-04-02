@@ -6,6 +6,7 @@ use warnings;
 use Getopt::Long;
 use Pod::Usage;
 use YAML::Tiny qw(Dump);
+use Data::Dumper;
 
 use FindBin qw($RealBin);
 use lib "$RealBin/../lib";
@@ -41,21 +42,13 @@ if (@ARGV != 1) {
 
 my $name = shift @ARGV;
 
-my $device = $udb->get_equip($name);
+my $device = $udb->db->resultset('Equipment')->find($name);
+die "No record for device $name.\n" if not $device;
 
-if (not $device) {
-  print "No record for device $name.\n";
-  exit(2);
-}
+print Dumper($device->get_columns);
 
-printf("Name: %s\n", $device->{name});
+printf("Name: %s\n", $device->name);
 print Dump(filter_record($view, $device));
-
-END {
-  if (defined $udb) {
-    $udb->finish;
-  }
-}
 
 __END__
 

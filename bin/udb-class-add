@@ -5,8 +5,6 @@ use warnings;
 
 use Getopt::Long;
 use Pod::Usage;
-use DBI qw(:sql_types);
-use DBD::Pg qw(:pg_types);
 
 use FindBin qw($RealBin);
 use lib "$RealBin/../lib";
@@ -24,6 +22,13 @@ my $verbose = 0;
 my $dryrun = 0;
 my $username = $ENV{'USER'};
 
+sub vprint {
+  my ($msg) = @_;
+  if ($verbose) {
+    print $msg, "\n";
+  }
+}
+
 GetOptions ('help|h|?' => \$help, 
             'v|verbose' => \$verbose,
             'n|dryrun' => \$dryrun,
@@ -37,24 +42,21 @@ if (@ARGV < 1) {
   usage(2);
 }
 
-my $class = shift @ARGV;
+my $classname = shift @ARGV;
 my @hostnames = @ARGV;
 
 foreach my $hostname (@hostnames) {
-  if ($verbose) {
-    print "adding host $hostname to class $class\n";
+  my $comp = $udb->db->resultset('Computers')->find($hostname);
+  if (not $comp) {
+    vprint("no record for computer $hostname");
+    next;
   }
-  my $host = $udb->get_equip($hostname);
-  next if not $host->{comp};
-  my $class_id = $udb->get_class_id($class, $host->{comp}->{os});
-  print "[$class_id]\n";
-  $udb->query("INSERT INTO comp_classes_computers (comp_class, computer) \
-    VALUES (??)", $class_id, $hostname);
-}
 
-END {
-  if (defined $udb) {
-    $udb->finish;
+  my $class = $udb->db->resultset('CompClasses')->find_or_create({name => $classname, os => $comp->os});
+
+  if (not $class->computers()->find($hostname)) {
+    vprint("adding computer $hostname to class $classname");
+    $comp->add_to_classes($class);
   }
 }
 

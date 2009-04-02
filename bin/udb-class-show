@@ -5,8 +5,6 @@ use warnings;
 
 use Getopt::Long;
 use Pod::Usage;
-use DBI qw(:sql_types);
-use DBD::Pg qw(:pg_types);
 
 use FindBin qw($RealBin);
 use lib "$RealBin/../lib";
@@ -37,21 +35,14 @@ if (@ARGV != 2) {
   usage(2);
 }
 
-my $class = shift @ARGV;
+my $name = shift @ARGV;
 my $os = shift @ARGV;
-my @hosts = $udb->all_hosts_in_class($class, $os);
-if (not @hosts) {
-  print STDERR "No such class $class.\n";
-  exit(2);
-} else {
-  print join(" ", @hosts) . "\n";
-}
 
-END {
-  if (defined $udb) {
-    $udb->finish;
-  }
-}
+my $class = $udb->db->resultset('CompClasses')->search({name => $name, os => $os})->first;
+die "No such class $name for OS $os.\n" if not $class;
+
+my @comps = $class->computers()->get_column("name")->all;
+print join(" ", @comps) . "\n";
 
 __END__
 

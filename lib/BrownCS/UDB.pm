@@ -2,15 +2,14 @@ package BrownCS::UDB;
 use Moose;
 
 use Crypt::Simple;
-use DBIx::Simple;
 use Data::Dumper;
 
 use BrownCS::UDB::Util qw(:all);
+use BrownCS::UDB::Schema;
 
 has 'db' => (
   is => 'ro',
-  isa => 'DBIx::Simple',
-  handles => [qw(query)]
+  isa => 'BrownCS::UDB::Schema'
 );
 
 my $debug = 0;
@@ -30,7 +29,7 @@ sub start {
     close(FH);
   }
 
-  while (! ($self->{db} = DBIx::Simple->connect("dbi:Pg:dbname=udb;host=sysdb", $username, $password, {AutoCommit=>0, PrintError=>1}))) {
+  while (! ($self->{db} = BrownCS::UDB::Schema->connect("dbi:Pg:dbname=udb;host=sysdb", $username, $password))) {
     if ($debug) {
       print "Error connecting to database. Try again.\n";
       print DBI->errstr if $debug;
@@ -51,23 +50,17 @@ sub start {
   if ($debug) {
     my $dbg_file = "/tmp/test.debug.log";
     open ($self->{dbg_fh}, ">>$dbg_file") or die qq{Could not open "$dbg_file": $!\n};
-    $self->db->dbh->pg_server_trace($self->{dbg_fh});
-    $self->db->dbh->trace(2);
+    $self->db->storage->dbh->pg_server_trace($self->{dbg_fh});
+    $self->db->storage->dbh->trace(2);
   }
 
 }
 
-sub finish {
+sub DEMOLISH {
   my $self = shift;
-
   if ($debug) {
-    $self->{db}->{dbh}->pg_server_untrace;
+    $self->db->storage->dbh->pg_server_untrace;
     close($self->{dbg_fh});
-  }
-
-  if ($self->{db}) {
-    $self->{db}->commit;
-    $self->{db}->disconnect;
   }
 }
 
