@@ -66,4 +66,5 @@ __PACKAGE__->belongs_to(
 
 
 # You can replace this text with custom content, and it will be preserved on regeneration
+__PACKAGE__->many_to_many('net_addresses' => 'net_addresses_net_interfaces', 'net_addresses_id');
 1;

@@ -46,12 +46,6 @@ if ($udb->is_protected($hostname)) {
 # delete associated net_addresses, &c
 # ask for kathy's info
 
-END {
-  if (defined $udb) {
-    $udb->finish;
-  }
-}
-
 __END__
 
 =head1 NAME

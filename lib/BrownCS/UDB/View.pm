@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use Exporter qw(import);
-our @EXPORT_OK = qw(filter_record);
+our @EXPORT_OK = qw(print_record);
 
 use Pod::Usage;
 use DBI qw(:sql_types);
@@ -19,14 +19,6 @@ my $fields = {
   },
   'contact' => {
     'desc' => "Primary user",
-    'views' => ['admin'],
-  },
-  'status' => {
-    'desc' => "Status",
-    'views' => ['admin'],
-  },
-  'managed_by' => {
-    'desc' => "Managed by",
     'views' => ['admin'],
   },
   'interfaces' => {
@@ -97,11 +89,11 @@ my $fields = {
     'desc' => "OS name (reported)",
     'views' => ['sw'],
   },
-  'os_name' => {
+  'os_version' => {
     'desc' => "OS version (reported)",
     'views' => ['sw'],
   },
-  'os_name' => {
+  'os_dist' => {
     'desc' => "OS dist (reported)",
     'views' => ['sw'],
   },
@@ -183,46 +175,49 @@ my $fields = {
   },
 };
 
-sub filter_record {
-  my ($view, $old) = @_;
+sub print_record {
+  my ($prefix, $hash) = @_;
 
-  if ((ref($old) eq "ARRAY")) {
-
-    if (scalar(@{$old}) > 0) {
-      my @new = map { filter_record($view, $_) } @{$old};
-      return \@new;
+  while (my ($key, $val) = each(%{$hash})) {
+    next if not defined $val;
+    if ((ref($val) eq "ARRAY")) {
+      if (scalar(@{$val}) > 0) {
+        print $prefix, $key, ":\n";
+        print_array(($prefix."  "), $val);
+      }
+    } elsif ((ref($val) eq "HASH")) {
+      print $prefix, $key, ":\n";
+      print_record(($prefix."  "), $val);
     } else {
-      return ();
+      printf "%s%s: %s\n", $prefix, $key, $val;
     }
+  }
+}
 
-  } elsif ((ref($old) eq "HASH")) {
+sub print_array {
+  my ($prefix, $array) = @_;
 
-    my $new = {};
+  my $end_list;
 
-    foreach my $key (sort(keys %{$old})) {
+  foreach my $item (sort @{$array}) {
 
-      my $views_ref = $fields->{$key}->{views};
-      next if (($view ne 'all') and not (grep { $_ =~ /^$view$/ } @{$views_ref}));
+    next if not defined $item;
 
-      my $val = $old->{$key};
-      next if not defined $val;
-
-      my $new_key = $fields->{$key}->{desc};
-      next if not defined $new_key;
-
-      my $new_val = filter_record($view, $val);
-      next if not defined $new_val;
-
-      $new->{$new_key} = $new_val;
-
+    if ((ref($item) eq "ARRAY")) {
+      $end_list = 1;
+      print "$prefix--\n";
+      print_array(($prefix."| "), $item);
+    } elsif ((ref($item) eq "HASH")) {
+      $end_list = 1;
+      print "$prefix--\n";
+      print_record(($prefix."| "), $item);
+    } else {
+      printf "%s- %s\n", $prefix, $item;
     }
+  }
 
-    return $new;
-
-  } else {
-
-    return $old;
-
+  if ($end_list) {
+    print "$prefix--\n";
   }
 
 }

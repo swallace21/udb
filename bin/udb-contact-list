@@ -5,8 +5,6 @@ use warnings;
 
 use Getopt::Long;
 use Pod::Usage;
-use DBI qw(:sql_types);
-use DBD::Pg qw(:pg_types);
 use Data::Dumper;
 
 use FindBin qw($RealBin);
@@ -38,24 +36,22 @@ if (@ARGV != 1) {
   usage(2);
 }
 
-my $class = shift @ARGV;
+my $room = shift @ARGV;
+
+my $location = $udb->db->resultset('Places')->search({room => $room})->single;
+my @devices = $location->devices;
 
 printf "%-18s%-10s%-18s%-40s\n\n", "MACHINE", "SERVICES", "CONTACT", "DESCRIPTION";
 
-my @devices = $udb->all_hosts_in_room($class);
-
-foreach my $name (@devices) {
-  my $device = $udb->get_equip($name);
-  my $comments = ($device->{equip}->{comments} or '');
-  my $contact = ($device->{equip}->{contact} or '');
-  my $services = join(",",@{$device->{services}});
-  printf "%-18s%-10s%-18s%-40s\n", $name, $services, $contact, $comments;
-}
-
-END {
-  if (defined $udb) {
-    $udb->finish;
-  }
+foreach my $device (@devices) {
+  my $comments = ($device->comments or '');
+  my $contact = ($device->contact or '');
+  my @interfaces = $device->net_interfaces;
+  my @addresses = map { $_->net_addresses } @interfaces;
+  my @services = map { $_->net_services } @addresses;
+  my @service_names = map { $_->service } @services;
+  my $services = join(",",@service_names);
+  printf "%-18s%-10s%-18s%-40s\n", $device->name, $services, $contact, $comments;
 }
 
 __END__

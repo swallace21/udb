@@ -46,12 +46,6 @@ if ($udb->is_protected($hostname)) {
 my $new_name = &get_new_name(0);
 print "SQL: rename $hostname to $new_name\n";
 
-END {
-  if (defined $udb) {
-    $udb->finish;
-  }
-}
-
 __END__
 
 =head1 NAME

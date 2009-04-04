@@ -35,19 +35,16 @@ if (@ARGV != 1) {
   usage(2);
 }
 
-my $hostname = shift @ARGV;
+my $name = shift @ARGV;
 
-if ($udb->is_protected($hostname)) {
+my $device = $udb->db->resultset('Equipment')->find($name);
+die "No record for device $name.\n" if not $device;
+
+if ($device->protected) {
   print "This device is protected!\n";
   print "Do not modify or delete this entry unless you know what you're doing.\n";
 } else {
-  $udb->query("delete from equipment where name = ?", $hostname);
-}
-
-END {
-  if (defined $udb) {
-    $udb->finish;
-  }
+  $device->delete;
 }
 
 __END__

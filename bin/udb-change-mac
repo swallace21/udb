@@ -36,22 +36,24 @@ if ((@ARGV < 1) or (@ARGV > 2)) {
   usage(2);
 }
 
-my $hostname = shift @ARGV;
+my $name = shift @ARGV;
 my $new_mac = shift @ARGV;
 
-if ($udb->is_protected($hostname)) {
+my $device = $udb->db->resultset('Equipment')->find($name);
+die "No record for device $name.\n" if not $device;
+
+if ($device->protected) {
   print "This device is protected!\n";
   print "Do not modify or delete this entry unless you know what you're doing.\n";
   exit(1);
 }
 
-my ($iface_count) = $udb->query("select count(id) from net_interfaces where \
-  equip_name = ?", $hostname)->flat;
+my $iface_set = $device->net_interfaces;
 
-if ($iface_count < 1) {
+if ($iface_set->count < 1) {
   print "No networked device with this name exists.\n";
   exit(1);
-} elsif ($iface_count > 1) {
+} elsif ($iface_set->count > 1) {
   print "This device has more than one network card.\n";
   print "Do not modify or delete this entry unless you know what you're doing.\n";
   exit(1);
@@ -67,13 +69,9 @@ if (not $new_mac) {
   exit(0);
 }
 
-$udb->query("update net_interfaces set ethernet = ? where equip_name = ?", $new_mac, $hostname);
-
-END {
-  if (defined $udb) {
-    $udb->finish;
-  }
-}
+my $iface = $iface_set->single;
+$iface->ethernet($new_mac);
+$iface->update;
 
 __END__
 

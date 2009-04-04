@@ -5,14 +5,13 @@ use warnings;
 
 use Getopt::Long;
 use Pod::Usage;
-use YAML::Tiny qw(Dump);
 use Data::Dumper;
 
 use FindBin qw($RealBin);
 use lib "$RealBin/../lib";
 use BrownCS::UDB;
 use BrownCS::UDB::Util qw(:all);
-use BrownCS::UDB::View qw(filter_record);
+use BrownCS::UDB::View qw(print_record);
 
 # Print a simple help message.
 sub usage {
@@ -45,10 +44,61 @@ my $name = shift @ARGV;
 my $device = $udb->db->resultset('Equipment')->find($name);
 die "No record for device $name.\n" if not $device;
 
-print Dumper($device->get_columns);
+# if no device, check for an alias
 
-printf("Name: %s\n", $device->name);
-print Dump(filter_record($view, $device));
+print_record('', format_device($device));
+
+sub format_device {
+  my ($device) = @_;
+  my $out = {};
+  $out->{"Name"} = $device->name;
+  $out->{"Location"} = format_location($device->place_id);
+  $out->{"Status"} = $device->equip_status->name;
+  $out->{"Managed by"} = $device->managed_by->name;
+  $out->{"Purchase date"} = $device->purchased_on;
+  $out->{"Install date"} = $device->installed_on;
+  $out->{"Brown inv number"} = $device->brown_inv_num;
+  $out->{"Serial number"} = $device->serial_num;
+  $out->{"Purchase order"} = $device->po_num;
+  $out->{"Owner"} = $device->owner;
+  $out->{"Contact"} = $device->contact;
+  $out->{"Comments"} = $device->comments;
+  if ($device->computer) {
+    format_computer($out, $device->computer);
+  } elsif ($device->switch) {
+    format_switch($out, $device->switch);
+  }
+  my $ifaces = [];
+  foreach my $iface ($device->net_interfaces) {
+    push @$ifaces, format_interface($out, $iface);
+  }
+  $out->{"Interfaces"} = $ifaces;
+  return $out;
+}
+
+sub format_computer {
+  my ($out, $comp) = @_;
+  $out->{"Ima computah"} = "stop all the downloadin";
+}
+
+sub format_switch {
+  my ($out, $switch) = @_;
+  $out->{"Switch"} = "me on";
+}
+
+sub format_location {
+  my ($loc) = @_;
+  my $out = {};
+  $out->{"City"} = $loc->city;
+  $out->{"Building"} = $loc->building;
+  $out->{"Room"} = $loc->room;
+  return $out;
+}
+
+sub format_interface {
+  my ($old_pre, $iface) = @_;
+  return {};
+}
 
 __END__
 

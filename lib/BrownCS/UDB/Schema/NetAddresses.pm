@@ -71,8 +71,8 @@ __PACKAGE__->has_many(
   "BrownCS::UDB::Schema::NetDnsEntries",
   { "foreign.address" => "self.id" },
 );
-__PACKAGE__->has_many(
-  "net_interfaces",
+__PACKAGE__->might_have(
+  "primary_interface",
   "BrownCS::UDB::Schema::NetInterfaces",
   { "foreign.primary_address" => "self.id" },
 );
@@ -83,4 +83,6 @@ __PACKAGE__->has_many(
 
 
 # You can replace this text with custom content, and it will be preserved on regeneration
+__PACKAGE__->many_to_many('net_interfaces' => 'net_addresses_net_interfaces', 'net_interfaces_id');
+__PACKAGE__->many_to_many('net_services' => 'net_addresses_net_services', 'net_services_id');
 1;

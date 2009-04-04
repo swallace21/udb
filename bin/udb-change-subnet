@@ -54,12 +54,6 @@ $switch->start;
 $switch->update_port($host, $walljack, $switch, $port, $subnet);
 $switch->disconnect;
 
-END {
-  if (defined $udb) {
-    $udb->finish;
-  }
-}
-
 __END__
 
 =head1 NAME

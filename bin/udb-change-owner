@@ -35,24 +35,21 @@ if (@ARGV != 1) {
   usage(2);
 }
 
-my $hostname = shift @ARGV;
+my $name = shift @ARGV;
 
-if ($udb->is_protected($hostname)) {
+my $device = $udb->db->resultset('Equipment')->find($name);
+die "No record for device $name.\n" if not $device;
+
+if ($device->protected) {
   print "This device is protected!\n";
   print "Do not modify or delete this entry unless you know what you're doing.\n";
   exit(1);
 }
 
 my $new_user = &get_new_user(0);
-my $new_os = &get_new_os(1);
-my $new_name = &get_new_name(1);
-my $new_location = &get_new_location(1);
 
-END {
-  if (defined $udb) {
-    $udb->finish;
-  }
-}
+$device->owner($new_user);
+$device->update;
 
 __END__
 

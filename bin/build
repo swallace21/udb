@@ -52,10 +52,6 @@ my $tt = Template->new({INCLUDE_PATH => "$RealBin/../templates"}) || die "$Templ
 &build_finger_data;
 &build_ypmake;
 
-END {
-  $udb->finish;
-}
-
 sub maybe_system {
   if ($dry_run) {
     print "DEBUG: @_\n";

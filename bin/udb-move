@@ -64,12 +64,6 @@ while ($new_port = get_new(0, "wall plate", sub{1;})) {
 
 }
     
-END {
-  if (defined $udb) {
-    $udb->finish;
-  }
-}
-
 __END__
 
 =head1 NAME
