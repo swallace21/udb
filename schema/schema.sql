@@ -9,8 +9,8 @@ set role tstaff;
 create language plpgsql;
 
 create table log_db_export (
-  script_name               text,
-  last_run                  timestamp default now()
+  script_name               text not null,
+  last_run                  timestamp not null default now()
 ) ;
 
 create or replace function commacat(acc text, instr text) returns text as
@@ -191,7 +191,7 @@ create table net_addresses (
   ipaddr                    inet,
   enabled                   boolean not null default true,
   monitored                 boolean not null,
-  last_changed              timestamp not null default now(),
+  last_updated              timestamp not null default now(),
   check (
     ipaddr is null or (
       masklen(ipaddr) = 32 and
@@ -233,7 +233,7 @@ create table net_ports (
                               on delete cascade,
   port_num                  integer not null,
   wall_plate                text not null,
-  last_changed              timestamp not null default now(),
+  last_updated              timestamp not null default now(),
   blade_num                 integer,
   unique (switch, port_num, blade_num),
   check (port_num >= 0 and port_num <= num_ports(switch)),
@@ -256,7 +256,7 @@ create table net_interfaces (
   primary_address           integer references net_addresses
                               on update cascade
                               on delete set null,
-  last_changed              timestamp not null default now()
+  last_updated              timestamp not null default now()
 ) ;
 
 create table net_services (
@@ -273,7 +273,7 @@ create table net_dns_entries (
                               on update cascade
                               on delete cascade,
   authoritative             boolean not null,
-  last_changed              timestamp not null default now(),
+  last_updated              timestamp not null default now(),
   primary key               (dns_name, domain, dns_region)
 ) ;
 
@@ -397,7 +397,7 @@ create table user_accounts (
   created                   date not null,
   expiration                date,
   enabled                   boolean,
-  last_changed              timestamp not null default now()
+  last_updated              timestamp not null default now()
 ) ;
 
 create table mail_aliases (
@@ -535,21 +535,13 @@ create table computers (
                               on update cascade
                               on delete restrict,
   pxelink                   text,
-  system_model              text,
   num_cpus                  integer,
   cpu_type                  text,
   cpu_speed                 text,
   memory                    text,
   hard_drives               text,
-  total_disk                text,
-  other_drives              text,
-  network_cards             text,
   video_cards               text,
-  os_name                   text,
-  os_version                text,
-  os_dist                   text,
-  info_time                 timestamp,
-  boot_time                 timestamp
+  last_updated              timestamp not null default now()
 );
 
 create table comp_classes (

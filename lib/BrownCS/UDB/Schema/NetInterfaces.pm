@@ -28,7 +28,7 @@ __PACKAGE__->add_columns(
   { data_type => "macaddr", default_value => undef, is_nullable => 1, size => 6 },
   "primary_address",
   { data_type => "integer", default_value => undef, is_nullable => 1, size => 4 },
-  "last_changed",
+  "last_updated",
   {
     data_type => "timestamp without time zone",
     default_value => "now()",
@@ -50,7 +50,7 @@ __PACKAGE__->belongs_to(
   { id => "port_id" },
 );
 __PACKAGE__->belongs_to(
-  "equip_name",
+  "device",
   "BrownCS::UDB::Schema::Equipment",
   { name => "equip_name" },
 );

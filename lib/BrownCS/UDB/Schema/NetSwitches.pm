@@ -69,7 +69,7 @@ __PACKAGE__->has_many(
   "BrownCS::UDB::Schema::NetPorts",
   { "foreign.switch" => "self.name" },
 );
-__PACKAGE__->belongs_to("name", "BrownCS::UDB::Schema::Equipment", { name => "name" });
+__PACKAGE__->belongs_to("device", "BrownCS::UDB::Schema::Equipment", { name => "name" });
 
 
 # Created by DBIx::Class::Schema::Loader v0.04005 @ 2009-04-02 16:27:51

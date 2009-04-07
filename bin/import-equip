@@ -8,8 +8,6 @@ use Pod::Usage;
 use Data::Dumper;
 
 use File::Temp qw(:mktemp);
-use DBI qw(:sql_types);
-use DBD::Pg qw(:pg_types);
 
 use FindBin qw($RealBin);
 use lib "$RealBin/../lib";
@@ -26,9 +24,133 @@ my $help = 0;
 my $username = $ENV{'USER'};
 my $udb = BrownCS::UDB->new;
 
-my $no_cdb;
-my $no_switchport;
-my $no_index_pc;
+sub dns_insert {
+  my ($a, $b, $c, $d) = @_;
+  $udb->db->resultset('NetDnsEntries')->find_or_create({
+      dns_name => $a,
+      domain => $b,
+      address => $c,
+      authoritative => $d,
+      dns_region => "internal",
+    });
+  $udb->db->resultset('NetDnsEntries')->find_or_create({
+      dns_name => $a,
+      domain => $b,
+      address => $c,
+      authoritative => $d,
+      dns_region => "external",
+    });
+}
+
+sub domain_insert {
+  my ($table, $desc) = @_;
+  $udb->db->resultset($table)->find_or_create({
+      name => $desc,
+    });
+}
+
+sub os_insert {
+  my ($desc, $pxe) = @_;
+  $udb->db->resultset('OsTypes')->find_or_create({
+      name => $desc,
+      pxe_boot => $pxe,
+    });
+}
+
+sub add_address {
+  my ($data) = @_;
+  my $hostname = $data->{'hostname'};
+
+  $data->{'aliases'} =~ s/\s//g;
+  my @aliases = split(/,/, $data->{'aliases'});
+
+  $data->{'classes'} =~ s/\s//g;
+  my @classes = split(/,/, $data->{'classes'});
+
+  my $ipaddr = $data->{'ip_addr'};
+  my $vlan;
+  if ((!$ipaddr) or ($ipaddr eq "")) {
+    $ipaddr = undef;
+    $vlan = 36;
+  } else {
+    $vlan = $udb->db->resultset('NetVlans')->search({
+        network => {'>>', $ipaddr},
+      })->single;
+  }
+
+  my $monitored = 0;
+  if ($data->{'status'} eq "monitored") {
+    $monitored = 1;
+  }
+
+  my $domain = 'cs.brown.edu';
+  if ($data->{prim_grp} eq 'ilab') {
+    $domain = 'ilab.cs.brown.edu';
+  }
+
+  my $ip = $udb->db->resultset('NetAddresses')->find_or_create({
+      vlan_num => $vlan,
+      ipaddr => $ipaddr,
+      monitored => $monitored,
+    });
+
+  dns_insert($hostname, $domain, $ip, 1);
+
+  if ( $#aliases != -1 ) {
+    foreach my $alias (@aliases) {
+      dns_insert($alias, $domain, $ip, 0);
+    }
+  }
+
+  if ( $#classes != -1 ) {
+    foreach (@classes) {
+      if (/^service\./) {
+        s/^service\.//;
+        my $svc = $udb->db->resultset('NetServices')->find_or_create({
+            service => $_,
+          });
+        $ip->add_to_net_services($svc);
+      }
+    }
+  }
+
+  return $ip;
+}
+
+sub zone_insert {
+  my ($a, $b, $c, $d, $e) = @_;
+  $udb->db->resultset("NetZones")->find_or_create({
+      zone_manager => $a,
+      equip_manager => $b,
+      routing_type => $c,
+      name => $d,
+      dynamic_dhcp => $e,
+    });
+}
+
+sub vlan_insert {
+  my ($a, $b, $c, $d, $e) = @_;
+  $udb->db->resultset("NetVlans")->find_or_create({
+      zone => $a,
+      vlan_num => $b,
+      network => $c,
+      dhcp => $d,
+      gateway => $e,
+    });
+}
+
+sub vlan_dhcp_insert {
+  my ($a, $b, $c, $d, $e, $f, $g) = @_;
+  $udb->db->resultset("NetVlans")->find_or_create({
+      zone => $a,
+      vlan_num => $b,
+      network => $c,
+      dhcp => $d,
+      dynamic_dhcp_start => $e,
+      dynamic_dhcp_end => $f,
+      gateway => $g,
+    });
+}
 
 GetOptions (
   'help|h|?' => \$help,
@@ -45,62 +167,51 @@ our ($sp_switches, $sp_hosts);
 
 print "deleting old data... ";
 
-$udb->db->query("DELETE FROM equipment;");
-$udb->db->query("DELETE FROM computers;");
-$udb->db->query("DELETE FROM net_interfaces;");
-$udb->db->query("DELETE FROM net_addresses;");
-$udb->db->query("DELETE FROM net_addresses_net_interfaces;");
-$udb->db->query("DELETE FROM net_dns_entries;");
-$udb->db->query("DELETE FROM comp_classes;");
-$udb->db->query("DELETE FROM comp_classes_computers;");
-$udb->db->query("DELETE FROM net_zones;");
-$udb->db->query("DELETE FROM net_vlans;");
-$udb->db->query("DELETE FROM equip_status_types;");
-$udb->db->query("DELETE FROM management_types;");
-$udb->db->query("DELETE FROM routing_types;");
-$udb->db->query("DELETE FROM dns_regions;");
-$udb->db->query("DELETE FROM os_types;");
-$udb->db->query("DELETE FROM places;");
-$udb->db->query("DELETE FROM net_switches;");
+$udb->db->resultset('Equipment')->delete;
+$udb->db->resultset('Computers')->delete;
+$udb->db->resultset('NetAddresses')->delete;
+$udb->db->resultset('NetInterfaces')->delete;
+$udb->db->resultset('NetAddressesNetInterfaces')->delete;
+$udb->db->resultset('NetDnsEntries')->delete;
+$udb->db->resultset('CompClasses')->delete;
+$udb->db->resultset('CompClassesComputers')->delete;
+$udb->db->resultset('NetZones')->delete;
+$udb->db->resultset('NetVlans')->delete;
+$udb->db->resultset('EquipStatusTypes')->delete;
+$udb->db->resultset('ManagementTypes')->delete;
+$udb->db->resultset('RoutingTypes')->delete;
+$udb->db->resultset('DnsRegions')->delete;
+$udb->db->resultset('OsTypes')->delete;
+$udb->db->resultset('Places')->delete;
+$udb->db->resultset('NetSwitches')->delete;
+$udb->db->resultset('NetPorts')->delete;
 
 print "done.\n";
 
 print "adjusting sequences... ";
 
-$udb->db->query("alter sequence dns_serial_num_seq restart with 6680;");
+$udb->do("alter sequence dns_serial_num_seq restart with 6680;");
 
 print "done.\n";
 
 print "populating static tables... ";
 
-sub domain_insert {
-  my ($table, $desc) = @_;
-  my $sth = $udb->prepare("INSERT INTO $table (name) VALUES (?)");
-  $sth->execute($desc);
-}
+domain_insert("EquipStatusTypes", "deployed"),
+domain_insert("EquipStatusTypes", "spare"),
+domain_insert("EquipStatusTypes", "surplus"),
+domain_insert("EquipStatusTypes", "virtual"),
 
-sub os_insert {
-  my ($desc, $pxe) = @_;
-  my $sth = $udb->prepare("INSERT INTO os_types (name, pxe_boot) VALUES (?, ?)");
-  $sth->execute($desc, $pxe);
-}
+domain_insert("ManagementTypes", "tstaff"),
+domain_insert("ManagementTypes", "cis"),
+domain_insert("ManagementTypes", "user"),
 
-domain_insert("equip_status_types", "deployed"),
-domain_insert("equip_status_types", "spare"),
-domain_insert("equip_status_types", "surplus"),
-domain_insert("equip_status_types", "virtual"),
+domain_insert("RoutingTypes", "standard");
+domain_insert("RoutingTypes", "private");
+domain_insert("RoutingTypes", "DMZ");
+domain_insert("RoutingTypes", "special");
 
-domain_insert("management_types", "tstaff"),
-domain_insert("management_types", "cis"),
-domain_insert("management_types", "user"),
-
-domain_insert("routing_types", "standard");
-domain_insert("routing_types", "private");
-domain_insert("routing_types", "DMZ");
-domain_insert("routing_types", "special");
-
-domain_insert("dns_regions", "internal");
-domain_insert("dns_regions", "external");
+domain_insert("DnsRegions", "internal");
+domain_insert("DnsRegions", "external");
 
 os_insert("linux", 1);
 os_insert("linux64", 1);
@@ -118,41 +229,35 @@ os_insert("vista64", 0);
 os_insert("winxp", 0);
 os_insert("winxp64", 0);
 
-my $zone_insert = $udb->{dbh}->prepare("INSERT INTO net_zones (zone_manager, equip_manager, routing_type, name, dynamic_dhcp) VALUES (?, ?, ?, ?, ?)");
+zone_insert("tstaff", "tstaff", "DMZ", "tstaff-dmz", 0);
+zone_insert("tstaff", "tstaff", "private", "tstaff-private", 0);
+zone_insert("tstaff", "tstaff", "standard", "tstaff-standard", 0);
+zone_insert("tstaff", "user", "DMZ", "user-dmz", 0);
+zone_insert("tstaff", "user", "private", "cs166", 0);
+zone_insert("tstaff", "user", "special", "outside", 0);
+zone_insert("tstaff", "user", "special", "ipsec", 0);
+zone_insert("tstaff", "user", "standard", "user-standard", 1);
+zone_insert("cis", "user", "special", "jj-oshean", 0);
+zone_insert("cis", "user", "special", "techhouse", 0);
+zone_insert("cis", "cis", "special", "cis-switches", 0);
 
-my $vlan_insert = $udb->{dbh}->prepare("INSERT INTO net_vlans (zone, vlan_num, network, dhcp, gateway) VALUES (?, ?, ?, ?, ?)");
+vlan_insert("tstaff-dmz", 32, "128.148.32.0/25", 1, "128.148.32.1");
+vlan_insert("tstaff-private", 192, "192.168.1.0/24", 0, "192.168.1.1");
+vlan_insert("tstaff-private", 898, "10.116.0.0/16", 1, "10.116.1.1");
+vlan_insert("tstaff-private", 897, "192.168.10.0/24", 1, "192.168.10.1");
+vlan_insert("tstaff-standard", 31, "128.148.31.0/24", 1, "128.148.31.1");
+vlan_insert("tstaff-standard", 33, "128.148.33.0/24", 1, "128.148.33.1");
+vlan_insert("tstaff-standard", 37, "128.148.37.0/24", 1, "128.148.37.1");
+vlan_insert("tstaff-standard", 38, "128.148.38.0/24", 1, "128.148.38.1");
+vlan_insert("user-dmz", 892, "128.148.32.128/25", 1, "128.148.32.129");
+vlan_insert("cs166", 893, "192.168.100.0/24", 0, "192.168.100.1");
+vlan_insert("outside", 34, "128.148.34.0/24", 0, "128.148.34.1");
+vlan_insert("jj-oshean", 698, "198.7.242.32/28", 1, "198.7.242.34");
+vlan_insert("techhouse", 360, "138.16.60.0/24", 1, "138.16.60.1");
+vlan_insert("ipsec", 885, "10.117.0.0/16", 0, "10.117.1.1");
+vlan_insert("cis-switches", 720, "10.115.1.0/24", 1, "10.115.1.1");
 
-my $vlan_dhcp_insert = $udb->{dbh}->prepare("INSERT INTO net_vlans (zone, vlan_num, network, dhcp, dynamic_dhcp_start, dynamic_dhcp_end, gateway) VALUES (?, ?, ?, ?, ?, ?, ?)");
-
-$zone_insert->execute("tstaff", "tstaff", "DMZ", "tstaff-dmz", 0);
-$zone_insert->execute("tstaff", "tstaff", "private", "tstaff-private", 0);
-$zone_insert->execute("tstaff", "tstaff", "standard", "tstaff-standard", 0);
-$zone_insert->execute("tstaff", "user", "DMZ", "user-dmz", 0);
-$zone_insert->execute("tstaff", "user", "private", "cs166", 0);
-$zone_insert->execute("tstaff", "user", "special", "outside", 0);
-$zone_insert->execute("tstaff", "user", "special", "ipsec", 0);
-$zone_insert->execute("tstaff", "user", "standard", "user-standard", 1);
-$zone_insert->execute("cis", "user", "special", "jj-oshean", 0);
-$zone_insert->execute("cis", "user", "special", "techhouse", 0);
-$zone_insert->execute("cis", "cis", "special", "cis-switches", 0);
-
-$vlan_insert->execute("tstaff-dmz", 32, "128.148.32.0/25", 1, "128.148.32.1");
-$vlan_insert->execute("tstaff-private", 192, "192.168.1.0/24", 0, "192.168.1.1");
-$vlan_insert->execute("tstaff-private", 898, "10.116.0.0/16", 1, "10.116.1.1");
-$vlan_insert->execute("tstaff-private", 897, "192.168.10.0/24", 1, "192.168.10.1");
-$vlan_insert->execute("tstaff-standard", 31, "128.148.31.0/24", 1, "128.148.31.1");
-$vlan_insert->execute("tstaff-standard", 33, "128.148.33.0/24", 1, "128.148.33.1");
-$vlan_insert->execute("tstaff-standard", 37, "128.148.37.0/24", 1, "128.148.37.1");
-$vlan_insert->execute("tstaff-standard", 38, "128.148.38.0/24", 1, "128.148.38.1");
-$vlan_insert->execute("user-dmz", 892, "128.148.32.128/25", 1, "128.148.32.129");
-$vlan_insert->execute("cs166", 893, "192.168.100.0/24", 0, "192.168.100.1");
-$vlan_insert->execute("outside", 34, "128.148.34.0/24", 0, "128.148.34.1");
-$vlan_insert->execute("jj-oshean", 698, "198.7.242.32/28", 1, "198.7.242.34");
-$vlan_insert->execute("techhouse", 360, "138.16.60.0/24", 1, "138.16.60.1");
-$vlan_insert->execute("ipsec", 885, "10.117.0.0/16", 0, "10.117.1.1");
-$vlan_insert->execute("cis-switches", 720, "10.115.1.0/24", 1, "10.115.1.1");
-
-$vlan_dhcp_insert->execute("user-standard", 36, "128.148.36.0/24", 1, "128.148.36.100", "128.148.36.254", "128.148.36.1");
+vlan_dhcp_insert("user-standard", 36, "128.148.36.0/24", 1, "128.148.36.100", "128.148.36.254", "128.148.36.1");
 
 print "done.\n";
 
@@ -162,14 +267,92 @@ while ( my ($key, $data) = each(%$cdb_by_hostname) ) {
   if ($data->{'status'} ne 'disabled') {
     if ($data->{'ethernet'} ne '' ) {
       print "adding host " . $data->{hostname} . "\n";
-      $udb->insert_host($data);
+
+      $data->{'classes'} =~ s/\s//g;
+      my @classes = split(/,/, $data->{'classes'});
+
+      my $ethernet = $data->{'ethernet'};
+      if ((defined $ethernet) and ($ethernet eq "")) {
+        $ethernet = undef;
+      }
+      if ((defined $ethernet) and ($ethernet eq "0:0:0:0:0:0")) {
+        $ethernet = undef;
+      }
+
+      my $status = $data->{'status'};
+
+      my $monitored = 0;
+      if ($status eq "monitored") {
+        $monitored = 1;
+      }
+
+      my $os = $data->{'os_type'};
+      if (($os eq "other") or ($os eq "") or ($os eq "windows")) {
+        $os = undef;
+      }
+
+      my $equip_status = "deployed";
+      if (defined $os and (($os eq "linux-xen") or ($os eq "linux64-xen"))) {
+        $equip_status = "virtual";
+      }
+
+      my $pxelink = $data->{'pxelink'};
+      if ((defined $pxelink) and ($pxelink eq "")) {
+        $pxelink = undef;
+      }
+
+      my $ip = add_address($data);
+
+      my $device = $udb->db->resultset('Equipment')->find_or_create({
+          equip_status => $equip_status,
+          managed_by => $data->{'managed_by'},
+          name => $data->{'hostname'},
+          contact => $data->{'contact'},
+          comments => ($data->{'comment'} or undef),
+        });
+
+      my $comp = $udb->db->resultset('Computers')->find_or_create({
+          device => $device,
+          os => $os,
+          pxelink => $pxelink,
+        });
+      $device->computer($comp);
+
+      my $iface = $device->add_to_net_interfaces({
+          device => $device,
+          ethernet => $ethernet,
+          primary_address => $ip,
+        });
+
+      $ip->add_to_net_interfaces($iface);
+
+      if (defined $os and (($os eq "linux-server") or ($os eq "linux64-server"))) {
+        $device->protected(1);
+      }
+
+      if ( $#classes != -1 ) {
+        foreach (@classes) {
+          if (/^service\./) {
+            $device->protected(1);
+          } else {
+            my $class = $udb->db->resultset('CompClasses')->find_or_create({
+                name => $_,
+                os => $os,
+              });
+            $device->computer->add_to_classes($class);
+          }
+        }
+      }
+
+      $device->update;
+
     } elsif ($data->{'prim_grp'} eq 'switch') {
       # skip
     } elsif ($data->{'prim_grp'} eq 'dhcp-placeholder') {
       # skip
     } else {
       print "adding virtual IP " . $data->{hostname} . "\n";
-      $udb->insert_virtual_ip($data);
+      add_address($data);
     }
   }
 }
@@ -179,81 +362,106 @@ print "done.\n";
 print "importing equipment from switchport... ";
  
 while ( my ($key, $data) = each(%$sp_switches) ) {
-  print "adding switch $key\n";
-  $udb->insert_switch($data);
+
+  my $fqdn = $data->{'fqdn'};
+  my @split_fqdn = split(/\./, $fqdn);
+  my $name = $split_fqdn[0];
+
+  my $loc = $udb->db->resultset('Places')->find_or_create({
+      city => 'Providence',
+      building => 'CIT',
+      room => $data->{'location'},
+    });
+
+  my $device = $udb->db->resultset('Equipment')->find_or_create({
+      name => $name,
+      equip_status => "deployed",
+      managed_by => "cis",
+      contact => 'help@brown.edu',
+      location => $loc,
+    });
+
+  my $switch = $udb->db->resultset('NetSwitches')->find_or_create({
+      device => $device,
+      fqdn => $fqdn,
+      num_ports => $data->{'numports'},
+      num_blades => $data->{'numblades'},
+      switch_type => $data->{'type'},
+      port_prefix => $data->{'prefix'},
+      connection => $data->{'mode'},
+      username => $data->{'user'},
+      pass => $data->{'login'},
+    });
+  $device->switch($switch);
 }
 
 print "done.\n";
 
-print "importing ports from switchport... ";
- 
-$udb->db->query("DELETE FROM net_ports;");
-
-while ( my ($key, $data) = each(%$sp_hosts) ) {
-  my $sth;
-
-  print "adding port for host $key\n";
-
-  my $switch = $data->{"switch"};
-  my $wall_plate = $data->{"jack"};
-
-  my ($port_num, $blade_num);
-  if ($data->{"port"} =~ /(\d+)\/0\/(\d+)/) {
-    $blade_num = $1;
-    $port_num = $2;
-  } elsif ($data->{"port"} =~ /(\d+)\/(\d+)/) {
-    $blade_num = $1;
-    $port_num = $2;
-  } elsif ($data->{"port"} =~ /(\d+)/) {
-    $port_num = $1;
-  } else {
-    die "bad format";
-  }
-
-  my $room_num;
-  if ($wall_plate =~ /^(\d+)/) {
-    $room_num = $1;
-  }
-
-  # insert port
-
-  $sth = $udb->prepare("insert into net_ports (switch, port_num, blade_num, wall_plate, last_changed) values (?, ?, ?, ?, now())");
-  $sth->bind_param(2, undef, SQL_INTEGER);
-  $sth->bind_param(3, undef, SQL_INTEGER);
-
-  $sth->execute($switch, $port_num, $blade_num, $wall_plate);
-  my $port_id = $udb->{dbh}->last_insert_id(undef, undef, "net_ports", undef);
-
-  # bind port to vlans
-
-  # foreach vlan in comma separated list, look it up then add a join
-  # table entry
-
-  my @vlans = split(/,/,$data->{"vlan"});
-
-  foreach my $vlan (@vlans) {
-    print "bind port $wall_plate to vlan $vlan\n";
-    my $vlan_sth = $udb->prepare("insert into net_ports_net_vlans (net_ports_id, vlan_num) values (?, ?)");
-    $vlan_sth->bind_param(1, undef, SQL_INTEGER);
-    $vlan_sth->bind_param(2, undef, SQL_INTEGER);
-    $vlan_sth->execute($port_id, $vlan);
-  }
-
-  my $iface_id;
-
-  $sth = $udb->prepare("select ni.id from net_interfaces ni where ni.equip_name = ?");
-  $sth->execute($key);
-  $sth->bind_columns(\$iface_id);
-  while ($sth->fetch) {
-    print "bind interface $key to port $wall_plate\n";
-    my $bind_sth = $udb->prepare("update net_interfaces set port_id = ? where id = ?");
-    $bind_sth->bind_param(1, undef, SQL_INTEGER);
-    $bind_sth->bind_param(2, undef, SQL_INTEGER);
-    $bind_sth->execute($port_id, $iface_id);
-  }
-}
-
-print "done.\n";
+### print "importing ports from switchport... ";
+###  
+### while ( my ($key, $data) = each(%$sp_hosts) ) {
+###   print "adding port for host $key\n";
+### 
+###   my $switch = $data->{"switch"};
+###   my $wall_plate = $data->{"jack"};
+### 
+###   my ($port_num, $blade_num);
+###   if ($data->{"port"} =~ /(\d+)\/0\/(\d+)/) {
+###     $blade_num = $1;
+###     $port_num = $2;
+###   } elsif ($data->{"port"} =~ /(\d+)\/(\d+)/) {
+###     $blade_num = $1;
+###     $port_num = $2;
+###   } elsif ($data->{"port"} =~ /(\d+)/) {
+###     $port_num = $1;
+###   } else {
+###     die "bad format";
+###   }
+### 
+###   my $room_num;
+###   if ($wall_plate =~ /^(\d+)/) {
+###     $room_num = $1;
+###   }
+### 
+###   # insert port
+### 
+###   $sth = $udb->prepare("insert into net_ports (switch, port_num, blade_num, wall_plate, last_updated) values (?, ?, ?, ?, now())");
+###   $sth->bind_param(2, undef, SQL_INTEGER);
+###   $sth->bind_param(3, undef, SQL_INTEGER);
+### 
+###   $sth->execute($switch, $port_num, $blade_num, $wall_plate);
+###   my $port_id = $udb->{dbh}->last_insert_id(undef, undef, "net_ports", undef);
+### 
+###   # bind port to vlans
+### 
+###   # foreach vlan in comma separated list, look it up then add a join
+###   # table entry
+### 
+###   my @vlans = split(/,/,$data->{"vlan"});
+### 
+###   foreach my $vlan (@vlans) {
+###     print "bind port $wall_plate to vlan $vlan\n";
+###     my $vlan_sth = $udb->prepare("insert into net_ports_net_vlans (net_ports_id, vlan_num) values (?, ?)");
+###     $vlan_sth->bind_param(1, undef, SQL_INTEGER);
+###     $vlan_sth->bind_param(2, undef, SQL_INTEGER);
+###     $vlan_sth->execute($port_id, $vlan);
+###   }
+### 
+###   my $iface_id;
+### 
+###   $sth = $udb->prepare("select ni.id from net_interfaces ni where ni.equip_name = ?");
+###   $sth->execute($key);
+###   $sth->bind_columns(\$iface_id);
+###   while ($sth->fetch) {
+###     print "bind interface $key to port $wall_plate\n";
+###     my $bind_sth = $udb->prepare("update net_interfaces set port_id = ? where id = ?");
+###     $bind_sth->bind_param(1, undef, SQL_INTEGER);
+###     $bind_sth->bind_param(2, undef, SQL_INTEGER);
+###     $bind_sth->execute($port_id, $iface_id);
+###   }
+### }
+### 
+### print "done.\n";
 
 # pc index db
 
@@ -282,33 +490,39 @@ while ( <FH> ) {
 
   print "updating $name\n";
 
-  my $device = $udb->get_equip($name);
-  if ( !$device ) {
-    # create an equipment entry...
-    my $equip_insert = $udb->prepare("INSERT INTO equipment (equip_status, managed_by, name, contact) VALUES (?, ?, ?, ?)");
-    my $managed_by = "tstaff";
-    $equip_insert->execute('spare', 'tstaff', $name, $users);
-    $equip_insert->finish;
-  } elsif ($device->{comments}) {
+  my $device = $udb->db->resultset('Equipment')->find_or_create({
+      equip_status => 'spare',
+      managed_by => 'tstaff',
+      name => $name,
+      contact => $users,
+    });
+
+  if ($device->comments) {
     chomp($comments);
     if ($comments ne '') {
       $comments .= ", ";
     }
-    $comments .= $device->{comments};
+    $comments .= $device->comments;
   }
 
-  my $place = $udb->get_location_id($location);
+  my $loc = $udb->db->resultset('Places')->find_or_create({
+      city => 'Providence',
+      building => 'CIT',
+      room => $location,
+    });
 
   $install_date = &fix_date($install_date);
   $purchase_date = &fix_date($purchase_date);
 
-  # owner, contact...
+  $device->brown_inv_num($brown_inv);
+  $device->serial_num($serial);
+  $device->po_num($po_num);
+  $device->purchased_on($purchase_date);
+  $device->installed_on($install_date);
+  $device->comments($comments);
+  $device->location($loc);
 
-  my $sth = $udb->prepare("update equipment set place_id = ?, brown_inv_num = ?, serial_num = ?, po_num = ?, purchased_on = ?, installed_on = ?, comments = ? where name = ?");
-  $sth->bind_param(5, undef, {pg_type => PG_DATE});
-  $sth->bind_param(6, undef, {pg_type => PG_DATE});
-
-  $sth->execute($place, $brown_inv, $serial, $po_num, $purchase_date, $install_date, $comments, $name);
+  $device->update;
 }
 
 close(FH);
@@ -353,7 +567,7 @@ print "done.\n";
 #     $equip_insert->finish;
 #   }
 # 
-#   my $place = $udb->get_location_id($location);
+#   my $loc = $udb->get_location_id($location);
 # 
 #   $install_date = &fix_date($install_date);
 #   $purchase_date = &fix_date($purchase_date);
@@ -364,12 +578,10 @@ print "done.\n";
 #   $sth->bind_param(5, undef, {pg_type => PG_DATE});
 #   $sth->bind_param(6, undef, {pg_type => PG_DATE});
 # 
-#   $sth->execute($place, $brown_inv, $serial, $po_num, $purchase_date, $install_date, $hostname, $comments);
+#   $sth->execute($loc, $brown_inv, $serial, $po_num, $purchase_date, $install_date, $hostname, $comments);
 # }
 # 
 # close(FH);
-
-$udb->finish;
 
 __END__
 

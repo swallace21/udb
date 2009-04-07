@@ -83,7 +83,7 @@ while(<INPUT>) {
 		$sth->finish;
 	}
 
-	$sth = $dbh->prepare("INSERT INTO accounts (uid, person_id, login, gid, shell, home_dir, last_changed) VALUES (?, ?, ?, ?, ?, ?, now())");
+	$sth = $dbh->prepare("INSERT INTO accounts (uid, person_id, login, gid, shell, home_dir, last_updated) VALUES (?, ?, ?, ?, ?, ?, now())");
 	$sth->execute($list[2], $person_id, $list[0], $list[3], $list[6], $list[5]);
 	$sth->finish;
 }

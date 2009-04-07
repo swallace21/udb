@@ -105,7 +105,7 @@ __PACKAGE__->belongs_to(
   { name => "parent_equip_id" },
 );
 __PACKAGE__->has_many(
-  "equipments",
+  "child_devices",
   "BrownCS::UDB::Schema::Equipment",
   { "foreign.parent_equip_id" => "self.name" },
 );
@@ -120,7 +120,7 @@ __PACKAGE__->belongs_to(
   { name => "managed_by" },
 );
 __PACKAGE__->belongs_to(
-  "place_id",
+  "location",
   "BrownCS::UDB::Schema::Places",
   { id => "place_id" },
 );

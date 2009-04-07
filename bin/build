@@ -340,6 +340,10 @@ sub build_wpkg_hosts {
         push @wpkg_profiles, "powerdvd";
       }
 
+      if (/^acrobat9$/) {
+        push @wpkg_profiles, "acrobat9";
+      }
+
     }
 
     next unless @wpkg_profiles;

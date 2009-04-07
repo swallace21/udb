@@ -33,7 +33,7 @@ __PACKAGE__->add_columns(
   { data_type => "integer", default_value => undef, is_nullable => 0, size => 4 },
   "authoritative",
   { data_type => "boolean", default_value => undef, is_nullable => 0, size => 1 },
-  "last_changed",
+  "last_updated",
   {
     data_type => "timestamp without time zone",
     default_value => "now()",

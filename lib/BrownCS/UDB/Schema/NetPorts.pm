@@ -31,7 +31,7 @@ __PACKAGE__->add_columns(
     is_nullable => 0,
     size => undef,
   },
-  "last_changed",
+  "last_updated",
   {
     data_type => "timestamp without time zone",
     default_value => "now()",

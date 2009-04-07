@@ -52,7 +52,7 @@ sub format_device {
   my ($device) = @_;
   my $out = {};
   $out->{"Name"} = $device->name;
-  $out->{"Location"} = format_location($device->place_id);
+  $out->{"Location"} = format_location($device->location);
   $out->{"Status"} = $device->equip_status->name;
   $out->{"Managed by"} = $device->managed_by->name;
   $out->{"Purchase date"} = $device->purchased_on;
@@ -70,7 +70,7 @@ sub format_device {
   }
   my $ifaces = [];
   foreach my $iface ($device->net_interfaces) {
-    push @$ifaces, format_interface($out, $iface);
+    push @$ifaces, format_interface($iface);
   }
   $out->{"Interfaces"} = $ifaces;
   return $out;
@@ -78,7 +78,16 @@ sub format_device {
 
 sub format_computer {
   my ($out, $comp) = @_;
-  $out->{"Ima computah"} = "stop all the downloadin";
+  $out->{"OS"} = ($comp->os and $comp->os->name);
+  $out->{"PXE link"} = $comp->pxelink;
+  $out->{"CPUs"} = $comp->num_cpus;
+  $out->{"CPU type"} = $comp->cpu_type;
+  $out->{"CPU speed"} = $comp->cpu_speed;
+  $out->{"Memory"} = $comp->memory;
+  $out->{"Hard drives"} = $comp->hard_drives;
+  $out->{"Video cards"} = $comp->video_cards;
+  $out->{"Last updated"} = $comp->last_updated;
+  @{$out->{"Classes"}} = $comp->classes->get_column("name")->all;
 }
 
 sub format_switch {
@@ -89,15 +98,34 @@ sub format_switch {
 sub format_location {
   my ($loc) = @_;
   my $out = {};
-  $out->{"City"} = $loc->city;
-  $out->{"Building"} = $loc->building;
-  $out->{"Room"} = $loc->room;
+  if ($loc) {
+    $out->{"City"} = $loc->city;
+    $out->{"Building"} = $loc->building;
+    $out->{"Room"} = $loc->room;
+  }
   return $out;
 }
 
 sub format_interface {
-  my ($old_pre, $iface) = @_;
-  return {};
+  my ($iface) = @_;
+  my $out = {};
+  $out->{"MAC address"} = $iface->ethernet;
+  $out->{"Primary IP"} = $iface->primary_address->ipaddr;
+  if ($iface->port_id) {
+    my $port = $iface->port_id;
+    $out->{"Switch"} = $port->switch->name;
+    $out->{"Blade"} = $port->blade_num;
+    $out->{"Port"} = $port->port_num;
+    $out->{"Wall plate"} = $port->wall_plate;
+  }
+  return $out;
+}
+
+sub format_generic {
+  my ($arg) = @_;
+  my $out = {};
+  $out->{"Something"} = $arg->something;
+  return $out;
 }
 
 __END__

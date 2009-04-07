@@ -29,15 +29,13 @@ __PACKAGE__->add_columns(
     is_nullable => 1,
     size => undef,
   },
-  "system_model",
+  "num_cpus",
   {
-    data_type => "text",
+    data_type => "integer",
     default_value => undef,
     is_nullable => 1,
-    size => undef,
+    size => 4
   },
-  "num_cpus",
-  { data_type => "integer", default_value => undef, is_nullable => 1, size => 4 },
   "cpu_type",
   {
     data_type => "text",
@@ -66,27 +64,6 @@ __PACKAGE__->add_columns(
     is_nullable => 1,
     size => undef,
   },
-  "total_disk",
-  {
-    data_type => "text",
-    default_value => undef,
-    is_nullable => 1,
-    size => undef,
-  },
-  "other_drives",
-  {
-    data_type => "text",
-    default_value => undef,
-    is_nullable => 1,
-    size => undef,
-  },
-  "network_cards",
-  {
-    data_type => "text",
-    default_value => undef,
-    is_nullable => 1,
-    size => undef,
-  },
   "video_cards",
   {
     data_type => "text",
@@ -94,39 +71,11 @@ __PACKAGE__->add_columns(
     is_nullable => 1,
     size => undef,
   },
-  "os_name",
-  {
-    data_type => "text",
-    default_value => undef,
-    is_nullable => 1,
-    size => undef,
-  },
-  "os_version",
-  {
-    data_type => "text",
-    default_value => undef,
-    is_nullable => 1,
-    size => undef,
-  },
-  "os_dist",
-  {
-    data_type => "text",
-    default_value => undef,
-    is_nullable => 1,
-    size => undef,
-  },
-  "info_time",
+  "last_updated",
   {
     data_type => "timestamp without time zone",
-    default_value => undef,
-    is_nullable => 1,
-    size => 8,
-  },
-  "boot_time",
-  {
-    data_type => "timestamp without time zone",
-    default_value => undef,
-    is_nullable => 1,
+    default_value => "now()",
+    is_nullable => 0,
     size => 8,
   },
 );
@@ -137,8 +86,8 @@ __PACKAGE__->has_many(
   "BrownCS::UDB::Schema::CompClassesComputers",
   { "foreign.computer" => "self.name" },
 );
-__PACKAGE__->belongs_to("name", "BrownCS::UDB::Schema::Equipment", { name => "name" });
-__PACKAGE__->belongs_to("o", "BrownCS::UDB::Schema::OsTypes", { name => "os" });
+__PACKAGE__->belongs_to("device", "BrownCS::UDB::Schema::Equipment", { name => "name" });
+__PACKAGE__->belongs_to("os", "BrownCS::UDB::Schema::OsTypes", { name => "os" });
 
 
 # Created by DBIx::Class::Schema::Loader v0.04005 @ 2009-04-02 16:27:51
