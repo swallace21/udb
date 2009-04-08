@@ -23,6 +23,7 @@ our @EXPORT_OK = qw(
   ipv4_n2x
   fix_date
   get_new
+  bool
 );
 
 our %EXPORT_TAGS = ("all" => [@EXPORT_OK]);
@@ -156,6 +157,11 @@ sub fmt_time {
                   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec' );
 
   return "${mday}${moname[$mon]}${year} ${hour}:${min}:${sec}";
+}
+
+sub bool {
+  my ($bool) = @_;
+  return $bool ? "yes" : "no";
 }
 
 sub ipv4_n2x {

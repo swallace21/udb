@@ -34,7 +34,7 @@ sub print_record {
     } elsif ((ref($val) eq "HASH")) {
       print $prefix, $key, ":\n";
       print_record(($prefix."  "), $val);
-    } else {
+    } elsif ($val) {
       printf "%s%s: %s\n", $prefix, $key, $val;
     }
   }
@@ -53,7 +53,7 @@ sub print_array {
     } elsif ((ref($item) eq "HASH")) {
       print "$prefix-\n";
       print_record(($prefix."  "), $item);
-    } else {
+    } elsif ($item) {
       printf "%s- %s\n", $prefix, $item;
     }
   }

@@ -52,7 +52,7 @@ __PACKAGE__->set_primary_key("id");
 __PACKAGE__->add_unique_constraint("net_addresses_pkey", ["id"]);
 __PACKAGE__->belongs_to("zone", "BrownCS::UDB::Schema::NetZones", { name => "zone" });
 __PACKAGE__->belongs_to(
-  "vlan_num",
+  "vlan",
   "BrownCS::UDB::Schema::NetVlans",
   { vlan_num => "vlan_num" },
 );

@@ -199,7 +199,6 @@ print "populating static tables... ";
 
 domain_insert("EquipStatusTypes", "deployed"),
 domain_insert("EquipStatusTypes", "spare"),
-domain_insert("EquipStatusTypes", "surplus"),
 domain_insert("EquipStatusTypes", "virtual"),
 
 domain_insert("ManagementTypes", "tstaff"),
@@ -523,59 +522,120 @@ close(FH);
 
 print "done.\n";
 
-# # surplus index db
-# 
-# print "importing index surplus... ";
-# 
-# # o Hostname
-# # o Description
-# # o Brown inv. #
-# # o Serial #
-# # o Purchase Order#
-# # o Purchase date
-# # o Installation Date
-# # o Location
-# # o User(s)	
-# # o Comments
-# 
-# my($id, $result);
-# 
-# my $filename = mktemp("/tmp/udbXXXXX");
-# system("index -f cat surplus '' > $filename");
-# open(FH, $filename);
-# 
-# my $first_line = <FH>;
-# 
-# while ( <FH> ) {
-#   my ($hostname, $desc, $brown_inv, $serial, $po_num, $purchase_date,
-#     $install_date, $location, $users, $comments) = split(/\t/);
-# 
-#   print "updating $hostname\n";
-# 
-#   $result = $udb->get_host($hostname);
-#   if ( !$result ) {
-#     # create an equipment entry...
-#     my $equip_insert = $udb->prepare("INSERT INTO equipment (equip_status, managed_by, name, contact) VALUES (?, ?, ?, ?)");
-#     my $managed_by = "tstaff";
-#     $equip_insert->execute('spare', 'tstaff', $hostname, $users);
-#     $equip_insert->finish;
-#   }
-# 
-#   my $loc = $udb->get_location_id($location);
-# 
-#   $install_date = &fix_date($install_date);
-#   $purchase_date = &fix_date($purchase_date);
-# 
-#   # owner, contact...
-# 
-#   my $sth = $udb->prepare("update equipment set place_id = ?, brown_inv_num = ?, serial_num = ?, po_num = ?, purchased_on = ?, installed_on = ?, comments = ? where name = ?");
-#   $sth->bind_param(5, undef, {pg_type => PG_DATE});
-#   $sth->bind_param(6, undef, {pg_type => PG_DATE});
-# 
-#   $sth->execute($loc, $brown_inv, $serial, $po_num, $purchase_date, $install_date, $hostname, $comments);
-# }
-# 
-# close(FH);
+# surplus index db
+
+print "importing index surplus... ";
+
+# o Hostname
+# o Description
+# o Brown inv. #
+# o Upgrade serial #
+# o Serial #
+# o Upgrade PO #
+# o Purchase Order#
+# o  remarks
+# o  remarks
+# o Purchase date
+# o   remarks
+# o   remarks
+# o Upgrade install date
+# o Installation Date
+# o   remarks
+# o   remarks
+# o Location
+# o Configuration
+# o   remarks
+# o   remarks
+# o Type
+# o User(s)
+# o Date of surplus
+# o Buyer
+
+$filename = mktemp("/tmp/udbXXXXX");
+system("index -f cat surplus '' > $filename");
+open(FH, $filename);
+
+$first_line = <FH>;
+
+while ( <FH> ) {
+  my ($name, $desc, $brown_inv, $upgrade_serial, $serial,
+    $upgrade_po, $po_num, $po_rem1, $po_rem2,
+    $purchase_date, $pd_rem1, $pd_rem2,
+    $upgrade_install_date, $install_date, $install_rem1, $install_rem2,
+    $location,
+    $configuration, $conf_rem1, $conf_rem2,
+    $type, $users, $surplus_date, $buyer) = split(/\t/);
+
+  next if (not $surplus_date);
+
+  my $comments = $desc;
+
+  if ($configuration) {
+    $comments .= ", $configuration";
+  }
+
+  if ($conf_rem1) {
+    $comments .= ", $conf_rem1";
+  }
+
+  if ($conf_rem2) {
+    $comments .= ", $conf_rem2";
+  }
+
+  if ($upgrade_serial) {
+    $comments .= ", upgrade serial $upgrade_serial";
+  }
+
+  if ($upgrade_po) {
+    $comments .= ", upgrade po $upgrade_po";
+  }
+
+  if ($po_rem1) {
+    $comments .= ", $po_rem1";
+  }
+
+  if ($po_rem2) {
+    $comments .= ", $po_rem2";
+  }
+
+  if ($pd_rem1) {
+    $comments .= ", $pd_rem1";
+  }
+
+  if ($pd_rem2) {
+    $comments .= ", $pd_rem2";
+  }
+
+  if ($upgrade_install_date) {
+    $comments .= ", upgraded on $upgrade_install_date";
+  }
+
+  if ($install_rem1) {
+    $comments .= ", $install_rem1";
+  }
+
+  if ($install_rem2) {
+    $comments .= ", $install_rem2";
+  }
+
+  print "adding surplus device $name\n";
+
+  my $device = $udb->db->resultset('SurplusEquipment')->create({
+      surplus_date => &fix_date($surplus_date),
+      purchased_on => &fix_date($purchase_date),
+      installed_on => &fix_date($install_date),
+      name => $name,
+      buyer => $buyer,
+      brown_inv_num => $brown_inv,
+      serial_num => $serial,
+      po_num => $po_num,
+      comments => $comments,
+    });
+}
+
+close(FH);
+
+print "done.\n";
 
 __END__
 

@@ -99,14 +99,19 @@ create table equipment (
 ) ;
 
 create table surplus_equipment (
-  name                      text not null references equipment
+  id                        serial primary key,
+  parent_equip_id           integer references surplus_equipment
                               on update cascade
                               on delete cascade,
-  primary key (name),
-  surplus_date              date,
-  sale_date                 date,
-  buyer                     text,
-  check (surplus_date is not null or sale_date is not null)
+  surplus_date              date not null,
+  purchased_on              date,
+  installed_on              date,
+  name                      text,
+  buyer                     text not null,
+  brown_inv_num             text,
+  serial_num                text,
+  po_num                    text,
+  comments                  text
 ) ;
 
 -- }}}

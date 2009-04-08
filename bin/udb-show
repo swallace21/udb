@@ -42,12 +42,74 @@ if (@ARGV != 1) {
 my $name = shift @ARGV;
 
 my $device = $udb->db->resultset('Equipment')->find($name);
-die "No record for device $name.\n" if not $device;
+if ($device) {
+  print_record('', format_device($device));
+  exit(0);
+}
 
-# if no device, check for an alias
+warn "No device matching found matching $name. Trying heuristics.\n";
 
-print_record('', format_device($device));
+my @candidate_devices = ();
+my @candidate_addresses = ();
 
+# device with name LIKE what we're looking for
+my $device_rs = $udb->db->resultset('Equipment')->search({
+    name => { '~*' => $name },
+  });
+if ($device_rs) {
+  while ($device = $device_rs->next) {
+    push @candidate_devices, $device;
+  }
+}
+
+my $dns_rs = $udb->db->resultset('NetDnsEntries')->search({
+    dns_name => { '~*' => $name },
+    dns_region => 'internal',
+  });
+if ($dns_rs) {
+  while (my $dns = $dns_rs->next) {
+    my $address = $dns->address;
+    my $interface_rs = $address->net_interfaces;
+    if ($interface_rs->count) {
+      while (my $interface = $interface_rs->next) {
+        my $device = $interface->device;
+        push @candidate_devices, $device;
+      }
+    } else {
+      push @candidate_addresses, $address;
+    }
+  }
+}
+
+my %seen_devices = ();
+foreach my $device (@candidate_devices) {
+  if (not $seen_devices{$device->name}) {
+    $seen_devices{$device->name} = 1;
+    print "\n";
+    print_record('', format_device($device));
+  }
+}
+
+if (%seen_devices) {
+  exit(0);
+}
+
+my %seen_addresses = ();
+foreach my $address (@candidate_addresses) {
+  if (not $seen_addresses{$address->id}) {
+    $seen_addresses{$address->id} = 1;
+    print "\n";
+    print_record('', format_address($address));
+  }
+}
+
+if (%seen_addresses) {
+  exit(0);
+}
+
+die "Couldn't find anything matching $name.\n";
+
+# TODO collect all IPs, all aliases
 sub format_device {
   my ($device) = @_;
   my $out = {};
@@ -118,6 +180,31 @@ sub format_interface {
     $out->{"Port"} = $port->port_num;
     $out->{"Wall plate"} = $port->wall_plate;
   }
+  return $out;
+}
+
+sub format_address {
+  my ($arg) = @_;
+  my $out = {};
+  $out->{"IP address"} = $arg->ipaddr;
+  $out->{"Zone"} = $arg->zone->name;
+  $out->{"VLAN"} = $arg->vlan_num;
+  $out->{"Enabled"} = bool($arg->enabled);
+  $out->{"Monitored"} = bool($arg->monitored);
+  my $dns = [];
+  foreach my $entry ($arg->net_dns_entries) {
+    push @$dns, format_dns_entry($entry);
+  }
+  $out->{"DNS"} = $dns;
+  return $out;
+}
+
+sub format_dns_entry {
+  my ($arg) = @_;
+  my $out = {};
+  $out->{"Name"} = $arg->dns_name . "." . $arg->domain;
+  $out->{"DNS region"} = $arg->dns_region->name;
+  $out->{"Authoritative"} = bool($arg->authoritative);
   return $out;
 }
 
