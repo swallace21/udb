@@ -15,7 +15,7 @@ __PACKAGE__->add_columns(
 __PACKAGE__->set_primary_key("id");
 __PACKAGE__->add_unique_constraint("comp_classes_pkey", ["id"]);
 __PACKAGE__->add_unique_constraint("comp_classes_name_key", ["name", "os"]);
-__PACKAGE__->belongs_to("o", "BrownCS::UDB::Schema::OsTypes", { name => "os" });
+__PACKAGE__->belongs_to("os", "BrownCS::UDB::Schema::OsTypes", { name => "os" });
 __PACKAGE__->has_many("comp_classes_computers", "BrownCS::UDB::Schema::CompClassesComputers", { "foreign.comp_class" => "self.id" });
 __PACKAGE__->many_to_many('computers' => 'comp_classes_computers', 'computer');
 
