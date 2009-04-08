@@ -76,13 +76,13 @@ __PACKAGE__->might_have(
   "BrownCS::UDB::Schema::NetInterfaces",
   { "foreign.primary_address" => "self.id" },
 );
+__PACKAGE__->many_to_many(
+  'net_interfaces' => 'net_addresses_net_interfaces',
+  'net_interfaces_id'
+);
+__PACKAGE__->many_to_many(
+  'net_services' => 'net_addresses_net_services',
+  'net_services_id'
+);
 
-
-# Created by DBIx::Class::Schema::Loader v0.04005 @ 2009-04-02 16:27:51
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:DEuWVicR94y5YU/AzeUIwQ
-
-
-# You can replace this text with custom content, and it will be preserved on regeneration
-__PACKAGE__->many_to_many('net_interfaces' => 'net_addresses_net_interfaces', 'net_interfaces_id');
-__PACKAGE__->many_to_many('net_services' => 'net_addresses_net_services', 'net_services_id');
 1;

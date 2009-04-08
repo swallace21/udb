@@ -29,10 +29,4 @@ __PACKAGE__->belongs_to(
   { id => "sponsor_id" },
 );
 
-
-# Created by DBIx::Class::Schema::Loader v0.04005 @ 2009-04-02 16:27:51
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:jWMtXXlSQdib65jm3zKKpg
-
-
-# You can replace this text with custom content, and it will be preserved on regeneration
 1;

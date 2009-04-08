@@ -63,4 +63,5 @@ __PACKAGE__->many_to_many(
   'net_addresses' => 'net_addresses_net_interfaces',
   'net_addresses_id'
 );
+
 1;

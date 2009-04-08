@@ -33,10 +33,4 @@ __PACKAGE__->add_columns(
 __PACKAGE__->set_primary_key("id");
 __PACKAGE__->add_unique_constraint("log_db_export_pkey", ["id"]);
 
-
-# Created by DBIx::Class::Schema::Loader v0.04005 @ 2009-04-02 16:27:51
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:brUO6wYuDbFb82z4OTQrmA
-
-
-# You can replace this text with custom content, and it will be preserved on regeneration
 1;

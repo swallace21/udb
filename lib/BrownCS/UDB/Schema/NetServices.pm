@@ -23,12 +23,9 @@ __PACKAGE__->has_many(
   "BrownCS::UDB::Schema::NetAddressesNetServices",
   { "foreign.net_services_id" => "self.service" },
 );
+__PACKAGE__->many_to_many(
+  'net_addresses' => 'net_addresses_net_services',
+  'net_addresses_id'
+);
 
-
-# Created by DBIx::Class::Schema::Loader v0.04005 @ 2009-04-02 16:27:51
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:Sj54781zd8y38TiLGOrJig
-
-
-# You can replace this text with custom content, and it will be preserved on regeneration
-__PACKAGE__->many_to_many('net_addresses' => 'net_addresses_net_services', 'net_addresses_id');
 1;

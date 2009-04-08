@@ -66,12 +66,6 @@ __PACKAGE__->has_many(
   { "foreign.vlan_num" => "self.vlan_num" },
 );
 __PACKAGE__->belongs_to("zone", "BrownCS::UDB::Schema::NetZones", { name => "zone" });
-
-
-# Created by DBIx::Class::Schema::Loader v0.04005 @ 2009-04-02 16:27:51
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:yjsk3VaZPA7eTsKXGf6TBA
-
-
-# You can replace this text with custom content, and it will be preserved on regeneration
 __PACKAGE__->many_to_many('net_ports' => 'net_ports_net_vlans', 'net_ports_id');
+
 1;

@@ -40,11 +40,4 @@ __PACKAGE__->has_many(
   { "foreign.comp_class" => "self.id" },
 );
 
-
-# Created by DBIx::Class::Schema::Loader v0.04005 @ 2009-04-02 16:27:51
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:66wC3VurpqsHi8ibhJRkog
-
-
-# You can replace this text with custom content, and it will be preserved on regeneration
-__PACKAGE__->many_to_many('computers' => 'comp_classes_computers', 'computer');
 1;
