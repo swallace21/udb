@@ -13,11 +13,11 @@ my %udb_commands = (
     'desc' => "add a new device",
     'common' => 1,
   },
-  'add-class' => {
+  'add-to-class' => {
     'desc' => "add one or more computers to a class",
     'common' => 0,
   },
-  'del-class' => {
+  'del-from-class' => {
     'desc' => "remove one or more computers from a class",
     'common' => 0,
   },

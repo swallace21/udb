@@ -48,15 +48,15 @@ __END__
 
 =head1 NAME
 
-udb-class-show - Print out a list of all computers in a class
+udb-show-class - Print out a list of all computers in a class
 
 =head1 SYNOPSIS
 
-udb-class-show [-u username] <class> <os>
+udb-show-class [-u username] <class> <os>
 
 =head1 DESCRIPTION
 
-udb-class-show queries the UDB database for all computers that belong to
+udb-show-class queries the UDB database for all computers that belong to
 a given class and OS.
 
 =head1 OPTIONS
