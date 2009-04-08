@@ -181,20 +181,20 @@ sub fix_date {
   my($orig) = shift;
   my($month, $day, $year);
 
-  if ( $orig =~ m%^\d+/\d+$% ) {
-    ($month, $year) = ($orig =~ m%^(\d+)/(\d+)$% );
+  if ( $orig =~ m%^\d+[/-]\d+$% ) {
+    ($month, $year) = ($1, $2);
     $year = &fix_year($year);
     return "$year-$month-01";
   }
 
-  if ( $orig =~ m%\d+-\d+-\d+$% ) {
-    ($month, $day, $year) = ( $orig =~ m%(\d+)-(\d+)-(\d+)$% );
+  if ( $orig =~ m%\d+[/-]\d+[/-]\d+$% ) {
+    ($month, $day, $year) = ($1, $2, $3);
     $year = &fix_year($year);
     return "$year-$month-$day";
   }
 
-  if ( $orig =~ m%^\d+-[A-Za-z]+-\d+$% ) {
-    ($day, $month, $year) = ( $orig =~ m%^(\d+)-([A-Za-z]+)-(\d+)$% );
+  if ( $orig =~ m%^\d+[/-][A-Za-z]+[/-]\d+$% ) {
+    ($day, $month, $year) = ($1, $2, $3);
     $year = &fix_year($year);
     $month = &fix_month($month);
     return "$year-$month-$day";

@@ -64,7 +64,7 @@ sub add_address {
   my $vlan;
   if ((!$ipaddr) or ($ipaddr eq "")) {
     $ipaddr = undef;
-    $vlan = 36;
+    $vlan = $udb->db->resultset('NetVlans')->find(36);
   } else {
     $vlan = $udb->db->resultset('NetVlans')->search({
         network => {'>>', $ipaddr},
@@ -90,7 +90,7 @@ sub add_address {
   }
 
   my $ip = $udb->db->resultset('NetAddresses')->create({
-      vlan_num => $vlan,
+      vlan => $vlan,
       ipaddr => $ipaddr,
       monitored => $monitored,
     });
@@ -568,6 +568,8 @@ while ( <FH> ) {
 
   next if (not $surplus_date);
 
+  print "[$surplus_date]\n";
+
   my $comments = $desc;
 
   if ($configuration) {
@@ -618,12 +620,20 @@ while ( <FH> ) {
     $comments .= ", $install_rem2";
   }
 
+  if (not $purchase_date) {
+    $purchase_date = undef;
+  }
+
+  if (not $install_date) {
+    $install_date = undef;
+  }
+
   print "adding surplus device $name\n";
 
   my $device = $udb->db->resultset('SurplusEquipment')->create({
-      surplus_date => &fix_date($surplus_date),
-      purchased_on => &fix_date($purchase_date),
-      installed_on => &fix_date($install_date),
+      surplus_date => $surplus_date,
+      purchased_on => $purchase_date,
+      installed_on => $install_date,
       name => $name,
       buyer => $buyer,
       brown_inv_num => $brown_inv,

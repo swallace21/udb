@@ -22,6 +22,6 @@ __PACKAGE__->add_columns(
 );
 __PACKAGE__->set_primary_key("id");
 __PACKAGE__->add_unique_constraint("surplus_equipment_pkey", ["id"]);
-__PACKAGE__->belongs_to("name", "BrownCS::UDB::Schema::SurplusEquipment", { id => "id" });
+__PACKAGE__->belongs_to("parent", "BrownCS::UDB::Schema::SurplusEquipment", { id => "id" });
 
 1;
