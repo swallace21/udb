@@ -504,8 +504,13 @@ while ( <FH> ) {
       room => $location,
     });
 
-  $install_date = &fix_date($install_date);
-  $purchase_date = &fix_date($purchase_date);
+  if (not $purchase_date) {
+    $purchase_date = undef;
+  }
+
+  if (not $install_date) {
+    $install_date = undef;
+  }
 
   $device->brown_inv_num($brown_inv);
   $device->serial_num($serial);

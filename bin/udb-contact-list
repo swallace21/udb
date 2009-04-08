@@ -39,6 +39,9 @@ if (@ARGV != 1) {
 my $room = shift @ARGV;
 
 my $location = $udb->db->resultset('Places')->search({room => $room})->single;
+if (not $location) {
+  die "No such location $room.\n";
+}
 my @devices = $location->devices;
 
 printf "%-18s%-10s%-18s%-40s\n\n", "MACHINE", "SERVICES", "CONTACT", "DESCRIPTION";
