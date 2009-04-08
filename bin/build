@@ -73,33 +73,43 @@ sub build_tftpboot {
 
   my $tftpboot_path = "/tftpboot/pxelinux.cfg";
 
-  my $sth = $udb->prepare("select na.ipaddr, c.os, c.pxelink from net_addresses na, net_interfaces ni, net_addresses_net_interfaces nani, computers c where ni.equip_name = c.name and nani.net_addresses_id = na.id and nani.net_interfaces_id = ni.id");
+  my $addrs = $udb->db->resultset('NetAddresses')->search({},
+    {
+      prefetch => {
+        'primary_interface' => {
+          'device' => {
+            'computer' => 'os'
+          }
+        }
+      },
+      order_by => [qw(ipaddr)],
+    });
 
-  $sth->execute();
-  my $array_ref = $sth->fetchall_arrayref({});
+  while (my $addr = $addrs->next) {
 
-  foreach my $addr (@{$array_ref}) {
+    my $comp = $addr->primary_interface->device->computer;
 
     my $bootimage;
 
-    next if not defined $addr->{os};
-    next if not defined $addr->{ipaddr};
+    my $os = ($comp->os and $comp->os->get_column('name'));
+    next if not defined $os;
+    next if not defined $addr->ipaddr;
 
-    if (defined $addr->{pxelink}) {
-      $bootimage = $addr->{pxelink};
-    } elsif ($addr->{os} eq 'linux') {
+    if (defined $comp->pxelink) {
+      $bootimage = $comp->pxelink;
+    } elsif ($os eq 'linux') {
       $bootimage = "fai-workstation-i386";
-    } elsif ($addr->{os} eq 'linux64') {
+    } elsif ($os eq 'linux64') {
       $bootimage = "fai-workstation-amd64";
-    } elsif ($addr->{os} eq 'linux-server') {
+    } elsif ($os eq 'linux-server') {
       $bootimage = "fai-server-i386";
-    } elsif ($addr->{os} eq 'linux-server') {
+    } elsif ($os eq 'linux-server') {
       $bootimage = "fai-server-amd64";
     }
-      
+
     next if not defined($bootimage);
 
-    my $hex_ip = ipv4_n2x($addr->{ipaddr});
+    my $hex_ip = ipv4_n2x($addr->ipaddr);
 
     if($dry_run) {
       print "DEBUG: $hex_ip -> $bootimage\n";
@@ -124,24 +134,34 @@ sub add_to_group {
 
 sub build_netgroup {
   my(%netgroups) = ();
+
+  my $hosts = $udb->db->resultset('Computers')->search({},
+    {
+      prefetch => [
+      'os',
+      {
+        'device' => 'managed_by',
+      },
+      ],
+      order_by => [qw(me.name)],
+    });
+
   my $host_classes = $udb->get_host_class_map;
 
-  my $sth = $udb->prepare("select e.name, c.os, e.managed_by from equipment e, computers c where c.name = e.name");
-  $sth->execute();
-  my $array_ref = $sth->fetchall_arrayref({});
+  while (my $host = $hosts->next) {
+    
+    my $hostname = $host->name;
+    my $manager = $host->device->managed_by;
 
-  foreach my $host (@{$array_ref}) {
-
-    my $hostname = $host->{name};
-    my $manager = $host->{managed_by};
-    my $os = $host->{os};
+    my $os = ($host->os and $host->os->get_column('name'));
+    next if not defined $os;
 
     if (($manager eq 'tstaff') and (defined $os) and ($os =~ /^(?:linux|linux-server|solaris)$/)) {
       add_to_group(\%netgroups, "trusted", $hostname);
     }
 
     my $classes_ref = $host_classes->{$hostname};
-    next unless defined $classes_ref;
+    next if not $classes_ref;
     my @classes = @{$classes_ref};
 
     for (@classes) {
@@ -179,7 +199,7 @@ sub build_dhcp {
 
   my $file = $dry_run ? '/tmp/dhcpd.conf' : '/maytag/sys0/dhcp/dhcpd.conf';
   my $PATH_TMPFILE = $file . '.tmp';
-  my $vars = {filename => $file, date => get_date(), dbh => $udb->{dbh}};
+  my $vars = {filename => $file, date => get_date(), dbh => $udb->db->storage->dbh};
   $tt->process('dhcpd.conf.tt2', $vars, $PATH_TMPFILE) || die $tt->error(), "\n";
 
   # send new config file to each server
@@ -198,7 +218,7 @@ sub build_nagios_hosts {
 
   my $file = $dry_run ? '/tmp/hosts.cfg' : '/maytag/sys0/Linux/files/add/group.debian.server.nagios3/etc/nagios3/conf.d/hosts.cfg';
   my $PATH_TMPFILE = $file . '.tmp';
-  my $vars = {filename => $file, date => get_date(), dbh => $udb->{dbh}};
+  my $vars = {filename => $file, date => get_date(), dbh => $udb->db->storage->dbh};
   $tt->process('hosts.cfg.tt2', $vars, $PATH_TMPFILE) || die $tt->error(), "\n";
 
   # send new config file to each server
@@ -214,7 +234,7 @@ sub build_nagios_services {
 
   my $file = $dry_run ? '/tmp/services.cfg' : '/maytag/sys0/Linux/files/add/group.debian.server.nagios3/etc/nagios3/conf.d/services.cfg';
   my $PATH_TMPFILE = $file . '.tmp';
-  my $vars = {filename => $file, date => get_date(), dbh => $udb->{dbh}};
+  my $vars = {filename => $file, date => get_date(), dbh => $udb->db->storage->dbh};
   $tt->process('services.cfg.tt2', $vars, $PATH_TMPFILE) || die $tt->error(), "\n";
 
   # send new config file to each server
@@ -241,26 +261,31 @@ sub build_wpkg_hosts {
 
   my $host_classes = $udb->get_host_class_map;
 
-  my $sth = $udb->prepare("select e.name, c.os from equipment e, computers c where c.name = e.name and e.managed_by = 'tstaff'");
-  $sth->execute();
-  my $array_ref = $sth->fetchall_arrayref({});
+  my $hosts = $udb->db->resultset('Computers')->search(
+    {
+      'device.managed_by' => 'tstaff',
+    },
+    {
+      prefetch => [
+      'os',
+      {
+        'device' => 'managed_by',
+      },
+      ],
+      order_by => [qw(me.name)],
+    });
 
-  foreach my $host (@{$array_ref}) {
 
-    my $host_var = {};
+  while (my $host = $hosts->next) {
 
-    my $hostname = $host->{name};
-    $host_var->{hostname} = $hostname;
-
-    my $os = $host->{os};
-
+    my $os = ($host->os and $host->os->get_column('name'));
     next unless((defined $os) and (($os eq 'winxp') or ($os eq 'vista')));
 
     # generate profile list
 
     my @wpkg_profiles = ();
 
-    my $classes_ref = $host_classes->{$hostname};
+    my $classes_ref = $host_classes->{$host->name};
     next unless defined $classes_ref;
     my @classes = @{$classes_ref};
 
@@ -340,18 +365,17 @@ sub build_wpkg_hosts {
         push @wpkg_profiles, "powerdvd";
       }
 
-      if (/^acrobat9$/) {
-        push @wpkg_profiles, "acrobat9";
-      }
-
     }
 
     next unless @wpkg_profiles;
 
     my $first_profile = shift(@wpkg_profiles);
 
-    $host_var->{first_profile} = $first_profile;
-    $host_var->{other_profiles} = \@wpkg_profiles;
+    my $host_var = {
+      hostname => $host->name,
+      first_profile => $first_profile,
+      other_profiles => \@wpkg_profiles,
+    };
 
     push @{$vars->{hosts}}, $host_var;
   }
@@ -371,7 +395,7 @@ sub build_dns_map_forward {
   my $vars = {
     filename => $file,
     date => get_date(),
-    dbh => $udb->{dbh},
+    dbh => $udb->db->storage->dbh,
     zone => $zone,
     serial_num => $serial_num,
     domain => $domain,
@@ -390,7 +414,7 @@ sub build_dns_map_reverse {
   my $vars = {
     filename => $file,
     date => get_date(),
-    dbh => $udb->{dbh},
+    dbh => $udb->db->storage->dbh,
     zone => $zone,
     serial_num => $serial_num,
     cidr => $subnet->cidr,
@@ -411,16 +435,21 @@ sub build_dns {
   };
 
   # TODO increment the SOA line
-  my ($serial_num) = $udb->{dbh}->selectrow_array("select nextval('dns_serial_num_seq')");
+  my ($serial_num) = $udb->db->storage->dbh->selectrow_array("select nextval('dns_serial_num_seq')");
 
-  my $sth = $udb->prepare("select nv.network from net_vlans nv, net_zones nz where nv.zone = nz.name and nz.zone_manager = 'tstaff'");
-  $sth->execute();
-  my $array_ref = $sth->fetchall_arrayref({});
+  my $subnets = $udb->db->resultset("NetVlans")->search(
+    {
+      'zone.zone_manager' => 'tstaff',
+    },
+    {
+      join => 'zone',
+    }
+  );
 
   my @spread_subnets = ();
 
-  foreach my $subnet (@{$array_ref}) {
-    push @spread_subnets, (new NetAddr::IP($subnet->{network}));
+  while (my $subnet = $subnets->next) {
+    push @spread_subnets, (new NetAddr::IP($subnet->network));
   }
 
   my $classC = Coalesce(24, 1, @spread_subnets);
@@ -471,7 +500,7 @@ sub build_dns {
 sub build_finger_data {
   my $file = $dry_run ? '/tmp/finger_data' : '/u/system/sysadmin/data';
   my $PATH_TMPFILE = $file . '.tmp';
-  my $vars = {filename => $file, date => get_date(), dbh => $udb->{dbh}};
+  my $vars = {filename => $file, date => get_date(), dbh => $udb->db->storage->dbh};
   $tt->process('finger_data.tt2', $vars, $PATH_TMPFILE) || die $tt->error(), "\n";
   maybe_rename($PATH_TMPFILE, $file);
 }

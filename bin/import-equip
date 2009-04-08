@@ -59,13 +59,6 @@ sub os_insert {
 
 sub add_address {
   my ($data) = @_;
-  my $hostname = $data->{'hostname'};
-
-  $data->{'aliases'} =~ s/\s//g;
-  my @aliases = split(/,/, $data->{'aliases'});
-
-  $data->{'classes'} =~ s/\s//g;
-  my @classes = split(/,/, $data->{'classes'});
 
   my $ipaddr = $data->{'ip_addr'};
   my $vlan;
@@ -78,6 +71,14 @@ sub add_address {
       })->single;
   }
 
+  my $hostname = $data->{'hostname'};
+
+  $data->{'aliases'} =~ s/\s//g;
+  my @aliases = split(/,/, $data->{'aliases'});
+
+  $data->{'classes'} =~ s/\s//g;
+  my @classes = split(/,/, $data->{'classes'});
+
   my $monitored = 0;
   if ($data->{'status'} eq "monitored") {
     $monitored = 1;
@@ -88,7 +89,7 @@ sub add_address {
     $domain = 'ilab.cs.brown.edu';
   }
 
-  my $ip = $udb->db->resultset('NetAddresses')->find_or_create({
+  my $ip = $udb->db->resultset('NetAddresses')->create({
       vlan_num => $vlan,
       ipaddr => $ipaddr,
       monitored => $monitored,

@@ -12,7 +12,10 @@ has 'db' => (
   isa => 'BrownCS::UDB::Schema'
 );
 
-my $debug = 0;
+has 'dbh' => (
+  is => 'ro',
+  isa => 'DBIx::Simple'
+);
 
 sub start {
   my $self = shift;
@@ -29,17 +32,15 @@ sub start {
     close(FH);
   }
 
-  while (! ($self->{db} = BrownCS::UDB::Schema->connect("dbi:Pg:dbname=udb;host=sysdb", $username, $password))) {
-    if ($debug) {
-      print "Error connecting to database. Try again.\n";
-      print DBI->errstr if $debug;
-    }
+  my @connection_info = ("dbi:Pg:dbname=udb;host=sysdb", $username, $password);
+
+  while (! ($self->{db} = BrownCS::UDB::Schema->connect(@connection_info))) {
     $password = &ask_password;
     if (not $password) {
       exit(0);
     }
   };
-  
+
   my $old_umask = umask(0077);
   $enc_password = encrypt($password);
   open(FH, ">$filename");
@@ -47,21 +48,6 @@ sub start {
   close(FH);
   umask($old_umask);
 
-  if ($debug) {
-    my $dbg_file = "/tmp/test.debug.log";
-    open ($self->{dbg_fh}, ">>$dbg_file") or die qq{Could not open "$dbg_file": $!\n};
-    $self->db->storage->dbh->pg_server_trace($self->{dbg_fh});
-    $self->db->storage->dbh->trace(2);
-  }
-
-}
-
-sub DEMOLISH {
-  my $self = shift;
-  if ($debug) {
-    $self->db->storage->dbh->pg_server_untrace;
-    close($self->{dbg_fh});
-  }
 }
 
 sub do {
@@ -72,6 +58,29 @@ sub do {
       $dbh->do($sql, @args);
     }
   );
+}
+
+sub get_host_class_map {
+  my $self = shift;
+
+  my $hash = {};
+
+  my $rs = $self->db->resultset('CompClassesComputers')->search({},
+    {
+      prefetch => ['computer', 'comp_class'],
+      include_columns => ['comp_class.name'],
+    });
+
+  while (my $item = $rs->next) {
+    my $name = $item->computer->name;
+    if (not defined @{$hash->{$name}}) {
+      $hash->{$name} = [];
+    }
+    push @{$hash->{$name}}, $item->comp_class->name;
+  }
+
+  return $hash;
+
 }
 
 # sub find_unused_ip {
