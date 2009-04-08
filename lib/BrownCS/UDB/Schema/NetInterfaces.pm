@@ -45,7 +45,7 @@ __PACKAGE__->has_many(
   { "foreign.net_interfaces_id" => "self.id" },
 );
 __PACKAGE__->belongs_to(
-  "port_id",
+  "port",
   "BrownCS::UDB::Schema::NetPorts",
   { id => "port_id" },
 );
@@ -59,12 +59,8 @@ __PACKAGE__->belongs_to(
   "BrownCS::UDB::Schema::NetAddresses",
   { id => "primary_address" },
 );
-
-
-# Created by DBIx::Class::Schema::Loader v0.04005 @ 2009-04-02 16:27:51
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:rKEuW2WkFZSFMHBeUl71gQ
-
-
-# You can replace this text with custom content, and it will be preserved on regeneration
-__PACKAGE__->many_to_many('net_addresses' => 'net_addresses_net_interfaces', 'net_addresses_id');
+__PACKAGE__->many_to_many(
+  'net_addresses' => 'net_addresses_net_interfaces',
+  'net_addresses_id'
+);
 1;

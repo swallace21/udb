@@ -363,7 +363,6 @@ print "done.\n";
 print "importing equipment from switchport... ";
  
 while ( my ($key, $data) = each(%$sp_switches) ) {
-
   my $fqdn = $data->{'fqdn'};
   my @split_fqdn = split(/\./, $fqdn);
   my $name = $split_fqdn[0];
@@ -398,71 +397,65 @@ while ( my ($key, $data) = each(%$sp_switches) ) {
 
 print "done.\n";
 
-### print "importing ports from switchport... ";
-###  
-### while ( my ($key, $data) = each(%$sp_hosts) ) {
-###   print "adding port for host $key\n";
-### 
-###   my $switch = $data->{"switch"};
-###   my $wall_plate = $data->{"jack"};
-### 
-###   my ($port_num, $blade_num);
-###   if ($data->{"port"} =~ /(\d+)\/0\/(\d+)/) {
-###     $blade_num = $1;
-###     $port_num = $2;
-###   } elsif ($data->{"port"} =~ /(\d+)\/(\d+)/) {
-###     $blade_num = $1;
-###     $port_num = $2;
-###   } elsif ($data->{"port"} =~ /(\d+)/) {
-###     $port_num = $1;
-###   } else {
-###     die "bad format";
-###   }
-### 
-###   my $room_num;
-###   if ($wall_plate =~ /^(\d+)/) {
-###     $room_num = $1;
-###   }
-### 
-###   # insert port
-### 
-###   $sth = $udb->prepare("insert into net_ports (switch, port_num, blade_num, wall_plate, last_updated) values (?, ?, ?, ?, now())");
-###   $sth->bind_param(2, undef, SQL_INTEGER);
-###   $sth->bind_param(3, undef, SQL_INTEGER);
-### 
-###   $sth->execute($switch, $port_num, $blade_num, $wall_plate);
-###   my $port_id = $udb->{dbh}->last_insert_id(undef, undef, "net_ports", undef);
-### 
-###   # bind port to vlans
-### 
-###   # foreach vlan in comma separated list, look it up then add a join
-###   # table entry
-### 
-###   my @vlans = split(/,/,$data->{"vlan"});
-### 
-###   foreach my $vlan (@vlans) {
-###     print "bind port $wall_plate to vlan $vlan\n";
-###     my $vlan_sth = $udb->prepare("insert into net_ports_net_vlans (net_ports_id, vlan_num) values (?, ?)");
-###     $vlan_sth->bind_param(1, undef, SQL_INTEGER);
-###     $vlan_sth->bind_param(2, undef, SQL_INTEGER);
-###     $vlan_sth->execute($port_id, $vlan);
-###   }
-### 
-###   my $iface_id;
-### 
-###   $sth = $udb->prepare("select ni.id from net_interfaces ni where ni.equip_name = ?");
-###   $sth->execute($key);
-###   $sth->bind_columns(\$iface_id);
-###   while ($sth->fetch) {
-###     print "bind interface $key to port $wall_plate\n";
-###     my $bind_sth = $udb->prepare("update net_interfaces set port_id = ? where id = ?");
-###     $bind_sth->bind_param(1, undef, SQL_INTEGER);
-###     $bind_sth->bind_param(2, undef, SQL_INTEGER);
-###     $bind_sth->execute($port_id, $iface_id);
-###   }
-### }
-### 
-### print "done.\n";
+print "importing ports from switchport... ";
+ 
+while ( my ($hostname, $data) = each(%$sp_hosts) ) {
+  print "adding port for host $hostname\n";
+
+  my $switch_name = $data->{"switch"};
+  my $wall_plate = $data->{"jack"};
+
+  my ($port_num, $blade_num);
+  if ($data->{"port"} =~ /(\d+)\/0\/(\d+)/) {
+    $blade_num = $1;
+    $port_num = $2;
+  } elsif ($data->{"port"} =~ /(\d+)\/(\d+)/) {
+    $blade_num = $1;
+    $port_num = $2;
+  } elsif ($data->{"port"} =~ /(\d+)/) {
+    $port_num = $1;
+  } else {
+    die "bad format";
+  }
+
+  my $room_num;
+  if ($wall_plate =~ /^(\d+)/) {
+    $room_num = $1;
+  }
+
+  my $switch = $udb->db->resultset('NetSwitches')->find($switch_name);
+
+  # create port
+
+  my $port = $udb->db->resultset('NetPorts')->find_or_create({
+      switch => $switch,
+      port_num => $port_num,
+      blade_num => $blade_num,
+      wall_plate => $wall_plate,
+    });
+
+  # bind port to vlans
+
+  # foreach vlan in comma separated list, look it up then add a join
+  # table entry
+
+  my @vlans = split(/,/,$data->{"vlan"});
+
+  foreach my $vlan_num (@vlans) {
+    print "bind port $wall_plate to vlan $vlan_num\n";
+    my $vlan = $udb->db->resultset('NetVlans')->find($vlan_num);
+    $port->add_to_net_vlans($vlan);
+  }
+
+  my $ifaces = $udb->db->resultset('NetInterfaces')->search({'equip_name' => $hostname});
+  while (my $iface = $ifaces->next) {
+    print "bind interface $hostname to port $wall_plate\n";
+    $iface->port($port);
+    $iface->update;
+  }
+}
+
+print "done.\n";
 
 # pc index db
 

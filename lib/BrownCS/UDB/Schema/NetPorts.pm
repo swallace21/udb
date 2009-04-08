@@ -57,7 +57,7 @@ __PACKAGE__->belongs_to(
   { name => "switch" },
 );
 __PACKAGE__->belongs_to(
-  "place_id",
+  "location",
   "BrownCS::UDB::Schema::Places",
   { id => "place_id" },
 );
@@ -66,11 +66,8 @@ __PACKAGE__->has_many(
   "BrownCS::UDB::Schema::NetPortsNetVlans",
   { "foreign.net_ports_id" => "self.id" },
 );
-
-
-# Created by DBIx::Class::Schema::Loader v0.04005 @ 2009-04-02 16:27:51
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:NhcsIrSQvq2LWbD3CzG/sg
-
-
-# You can replace this text with custom content, and it will be preserved on regeneration
+__PACKAGE__->many_to_many(
+  'net_vlans' => 'net_ports_net_vlans',
+  'vlan_num'
+);
 1;

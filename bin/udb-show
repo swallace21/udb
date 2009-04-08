@@ -111,8 +111,8 @@ sub format_interface {
   my $out = {};
   $out->{"MAC address"} = $iface->ethernet;
   $out->{"Primary IP"} = $iface->primary_address->ipaddr;
-  if ($iface->port_id) {
-    my $port = $iface->port_id;
+  if ($iface->port) {
+    my $port = $iface->port;
     $out->{"Switch"} = $port->switch->name;
     $out->{"Blade"} = $port->blade_num;
     $out->{"Port"} = $port->port_num;

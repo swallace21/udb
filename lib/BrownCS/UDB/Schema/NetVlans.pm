@@ -73,4 +73,5 @@ __PACKAGE__->belongs_to("zone", "BrownCS::UDB::Schema::NetZones", { name => "zon
 
 
 # You can replace this text with custom content, and it will be preserved on regeneration
+__PACKAGE__->many_to_many('net_ports' => 'net_ports_net_vlans', 'net_ports_id');
 1;
