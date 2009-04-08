@@ -13,11 +13,11 @@ my %udb_commands = (
     'desc' => "add a new device",
     'common' => 1,
   },
-  'class-add' => {
+  'add-class' => {
     'desc' => "add one or more computers to a class",
     'common' => 0,
   },
-  'class-del' => {
+  'del-class' => {
     'desc' => "remove one or more computers from a class",
     'common' => 0,
   },
@@ -25,7 +25,7 @@ my %udb_commands = (
     'desc' => "list the classes to which the computers belongs",
     'common' => 0,
   },
-  'class-show' => {
+  'show-class' => {
     'desc' => "list the members of a class",
     'common' => 0,
   },
@@ -61,8 +61,12 @@ my %udb_commands = (
     'desc' => "disable (make a device spare)",
     'common' => 1,
   },
-  'surplus' => {
+  'make-surplus' => {
     'desc' => "surplus a device",
+    'common' => 1,
+  },
+  'show-surplus' => {
+    'desc' => "print a summary of a surplus device",
     'common' => 1,
   },
   'change-os' => {
