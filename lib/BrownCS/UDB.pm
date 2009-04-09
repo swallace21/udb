@@ -32,14 +32,22 @@ sub start {
     close(FH);
   }
 
-  my @connection_info = ("dbi:Pg:dbname=udb;host=sysdb", $username, $password);
+  $self->{db} = BrownCS::UDB::Schema->clone;
 
-  while (! ($self->{db} = BrownCS::UDB::Schema->connect(@connection_info))) {
-    $password = &ask_password;
-    if (not $password) {
-      exit(0);
+  while ((!$self->db->storage) or (!($self->db->storage->connected))) {
+    $self->db->connection("dbi:Pg:dbname=udb;host=sysdb", $username, $password);
+    eval {
+      $self->db->storage->ensure_connected;
+    };
+    if ($@) {
+      $password = &ask_password;
+      if (not $password) {
+        exit(0);
+      }
+    } else {
+      last;
     }
-  };
+  }
 
   my $old_umask = umask(0077);
   $enc_password = encrypt($password);
