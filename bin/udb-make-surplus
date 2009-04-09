@@ -52,11 +52,7 @@ if ($device->equip_status->name ne 'spare') {
   exit(1);
 }
 
-my $surplus_date = ask("Surplus date (leave blank for today):",'');
-if (not $surplus_date) {
-  $surplus_date = "today";
-}
-
+my $surplus_date = ask("Surplus date (leave blank for today):",'today');
 my $buyer = ask("Buyer:",'');
 
 make_surplus($device, undef);

@@ -2,8 +2,6 @@ schema:
 
 VERIFY:
 
-- comments are required for hosts with dynamic addresses
-
 - aliases are 256 chars or shorter
 
 - alias must match [a-z][a-z0-9_\-]* format
@@ -14,4 +12,9 @@ CLEAN:
 
 - convert hostname to lowercase and remove whitespace
 - convert aliases to lowercase and remove whitespace
+
+TRIGGER:
+
+- email kathy when computer is added (Brown inv number, serial #, etc)
+- email kathy when name is changed/added (label)
 

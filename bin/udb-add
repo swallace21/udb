@@ -10,6 +10,7 @@ use FindBin qw($RealBin);
 use lib "$RealBin/../lib";
 use BrownCS::UDB;
 use BrownCS::UDB::Util qw(:all);
+use BrownCS::UDB::Verify qw(verify_mac);
 
 # Print a simple help message.
 sub usage {
@@ -22,10 +23,12 @@ my $verbose = 0;
 my $dryrun = 0;
 my $username = $ENV{'USER'};
 
-GetOptions ('help|h|?' => \$help, 
-            'v|verbose' => \$verbose,
-            'n|dryrun' => \$dryrun,
-            'u|username=s' => \$username) or usage(1);
+GetOptions (
+  'help|h|?' => \$help, 
+  'v|verbose' => \$verbose,
+  'n|dryrun' => \$dryrun,
+  'u|username=s' => \$username
+) or usage(1);
 usage(0) if $help;
 
 my $udb = BrownCS::UDB->new;
@@ -37,17 +40,71 @@ if (@ARGV != 1) {
 
 my $name = shift @ARGV;
 
-my $device = $udb->db->resultset('Equipment')->find($name);
-die "No record for device $name.\n" if not $device;
+my $existing_device = $udb->db->resultset('Equipment')->find($name);
+die "Device $name already exists.\n" if $existing_device;
 
-if ($device->protected) {
-  printf("The device %s is protected!\n", $device->name);
-  print "Do not modify or delete this entry unless you know what you're doing.\n";
-  exit(1);
-}
+print <<'EOF';
+-----------------------------------------------------------
+This script assumes that you are adding a regular computer.
+If any of the following are true:
 
-my $new_name = &get_new_name(0);
-print "SQL: rename $name to $new_name\n";
+  - The device is a printer/switch/etc., not a computer
+  - The device has more than one network card
+  - The device will have more than one IP address
+  - The device will be a server
+  - The device will be a virtual host
+  - The device will not located inside the CIT
+
+then you need to use udb-long-add instead.
+-----------------------------------------------------------
+EOF
+
+my @management_types = $udb->db->resultset('ManagementTypes')->get_column("name")->all;
+my $management_preamble = <<EOF;
+Who is in charge of managing this computer?
+EOF
+my $management_prompt = "\n${management_preamble}Managed by:";
+my $managed_by = choose($management_prompt, \@management_types);
+
+my @os_types = ('', $udb->db->resultset('OsTypes')->get_column("name")->all);
+my $os_preamble = <<EOF;
+What OS will this computer have?
+If you don't know, or if this computer is user-maintained,
+you can safely leave this blank.
+EOF
+my $os_prompt = "\n${os_preamble}OS [default: none]:";
+my $os = choose($os_prompt, \@os_types);
+
+my $classes_preamble = <<EOF;
+What OS classes should this computer belong to?
+If you don't know, just say 'desktop' for a department workstation,
+or leave it blank for a user-maintained computer.
+EOF
+my $classes_prompt = "\n${classes_preamble}Classes [comma-separated list]:";
+my $classes_str = ask($classes_prompt,'');
+
+my $ip_or_vlan_preamble = <<EOF;
+What is the computer's IP address?
+If you just an arbitrary IP in a given VLAN, enter the VLAN number
+instead of an IP, and an IP will be picked for you.
+EOF
+my $ip_or_vlan_prompt = "\n${ip_or_vlan_preamble}IP or VLAN:";
+my $ip_or_vlan_str = demand($ip_or_vlan_prompt);
+
+my $mac = demand("\nMAC address:",\&verify_mac);
+my $room = ask("\nRoom number:",'');
+my $contact = demand("\nPrimary user:");
+my $owner = ask("\nWho paid for this computer?\nOwner [default: primary user]:",$contact);
+my $comments = ask("\nComments [optional]:",'');
+
+my $device = $udb->db->resultset('Equipment')->create({
+    equip_status => 'deployed',
+    managed_by => $managed_by,
+    name => $name,
+    contact => $contact,
+    owner => $owner,
+    comments => ($comments or undef),
+  });
 
 __END__
 

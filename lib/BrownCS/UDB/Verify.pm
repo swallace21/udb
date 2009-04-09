@@ -19,7 +19,6 @@ sub verify_hostname {
   my($value) = @_;
 
   if($value !~ /^[a-zA-Z]([a-zA-Z0-9\-]*[a-zA-Z0-9])?$/) {
-    warn "Invalid hostname.\n";
     return 0;
   }
 
@@ -28,9 +27,11 @@ sub verify_hostname {
 
 sub verify_mac {
   my ($mac_str) = @_;
-  my $mac = Net::MAC->new('mac' => $mac_str, 'die' => 0);
-  if (not $mac) {
-    warn "Invalid MAC address.\n";
+  my $mac;
+  eval {
+    $mac = Net::MAC->new('mac' => $mac_str);
+  };
+  if ($@) {
     return 0;
   } else {
     return 1;

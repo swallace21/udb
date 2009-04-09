@@ -14,6 +14,7 @@ our @EXPORT_OK = qw(
   ask
   ask_password
   choose
+  choose_from_menu
   confirm
   demand
   edit
@@ -90,27 +91,61 @@ sub confirm {
 sub ask {
   my($prompt, $default) = @_;
   my $answer = $term->readline("$prompt ");
-  return $answer;
+  return ($answer or $default);
 }
 
-# demand :: string -> string
-# Gets a nonempty line from the user.
+# demand :: string * (string -> boolean) -> string
+# Gets a line from the user and verifies it.
+# If no verification procedure is supplied, then
+# verifies that the input is nonempty.
 sub demand {
-  my($prompt, $default) = @_;
+  my($prompt, $verify_sub) = @_;
+  if (not $verify_sub) {
+    $verify_sub = sub {
+      my ($ans) = @_;
+      return ((defined $ans) and ($ans ne ''));
+    }
+  }
   while (1) {
     my $answer = $term->readline("$prompt ");
-    if ($answer ne '') {
+    if (&$verify_sub($answer)) {
       return $answer;
     } else {
-      print "Invalid answer. Please enter a non-empty string.\n"
+      print "Invalid answer. Please try again.\n"
     }
   }
 }
 
-# choose :: string * [(string * string * string)] -> string
+# choose :: string * [string] -> string
 # Gets an answer from the user. The answer must belong to a specified
 # list.
 sub choose {
+  my($prompt, $choices) = @_;
+
+  my $answer;
+  while (1) {
+    $|++;
+    print "$prompt ";
+    $|--;
+    chop($answer = <STDIN>);
+    last if grep {$_ eq $answer} @{$choices};
+    print "\nInvalid choice. Valid choices are:\n";
+    foreach my $i (sort(@{$choices})) {
+      if (not $i) {
+        print "  <blank>\n";
+      } else {
+        print "  $i\n";
+      }
+    }
+  }
+  return $answer;
+}
+
+# choose_from_menu :: string * [(string * string * string)] -> string
+# Gets an answer from the user. The answer must belong to a specified
+# list. The user is presented with a menu of choices, and is asked to
+# select one by number.
+sub choose_from_menu {
   my($prompt, $choices) = @_;
 
   my $answer = undef;
