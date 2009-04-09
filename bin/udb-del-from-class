@@ -49,7 +49,13 @@ my @hostnames = @ARGV;
 foreach my $hostname (@hostnames) {
   my $comp = $udb->db->resultset('Computers')->find($hostname);
   if (not $comp) {
-    vprint("no record for computer $hostname");
+    print "No record for computer $hostname.\n" if not $comp;
+    next;
+  }
+
+  if ($comp->protected) {
+    printf("The device %s is protected!\n", $comp->name);
+    print "Do not modify or delete this entry unless you know what you're doing.\n";
     next;
   }
 

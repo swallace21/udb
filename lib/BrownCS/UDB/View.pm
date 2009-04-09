@@ -130,7 +130,9 @@ sub format_interface {
   my ($iface) = @_;
   my $out = {};
   $out->{"MAC address"} = $iface->ethernet;
-  $out->{"Primary IP"} = $iface->primary_address->ipaddr;
+  if ($iface->primary_address) {
+    $out->{"Primary IP"} = $iface->primary_address->ipaddr;
+  }
   if ($iface->port) {
     my $port = $iface->port;
     $out->{"Switch"} = $port->switch->name;

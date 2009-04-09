@@ -35,26 +35,45 @@ if (@ARGV != 1) {
   usage(2);
 }
 
-my $hostname = shift @ARGV;
+my $name = shift @ARGV;
 
-if ($udb->is_protected($hostname)) {
-  print "This device is protected!\n";
+my $device = $udb->db->resultset('Equipment')->find($name);
+die "No record for device $name.\n" if not $device;
+
+if ($device->protected) {
+  printf("The device %s is protected!\n", $device->name);
   print "Do not modify or delete this entry unless you know what you're doing.\n";
   exit(1);
 }
 
-# delete associated net_addresses, &c
-print "You removed the computer from active use! You're so awesome!\n";
+if ($device->equip_status->name eq 'spare') {
+  print "This device is already disabled.\n";
+  exit(0);
+}
+
+my $iface_rs = $device->net_interfaces;
+while (my $iface = $iface_rs->next) {
+  my $ip_rs = $iface->net_addresses;
+  while (my $ip = $ip_rs->next) {
+    $ip->delete;
+  }
+  $iface->port(undef);
+  $iface->update;
+}
+
+my $spare_status = $udb->db->resultset('EquipStatusTypes')->find('spare');
+$device->equip_status($spare_status);
+$device->update;
 
 __END__
 
 =head1 NAME
 
-udb-modify - Perform maintenance on an existing device record in UDB
+udb-disable - Perform maintenance on an existing device record in UDB
 
 =head1 SYNOPSIS
 
-udb-modify [-u username] <device>
+udb-disable [-u username] <device>
 
 =head1 DESCRIPTION
 

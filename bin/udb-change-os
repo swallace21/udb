@@ -37,8 +37,11 @@ if (@ARGV != 1) {
 
 my $hostname = shift @ARGV;
 
-if ($udb->is_protected($hostname)) {
-  print "This device is protected!\n";
+my $device = $udb->db->resultset('Equipment')->find($name);
+die "No record for device $name.\n" if not $device;
+
+if ($device->protected) {
+  printf("The device %s is protected!\n", $device->name);
   print "Do not modify or delete this entry unless you know what you're doing.\n";
   exit(1);
 }

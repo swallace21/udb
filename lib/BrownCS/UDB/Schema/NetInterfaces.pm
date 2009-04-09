@@ -61,7 +61,7 @@ __PACKAGE__->belongs_to(
 );
 __PACKAGE__->many_to_many(
   'net_addresses' => 'net_addresses_net_interfaces',
-  'net_addresses_id'
+  'net_addresses'
 );
 
 1;

@@ -8,89 +8,20 @@ use base 'DBIx::Class';
 __PACKAGE__->load_components("Core");
 __PACKAGE__->table("equipment");
 __PACKAGE__->add_columns(
-  "name",
-  {
-    data_type => "text",
-    default_value => undef,
-    is_nullable => 0,
-    size => undef,
-  },
-  "parent_equip_id",
-  {
-    data_type => "text",
-    default_value => undef,
-    is_nullable => 1,
-    size => undef,
-  },
-  "place_id",
-  { data_type => "integer", default_value => undef, is_nullable => 1, size => 4 },
-  "equip_status",
-  {
-    data_type => "text",
-    default_value => undef,
-    is_nullable => 0,
-    size => undef,
-  },
-  "managed_by",
-  {
-    data_type => "text",
-    default_value => undef,
-    is_nullable => 0,
-    size => undef,
-  },
-  "protected",
-  {
-    data_type => "boolean",
-    default_value => "false",
-    is_nullable => 0,
-    size => 1,
-  },
-  "purchased_on",
-  { data_type => "date", default_value => undef, is_nullable => 1, size => 4 },
-  "installed_on",
-  { data_type => "date", default_value => undef, is_nullable => 1, size => 4 },
-  "brown_inv_num",
-  {
-    data_type => "text",
-    default_value => undef,
-    is_nullable => 1,
-    size => undef,
-  },
-  "serial_num",
-  {
-    data_type => "text",
-    default_value => undef,
-    is_nullable => 1,
-    size => undef,
-  },
-  "po_num",
-  {
-    data_type => "text",
-    default_value => undef,
-    is_nullable => 1,
-    size => undef,
-  },
-  "owner",
-  {
-    data_type => "text",
-    default_value => undef,
-    is_nullable => 1,
-    size => undef,
-  },
-  "contact",
-  {
-    data_type => "text",
-    default_value => undef,
-    is_nullable => 1,
-    size => undef,
-  },
-  "comments",
-  {
-    data_type => "text",
-    default_value => undef,
-    is_nullable => 1,
-    size => undef,
-  },
+  "name"            => { data_type => "text", default_value => undef, is_nullable => 0, size => undef, },
+  "parent_equip_id" => { data_type => "text", default_value => undef, is_nullable => 1, size => undef, },
+  "place_id"        => { data_type => "integer", default_value => undef, is_nullable => 1, size => 4 },
+  "equip_status"    => { data_type => "text", default_value => undef, is_nullable => 0, size => undef, },
+  "managed_by"      => { data_type => "text", default_value => undef, is_nullable => 0, size => undef, },
+  "protected"       => { data_type => "boolean", default_value => "false", is_nullable => 0, size => 1, },
+  "purchased_on"    => { data_type => "date", default_value => undef, is_nullable => 1, size => 4 },
+  "installed_on"    => { data_type => "date", default_value => undef, is_nullable => 1, size => 4 },
+  "brown_inv_num"   => { data_type => "text", default_value => undef, is_nullable => 1, size => undef, },
+  "serial_num"      => { data_type => "text", default_value => undef, is_nullable => 1, size => undef, },
+  "po_num"          => { data_type => "text", default_value => undef, is_nullable => 1, size => undef, },
+  "owner"           => { data_type => "text", default_value => undef, is_nullable => 1, size => undef, },
+  "contact"         => { data_type => "text", default_value => undef, is_nullable => 1, size => undef, },
+  "comments"        => { data_type => "text", default_value => undef, is_nullable => 1, size => undef, },
 );
 __PACKAGE__->set_primary_key("name");
 __PACKAGE__->add_unique_constraint("equipment_pkey", ["name"]);
@@ -137,11 +68,6 @@ __PACKAGE__->has_many(
 __PACKAGE__->might_have(
   "switch",
   "BrownCS::UDB::Schema::NetSwitches",
-  { "foreign.name" => "self.name" },
-);
-__PACKAGE__->might_have(
-  "surplus_equipments",
-  "BrownCS::UDB::Schema::SurplusEquipment",
   { "foreign.name" => "self.name" },
 );
 

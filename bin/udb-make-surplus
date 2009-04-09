@@ -1,0 +1,141 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+use Pod::Usage;
+
+use FindBin qw($RealBin);
+use lib "$RealBin/../lib";
+use BrownCS::UDB;
+use BrownCS::UDB::Util qw(:all);
+
+# Print a simple help message.
+sub usage {
+  my ($exit_status) = @_;
+  pod2usage({ -exitval => $exit_status, -verbose => 1});
+}
+
+my $help = 0;
+my $verbose = 0;
+my $dryrun = 0;
+my $username = $ENV{'USER'};
+
+GetOptions ('help|h|?' => \$help, 
+            'v|verbose' => \$verbose,
+            'n|dryrun' => \$dryrun,
+            'u|username=s' => \$username) or usage(1);
+usage(0) if $help;
+
+my $udb = BrownCS::UDB->new;
+$udb->start($username);
+
+if (@ARGV != 1) {
+  usage(2);
+}
+
+my $name = shift @ARGV;
+
+my $device = $udb->db->resultset('Equipment')->find($name);
+die "No record for device $name.\n" if not $device;
+
+if ($device->protected) {
+  printf("The device %s is protected!\n", $device->name);
+  print "Do not modify or delete this entry unless you know what you're doing.\n";
+  exit(1);
+}
+
+if ($device->equip_status->name ne 'spare') {
+  printf("The device %s is currently in use!\n", $device->name);
+  print "You must disable this device with udb-disable before you can surplus it.\n";
+  exit(1);
+}
+
+my $surplus_date = ask("Surplus date (leave blank for today):",'');
+if (not $surplus_date) {
+  $surplus_date = "today";
+}
+
+my $buyer = ask("Buyer:",'');
+
+make_surplus($device, undef);
+
+sub make_surplus {
+  my ($device, $parent) = @_;
+
+  if ($device->protected) {
+    printf("The device %s is protected!\n", $device->name);
+    print "Do not modify or delete this entry unless you know what you're doing.\n";
+    return;
+  }
+  
+  if ($device->equip_status->name ne 'spare') {
+    printf("The device %s is currently in use!\n", $device->name);
+    print "You must disable this device with udb-disable before you can surplus it.\n";
+    return;
+  }
+  
+  my $surplus = $udb->db->resultset('SurplusEquipment')->create({
+      surplus_date => $surplus_date,
+      purchased_on => $device->purchased_on,
+      installed_on => $device->installed_on,
+      name => $device->name,
+      buyer => $buyer,
+      brown_inv_num => $device->brown_inv_num,
+      serial_num => $device->serial_num,
+      po_num => $device->po_num,
+      comments => $device->comments,
+    });
+
+  if ($parent) {
+    $surplus->parent($parent);
+  }
+
+  my $children = $device->children;
+  while (my $child = $children->next) {
+    make_surplus($child, $surplus);
+  }
+
+  $device->delete;
+}
+
+__END__
+
+=head1 NAME
+
+udb-make-surplus - Perform maintenance on an existing device record in UDB
+
+=head1 SYNOPSIS
+
+udb-make-surplus [-u username] <device>
+
+=head1 DESCRIPTION
+
+Perform maintenance on an existing device record in UDB.
+
+=head1 OPTIONS
+
+=over
+
+=item B<-h>, B<--help>
+
+Print a help message and exit.
+
+=item B<-u>, B<--username>=user
+
+Logs onto the database server as the specified username, instead of as
+the current user.
+
+=back
+
+=head1 AUTHORS
+
+Aleks Bromfield.
+
+=head1 SEE ALSO
+
+B<udb>
+
+=cut
+

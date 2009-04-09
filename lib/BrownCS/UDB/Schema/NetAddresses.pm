@@ -78,11 +78,11 @@ __PACKAGE__->might_have(
 );
 __PACKAGE__->many_to_many(
   'net_interfaces' => 'net_addresses_net_interfaces',
-  'net_interfaces_id'
+  'net_interfaces'
 );
 __PACKAGE__->many_to_many(
   'net_services' => 'net_addresses_net_services',
-  'net_services_id'
+  'net_services'
 );
 
 1;

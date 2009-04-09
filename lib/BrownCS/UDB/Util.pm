@@ -179,8 +179,6 @@ sub fix_width {
 sub get_new {
   my ($maybe, $desc, $verify_proc) = @_;
 
-  return if (($maybe) and (not confirm("Do you want to change the $desc? ",0)));
-
   my $answer;
   while (1) {
     $answer = ask("Enter the new $desc (blank for no change):",'');
