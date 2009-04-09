@@ -77,12 +77,12 @@ __PACKAGE__->has_many(
   { "foreign.user_accounts_id" => "self.id" },
 );
 __PACKAGE__->belongs_to(
-  "people_id",
+  "person",
   "BrownCS::UDB::Schema::People",
   { id => "people_id" },
 );
 __PACKAGE__->has_many(
-  "user_accounts_peoples",
+  "user_accounts_people",
   "BrownCS::UDB::Schema::UserAccountsPeople",
   { "foreign.user_accounts_id" => "self.id" },
 );

@@ -66,6 +66,6 @@ __PACKAGE__->has_many(
   { "foreign.vlan_num" => "self.vlan_num" },
 );
 __PACKAGE__->belongs_to("zone", "BrownCS::UDB::Schema::NetZones", { name => "zone" });
-__PACKAGE__->many_to_many('net_ports' => 'net_ports_net_vlans', 'net_ports_id');
+__PACKAGE__->many_to_many('net_ports' => 'net_ports_net_vlans', 'port');
 
 1;

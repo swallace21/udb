@@ -68,7 +68,7 @@ __PACKAGE__->has_many(
 );
 __PACKAGE__->many_to_many(
   'net_vlans' => 'net_ports_net_vlans',
-  'vlan_num'
+  'vlan'
 );
 
 1;

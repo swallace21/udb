@@ -19,7 +19,7 @@ __PACKAGE__->add_columns(
 __PACKAGE__->set_primary_key("name");
 __PACKAGE__->add_unique_constraint("user_status_types_pkey", ["name"]);
 __PACKAGE__->has_many(
-  "peoples",
+  "people",
   "BrownCS::UDB::Schema::People",
   { "foreign.user_status" => "self.name" },
 );

@@ -135,29 +135,45 @@ sub add_to_group {
 sub build_netgroup {
   my(%netgroups) = ();
 
-  my $hosts = $udb->db->resultset('Computers')->search({},
+  my $hosts = $udb->db->resultset('Computers')->search(
+    {
+      'net_dns_entries.authoritative' => 1,
+      'net_dns_entries.dns_region' => 'internal',
+    },
     {
       prefetch => [
       'os',
       {
-        'device' => 'managed_by',
+        'device' => [
+        'managed_by',
+        {
+          'net_interfaces' => {
+            'net_addresses_net_interfaces' => {
+              'net_addresses' => 'net_dns_entries',
+            },
+          },
+        },
+        ]
       },
       ],
+      '+select' => [ 'net_dns_entries.domain' ],
+      '+as'     => [ 'Domain' ],
       order_by => [qw(me.name)],
     });
 
   my $host_classes = $udb->get_host_class_map;
 
   while (my $host = $hosts->next) {
-    
+
     my $hostname = $host->name;
+    my $fqdn = ($host->name . "." . $host->get_column('Domain'));
     my $manager = $host->device->managed_by;
 
     my $os = ($host->os and $host->os->get_column('name'));
     next if not defined $os;
 
     if (($manager eq 'tstaff') and (defined $os) and ($os =~ /^(?:linux|linux-server|solaris)$/)) {
-      add_to_group(\%netgroups, "trusted", $hostname);
+      add_to_group(\%netgroups, "trusted", $fqdn);
     }
 
     my $classes_ref = $host_classes->{$hostname};
@@ -167,23 +183,25 @@ sub build_netgroup {
     for (@classes) {
 
       if (/^camera$/) {
-        add_to_group(\%netgroups, "camera", $hostname);
+        add_to_group(\%netgroups, "camera", $fqdn);
       } elsif (/^cgc$/) {
-        add_to_group(\%netgroups, "cgc", $hostname);
+        add_to_group(\%netgroups, "cgc", $fqdn);
       } elsif (/^graphics$/) {
-        add_to_group(\%netgroups, "graphics", $hostname);
+        add_to_group(\%netgroups, "graphics", $fqdn);
       } elsif (/^fun$/) {
-        add_to_group(\%netgroups, "ugrad", $hostname);
+        add_to_group(\%netgroups, "ugrad", $fqdn);
       } elsif (/^ssh\.forward$/) {
-        add_to_group(\%netgroups, "sunlab", $hostname);
+        add_to_group(\%netgroups, "sunlab", $fqdn);
       } elsif (/^tstaff-netgroup$/) {
-        add_to_group(\%netgroups, "tstaff", $hostname);
+        add_to_group(\%netgroups, "tstaff", $fqdn);
       } elsif (/^thermo$/) {
-        add_to_group(\%netgroups, "thermo", $hostname);
+        add_to_group(\%netgroups, "thermo", $fqdn);
       } elsif (/^liebert$/) {
-        add_to_group(\%netgroups, "liebert", $hostname);
+        add_to_group(\%netgroups, "liebert", $fqdn);
       } elsif (/^server$/) {
-        add_to_group(\%netgroups, "server", $hostname);
+        add_to_group(\%netgroups, "server", $fqdn);
+      } elsif (/^sge\.dedicated$/) {
+        add_to_group(\%netgroups, "sge", $fqdn);
       }
     }
   }

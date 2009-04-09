@@ -23,12 +23,12 @@ __PACKAGE__->add_columns(
 __PACKAGE__->set_primary_key("net_ports_id", "vlan_num");
 __PACKAGE__->add_unique_constraint("net_ports_net_vlans_pkey", ["net_ports_id", "vlan_num"]);
 __PACKAGE__->belongs_to(
-  "net_ports_id",
+  "port",
   "BrownCS::UDB::Schema::NetPorts",
   { id => "net_ports_id" },
 );
 __PACKAGE__->belongs_to(
-  "vlan_num",
+  "vlan",
   "BrownCS::UDB::Schema::NetVlans",
   { vlan_num => "vlan_num" },
 );

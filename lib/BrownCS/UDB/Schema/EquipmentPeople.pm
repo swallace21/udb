@@ -21,7 +21,7 @@ __PACKAGE__->add_columns(
 __PACKAGE__->set_primary_key("equipment_name", "equip_user_id");
 __PACKAGE__->add_unique_constraint("equipment_people_pkey", ["equipment_name", "equip_user_id"]);
 __PACKAGE__->belongs_to(
-  "equip_user_id",
+  "equip_user",
   "BrownCS::UDB::Schema::People",
   { id => "equip_user_id" },
 );

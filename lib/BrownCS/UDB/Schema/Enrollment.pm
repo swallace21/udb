@@ -63,12 +63,12 @@ __PACKAGE__->add_columns(
 __PACKAGE__->set_primary_key("student_id", "course_id");
 __PACKAGE__->add_unique_constraint("enrollment_pkey", ["student_id", "course_id"]);
 __PACKAGE__->belongs_to(
-  "course_id",
+  "course",
   "BrownCS::UDB::Schema::Courses",
   { id => "course_id" },
 );
 __PACKAGE__->belongs_to(
-  "student_id",
+  "student",
   "BrownCS::UDB::Schema::People",
   { id => "student_id" },
 );

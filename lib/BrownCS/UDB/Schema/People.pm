@@ -109,7 +109,7 @@ __PACKAGE__->has_many(
   { "foreign.student_id" => "self.id" },
 );
 __PACKAGE__->has_many(
-  "equipment_peoples",
+  "equipment_people",
   "BrownCS::UDB::Schema::EquipmentPeople",
   { "foreign.equip_user_id" => "self.id" },
 );
@@ -124,7 +124,7 @@ __PACKAGE__->has_many(
   { "foreign.people_id" => "self.id" },
 );
 __PACKAGE__->has_many(
-  "user_accounts_peoples",
+  "user_accounts_people",
   "BrownCS::UDB::Schema::UserAccountsPeople",
   { "foreign.sponsor_id" => "self.id" },
 );

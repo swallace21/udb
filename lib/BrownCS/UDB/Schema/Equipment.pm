@@ -100,12 +100,12 @@ __PACKAGE__->might_have(
   { "foreign.name" => "self.name" },
 );
 __PACKAGE__->belongs_to(
-  "parent_equip_id",
+  "parent",
   "BrownCS::UDB::Schema::Equipment",
   { name => "parent_equip_id" },
 );
 __PACKAGE__->has_many(
-  "child_devices",
+  "children",
   "BrownCS::UDB::Schema::Equipment",
   { "foreign.parent_equip_id" => "self.name" },
 );
@@ -125,7 +125,7 @@ __PACKAGE__->belongs_to(
   { id => "place_id" },
 );
 __PACKAGE__->has_many(
-  "equipment_peoples",
+  "equipment_people",
   "BrownCS::UDB::Schema::EquipmentPeople",
   { "foreign.equipment_name" => "self.name" },
 );

@@ -19,12 +19,12 @@ __PACKAGE__->add_unique_constraint(
   ["user_accounts_id", "sponsor_id"],
 );
 __PACKAGE__->belongs_to(
-  "user_accounts_id",
+  "user_accounts",
   "BrownCS::UDB::Schema::UserAccounts",
   { id => "user_accounts_id" },
 );
 __PACKAGE__->belongs_to(
-  "sponsor_id",
+  "sponsor",
   "BrownCS::UDB::Schema::People",
   { id => "sponsor_id" },
 );

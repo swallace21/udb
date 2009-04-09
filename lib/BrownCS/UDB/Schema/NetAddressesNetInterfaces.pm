@@ -19,12 +19,12 @@ __PACKAGE__->add_unique_constraint(
   ["net_addresses_id", "net_interfaces_id"],
 );
 __PACKAGE__->belongs_to(
-  "net_interfaces_id",
+  "net_interfaces",
   "BrownCS::UDB::Schema::NetInterfaces",
   { id => "net_interfaces_id" },
 );
 __PACKAGE__->belongs_to(
-  "net_addresses_id",
+  "net_addresses",
   "BrownCS::UDB::Schema::NetAddresses",
   { id => "net_addresses_id" },
 );
