@@ -45,6 +45,10 @@ my %udb_commands = (
     'desc' => "print a summary of a device",
     'common' => 1,
   },
+  'index' => {
+    'desc' => "interface like the old index db",
+    'common' => 1,
+  },
   'rename' => {
     'desc' => "rename a device",
     'common' => 1,

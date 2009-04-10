@@ -17,6 +17,7 @@ our @EXPORT_OK = qw(
   choose_from_menu
   confirm
   demand
+  get_key
   edit
   fix_width
   fmt_time
@@ -31,9 +32,15 @@ our %EXPORT_TAGS = ("all" => [@EXPORT_OK]);
 my $term = new Term::ReadLine 'udb';
 $term->ornaments(0);
 
-#
-# static methods
-#
+sub get_key {
+  ReadMode 'cbreak';
+  my $key = ReadKey(0);
+  ReadMode 'normal';
+  if ($key ne "\n") {
+    print "\n";
+  }
+  return $key;
+}
 
 # edit :: string -> string
 # Write a string to a temporary file, let the user edit it with a text

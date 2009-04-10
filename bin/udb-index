@@ -1,0 +1,152 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+use Pod::Usage;
+use Data::Dumper;
+use Term::ReadKey;
+
+use FindBin qw($RealBin);
+use lib "$RealBin/../lib";
+use BrownCS::UDB;
+use BrownCS::UDB::Util qw(:all);
+use BrownCS::UDB::View qw(sprint_record format_device format_address);
+
+# Print a simple help message.
+sub usage {
+  my ($exit_status) = @_;
+  pod2usage({ -exitval => $exit_status, -verbose => 1});
+}
+
+my $help = 0;
+my $verbose = 0;
+my $dryrun = 0;
+my $username = $ENV{'USER'};
+my $view = 'all';
+
+GetOptions ('help|h|?' => \$help, 
+            'v|verbose' => \$verbose,
+            'n|dryrun' => \$dryrun,
+            'm|view-mode=s' => \$view,
+            'u|username=s' => \$username) or usage(1);
+usage(0) if $help;
+
+my $udb = BrownCS::UDB->new;
+$udb->start($username);
+
+if ((@ARGV < 0) or (@ARGV > 1)) {
+  usage(2);
+}
+
+my $name = shift @ARGV;
+
+my $devices = get_devices($name);
+if ($devices->count == 0) {
+  die "Couldn't find anything matching $name.\n";
+}
+
+my $device_pager = $devices->pager;
+while (my $device = $devices->page($device_pager->current_page)->single) {
+  system("clear");
+  my ($wchar, $hchar, $wpixels, $hpixels) = GetTerminalSize();
+
+  my $out = sprint_record('', format_device($device));
+  my @newlines = ($out =~ m/\n/g);
+  my $newlines = $hchar - $#newlines - 7;
+  print $out;
+  while ($newlines > 0) {
+    print "\n";
+    $newlines--;
+  }
+  print <<EOF;
+
+          <RET> = next entry                   "d" = delete this entry
+          "-" = previous entry                 "e" = edit this entry
+          "q" = quit
+
+EOF
+
+  print "Command: ";
+  my $cmd = get_key;
+  for ($cmd) {
+    if (/^\n$/) {
+      $device_pager->current_page($device_pager->next_page or $device_pager->last_page);
+    } elsif (/^-$/) {
+      $device_pager->current_page($device_pager->previous_page);
+    } elsif (/^q$/) {
+      exit(0);
+    } elsif (/^d$/) {
+      my $answer = confirm("Are you sure? ",0);
+      if ($answer) {
+        my $name = $device->name;
+        system("udb delete $name");
+      }
+    } elsif (/^e$/) {
+      system("udb edit $name");
+    }
+  }
+}
+
+sub get_devices {
+  my ($name) = @_;
+
+  my $query;
+
+  if (not $name) {
+    $query = undef;
+  } else {
+    $query = {
+      name => {'~*' => $name},
+    };
+  }
+
+  return $udb->db->resultset('Equipment')->search($query, {
+      page => 1,
+      rows => 1,
+      order_by => 'name',
+    });
+}
+
+__END__
+
+=head1 NAME
+
+udb-show - Print out information about a device
+
+=head1 SYNOPSIS
+
+udb-show [-u <username>] [-m <view-mode>] <device>
+
+=head1 DESCRIPTION
+
+udb-show queries the UDB database for information about a piece of
+equipment, and prints it out to the console. It is designed to resemble
+the old I<cdb profile> or I<index pc> commands.
+
+=head1 OPTIONS
+
+=over
+
+=item B<-h>, B<--help>
+
+Print a help message and exit.
+
+=item B<-u>, B<--username>=user
+
+Logs onto the database server as the specified username, instead of as
+the current user.
+
+=back
+
+=head1 AUTHORS
+
+Aleks Bromfield.
+
+=head1 SEE ALSO
+
+B<udb>
+
+=cut
+
