@@ -91,37 +91,40 @@ sub get_host_class_map {
 
 }
 
-# sub find_unused_ip {
-#   my($ip_addr) = @_;
-#   my(%ip_addrs) = ();
-#   my(@nibbles, $addr);
-# 
-#   $ip_addr =~ s/\s+//g;
-#   @nibbles = split(/\./, $ip_addr);
-#   foreach $i (0 .. $#nibbles) { $nibbles[$i] =~ s/^0(.+)$/$1/; }
-#   return join('.', @nibbles) if($nibbles[3] ne '*');
-# 
-#   # Build hash of used IP addresses to avoid for '*' replacement
-#   %ip_addrs = get_all_ips;
-#   
-#   # Strip trailing nibble, which is '*'
-# 
-#   pop(@nibbles);
-# 
-#   # Try all values for $nibbles[3] in ascending order from 2 to 254.
-#   # 255 is the broadcast address, 0 is the network address, and 1 we reserve
-#   # so it can be manually assigned by sysadmins to routers.
-# 
-#   for($i = 2; $i < 255; $i++) {
-#     $addr = join('.', @nibbles) . ".$i";
-#     print "Trying $addr ...\n" if($opt_v);
-#     next if(defined($ip_addrs{$addr}));
-#     next if(defined($g_cdb_include_ip_addrs{$addr}));
-#     return $addr;
-#   }
-# 
-#   die "$PNAME ERROR: No addresses are available for the $nibbles[2] subnet\n";
-# }
+sub find_unused_ip {
+  my $self = shift;
+  my ($vlan) = @_;
+
+  my($subnet) = new NetAddr::IP ($vlan->network);
+
+  my(%ip_addrs) = ();
+
+  # Build hash of used IP addresses to avoid
+
+  my $all_ips = $self->db->resultset('NetAddresses');;
+
+  while (my $ip = $all_ips->next) {
+    if ($ip->ipaddr) {
+      $ip_addrs{$ip->ipaddr} = 1;
+    }
+  }
+
+  # Skip the broadcast, gateway, and network addresses
+  $ip_addrs{$subnet->broadcast} = 1;
+  $ip_addrs{$subnet->network} = 1;
+  $ip_addrs{$vlan->gateway} = 1;
+
+  my $ip_end = $subnet;
+  my $ip_iterator = $ip_end;
+
+  while ((++$ip_iterator) != $ip_end) {
+    my $ip_addr_test = $ip_iterator->addr;
+    next if(defined($ip_addrs{$ip_addr_test}));
+    return $ip_addr_test;
+  }
+
+  die "No addresses are available for the $subnet subnet.\n";
+}
 
 no Moose;
 

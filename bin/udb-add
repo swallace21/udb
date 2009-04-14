@@ -5,12 +5,13 @@ use warnings;
 
 use Getopt::Long;
 use Pod::Usage;
+use NetAddr::IP;
 
 use FindBin qw($RealBin);
 use lib "$RealBin/../lib";
 use BrownCS::UDB;
 use BrownCS::UDB::Util qw(:all);
-use BrownCS::UDB::Verify qw(verify_mac);
+use BrownCS::UDB::Verify qw(verify_mac verify_ip_or_vlan verify_walljack);
 
 # Print a simple help message.
 sub usage {
@@ -45,7 +46,7 @@ die "Device $name already exists.\n" if $existing_device;
 
 print <<'EOF';
 -----------------------------------------------------------
-This script assumes that you are adding a regular computer.
+This script assumes that you are adding a standard computer.
 If any of the following are true:
 
   - The device is a printer/switch/etc., not a computer
@@ -54,6 +55,7 @@ If any of the following are true:
   - The device will be a server
   - The device will be a virtual host
   - The device will not located inside the CIT
+  - The device's domain name is not 'cs.brown.edu' (i.e. ilab)
 
 then you need to use udb-long-add instead.
 -----------------------------------------------------------
@@ -74,6 +76,9 @@ you can safely leave this blank.
 EOF
 my $os_prompt = "\n${os_preamble}OS [default: none]:";
 my $os = choose($os_prompt, \@os_types);
+if (not $os) {
+  $os = undef;
+}
 
 my $classes_preamble = <<EOF;
 What OS classes should this computer belong to?
@@ -85,26 +90,125 @@ my $classes_str = ask($classes_prompt,'');
 
 my $ip_or_vlan_preamble = <<EOF;
 What is the computer's IP address?
-If you just an arbitrary IP in a given VLAN, enter the VLAN number
-instead of an IP, and an IP will be picked for you.
+If you just want an arbitrary IP in a given VLAN (e.g. 31, 36),
+enter the VLAN number, and an IP will be picked for you.
 EOF
 my $ip_or_vlan_prompt = "\n${ip_or_vlan_preamble}IP or VLAN:";
-my $ip_or_vlan_str = demand($ip_or_vlan_prompt);
+my $ip_or_vlan_str = demand($ip_or_vlan_prompt, verify_ip_or_vlan($udb));
 
-my $mac = demand("\nMAC address:",\&verify_mac);
-my $room = ask("\nRoom number:",'');
+my $walljack_preamble = <<EOF;
+What wall jack will the computer be plugged into?
+If this computer will not be tied to any particular wall jack (e.g.
+laptops), or if you aren't sure which wall jack the computer will be
+attached to, you can safely leave this blank and fill it in later.
+EOF
+my $walljack_prompt = "\n${walljack_preamble}Wall jack:";
+my $walljack_str = demand($walljack_prompt, verify_walljack($udb));
+
+my $ethernet = demand("\nMAC address:", verify_mac($udb));
+my $room = ask("\nRoom number:",undef);
 my $contact = demand("\nPrimary user:");
 my $owner = ask("\nWho paid for this computer?\nOwner [default: primary user]:",$contact);
-my $comments = ask("\nComments [optional]:",'');
+my $comments = ask("\nComments [optional]:",undef);
 
-my $device = $udb->db->resultset('Equipment')->create({
-    equip_status => 'deployed',
-    managed_by => $managed_by,
-    name => $name,
-    contact => $contact,
-    owner => $owner,
-    comments => ($comments or undef),
-  });
+my $db_coderef = sub {
+
+  my $loc = $udb->db->resultset('Places')->find_or_create({
+      city => 'Providence',
+      building => 'CIT',
+      room => $room,
+    });
+
+  my $comp = $udb->db->resultset('Computers')->create({
+      os => $os,
+      device => {
+        equip_status => 'deployed',
+        managed_by => $managed_by,
+        name => $name,
+        contact => $contact,
+        owner => $owner,
+        location => $loc,
+        comments => $comments,
+      },
+    });
+
+  $classes_str =~ s/\s//g;
+  my @classes = split(/,/, $classes_str);
+
+  if ( $#classes != -1 ) {
+    foreach (@classes) {
+      my $class = $udb->db->resultset('CompClasses')->find_or_create({
+          name => $_,
+          os => $os,
+        });
+      $comp->add_to_classes($class);
+    }
+  }
+
+  my $device = $comp->device;
+
+  my ($ipaddr, $vlan) = verify_ip_or_vlan($udb)->($ip_or_vlan_str);
+  print $vlan, "\n";
+  
+  my $addr = $udb->db->resultset('NetAddresses')->create({
+        vlan => $vlan,
+        ipaddr => $ipaddr,
+        monitored => 0,
+      });
+  
+  dns_insert_both($name, 'cs.brown.edu', $addr, 1);
+  
+  my $port = verify_walljack($udb)->($walljack_str);
+
+  my $iface = $device->add_to_net_interfaces({
+      device => $device,
+      ethernet => $ethernet,
+      primary_address => $addr,
+      port => $port,
+    });
+
+  $addr->add_to_net_interfaces($iface);
+
+#  foreach my $vlan_num (@vlans) {
+#    print "bind port $wall_plate to vlan $vlan_num\n";
+#    my $vlan = $udb->db->resultset('NetVlans')->find($vlan_num);
+#    $port->add_to_net_vlans($vlan);
+#  }
+
+  #switchport
+
+};
+
+my $rs;
+eval {
+  $rs = $udb->db->txn_do($db_coderef);
+};
+
+if ($@) {
+  die <<EOF;
+Failed to add $name. Try again.
+
+Details:
+  $@
+EOF
+}
+
+sub dns_insert {
+  my ($a, $b, $c, $d, $e) = @_;
+  $udb->db->resultset('NetDnsEntries')->find_or_create({
+      dns_name => $a,
+      domain => $b,
+      address => $c,
+      authoritative => $d,
+      dns_region => $e,
+    });
+}
+
+sub dns_insert_both {
+  my ($a, $b, $c, $d) = @_;
+  dns_insert($a, $b, $c, $d, "internal");
+  dns_insert($a, $b, $c, $d, "external");
+}
 
 __END__
 
@@ -118,7 +222,7 @@ udb-add [-u username] <device>
 
 =head1 DESCRIPTION
 
-adds one or more devices to the database
+adds a device to the database
 
 =head1 OPTIONS
 

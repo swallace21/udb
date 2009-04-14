@@ -115,10 +115,17 @@ sub demand {
   }
   while (1) {
     my $answer = $term->readline("$prompt ");
-    if (&$verify_sub($answer)) {
+    my $is_valid;
+    eval {
+      $is_valid = &$verify_sub($answer);
+    };
+    if ($@) {
+      print "Error: $@\n";
+      print "Please try again.\n";
+    } elsif ($is_valid) {
       return $answer;
     } else {
-      print "Invalid answer. Please try again.\n"
+      print "Invalid answer. Please try again.\n";
     }
   }
 }

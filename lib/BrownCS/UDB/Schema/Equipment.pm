@@ -25,50 +25,14 @@ __PACKAGE__->add_columns(
 );
 __PACKAGE__->set_primary_key("name");
 __PACKAGE__->add_unique_constraint("equipment_pkey", ["name"]);
-__PACKAGE__->might_have(
-  "computer",
-  "BrownCS::UDB::Schema::Computers",
-  { "foreign.name" => "self.name" },
-);
-__PACKAGE__->belongs_to(
-  "parent",
-  "BrownCS::UDB::Schema::Equipment",
-  { name => "parent_equip_id" },
-);
-__PACKAGE__->has_many(
-  "children",
-  "BrownCS::UDB::Schema::Equipment",
-  { "foreign.parent_equip_id" => "self.name" },
-);
-__PACKAGE__->belongs_to(
-  "equip_status",
-  "BrownCS::UDB::Schema::EquipStatusTypes",
-  { name => "equip_status" },
-);
-__PACKAGE__->belongs_to(
-  "managed_by",
-  "BrownCS::UDB::Schema::ManagementTypes",
-  { name => "managed_by" },
-);
-__PACKAGE__->belongs_to(
-  "location",
-  "BrownCS::UDB::Schema::Places",
-  { id => "place_id" },
-);
-__PACKAGE__->has_many(
-  "equipment_people",
-  "BrownCS::UDB::Schema::EquipmentPeople",
-  { "foreign.equipment_name" => "self.name" },
-);
-__PACKAGE__->has_many(
-  "net_interfaces",
-  "BrownCS::UDB::Schema::NetInterfaces",
-  { "foreign.equip_name" => "self.name" },
-);
-__PACKAGE__->might_have(
-  "switch",
-  "BrownCS::UDB::Schema::NetSwitches",
-  { "foreign.name" => "self.name" },
-);
+__PACKAGE__->belongs_to("equip_status", "BrownCS::UDB::Schema::EquipStatusTypes", { name => "equip_status" },);
+__PACKAGE__->belongs_to("location", "BrownCS::UDB::Schema::Places", { id => "place_id" },);
+__PACKAGE__->belongs_to("managed_by", "BrownCS::UDB::Schema::ManagementTypes", { name => "managed_by" },);
+__PACKAGE__->belongs_to("parent", "BrownCS::UDB::Schema::Equipment", { name => "parent_equip_id" },);
+__PACKAGE__->has_many("children", "BrownCS::UDB::Schema::Equipment", { "foreign.parent_equip_id" => "self.name" },);
+__PACKAGE__->has_many("equipment_people", "BrownCS::UDB::Schema::EquipmentPeople", { "foreign.equipment_name" => "self.name" },);
+__PACKAGE__->has_many("net_interfaces", "BrownCS::UDB::Schema::NetInterfaces", { "foreign.equip_name" => "self.name" },);
+__PACKAGE__->might_have("computer", "BrownCS::UDB::Schema::Computers", { "foreign.name" => "self.name" },);
+__PACKAGE__->might_have("switch", "BrownCS::UDB::Schema::NetSwitches", { "foreign.name" => "self.name" },);
 
 1;
