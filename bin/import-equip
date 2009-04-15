@@ -488,7 +488,6 @@ while ( <FH> ) {
       equip_status => 'spare',
       managed_by => 'tstaff',
       name => $name,
-      contact => $users,
     });
 
   if ($device->comments) {
@@ -520,6 +519,7 @@ while ( <FH> ) {
   $device->installed_on($install_date);
   $device->comments($comments);
   $device->location($loc);
+  $device->contact($users),
 
   $device->update;
 }

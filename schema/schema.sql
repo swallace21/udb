@@ -10,7 +10,7 @@ create language plpgsql;
 
 create table log_db_export (
   script_name               text not null,
-  last_run                  timestamp not null default now()
+  last_run                  timestamp default now()
 ) ;
 
 create or replace function commacat(acc text, instr text) returns text as
@@ -39,6 +39,14 @@ begin
   else
     return hostname || '.' || domain;
   end if;
+end;
+$$ language plpgsql;
+
+create or replace function set_last_updated() returns trigger as
+$$
+begin
+  new.last_updated := now();
+  return new;
 end;
 $$ language plpgsql;
 
@@ -73,6 +81,10 @@ create table equip_status_types (
   name                      text primary key
 ) ;
 
+create table equip_usage_types (
+  name                      text primary key
+) ;
+
 create table equipment (
   name                      text primary key,
   parent_equip_id           text references equipment
@@ -84,12 +96,16 @@ create table equipment (
   equip_status              text not null references equip_status_types
                               on update cascade
                               on delete restrict,
+  equip_usage               text not null references equip_usage_types
+                              on update cascade
+                              on delete restrict,
   managed_by                text not null references management_types
                               on update cascade
                               on delete restrict,
   protected                 boolean not null default false,
-  purchased_on              date,
-  installed_on              date,
+  purchased_on              date default today,
+  installed_on              date default today,
+  last_contacted_on         date default today,
   brown_inv_num             text,
   serial_num                text,
   po_num                    text,
@@ -196,7 +212,7 @@ create table net_addresses (
   ipaddr                    inet,
   enabled                   boolean not null default true,
   monitored                 boolean not null,
-  last_updated              timestamp not null default now(),
+  last_updated              timestamp default now(),
   check (
     ipaddr is null or (
       masklen(ipaddr) = 32 and
@@ -204,6 +220,9 @@ create table net_addresses (
     )
   )
 ) ;
+
+create trigger net_addresses_last_updated_trigger before insert or update on net_addresses
+  for each row execute procedure set_last_updated();
 
 create unique index idx_net_addresses_vlan_ip on net_addresses (
   vlan_num,
@@ -238,12 +257,15 @@ create table net_ports (
                               on delete cascade,
   port_num                  integer not null,
   wall_plate                text not null,
-  last_updated              timestamp not null default now(),
+  last_updated              timestamp default now(),
   blade_num                 integer,
   unique (switch, port_num, blade_num),
   check (port_num >= 0 and port_num <= num_ports(switch)),
   check (wall_plate = 'MR' or place_id is not null)
 ) ;
+
+create trigger net_ports_last_updated_trigger before insert or update on net_ports
+  for each row execute procedure set_last_updated();
 
 create unique index idx_wall_ports on net_ports (
   wall_plate
@@ -261,8 +283,11 @@ create table net_interfaces (
   primary_address           integer references net_addresses
                               on update cascade
                               on delete set null,
-  last_updated              timestamp not null default now()
+  last_updated              timestamp default now()
 ) ;
+
+create trigger net_interfaces_last_updated_trigger before insert or update on net_interfaces
+  for each row execute procedure set_last_updated();
 
 create table net_services (
   service                   text primary key
@@ -278,9 +303,12 @@ create table net_dns_entries (
                               on update cascade
                               on delete cascade,
   authoritative             boolean not null,
-  last_updated              timestamp not null default now(),
+  last_updated              timestamp default now(),
   primary key               (dns_name, domain, dns_region)
 ) ;
+
+create trigger net_dns_entries_last_updated_trigger before insert or update on net_dns_entries
+  for each row execute procedure set_last_updated();
 
 create unique index authoritative_dns_entries_index on net_dns_entries (
   dns_name,
@@ -338,7 +366,7 @@ create or replace function num_ports(text)
 
 create table log_dhcp (
   id                        serial primary key,
-  entry_time                timestamp not null default now(),
+  entry_time                timestamp default now(),
   ethernet                  macaddr not null,
   ipaddr                    inet not null,
   data                      text
@@ -346,7 +374,7 @@ create table log_dhcp (
 
 create table log_macaddr (
   id                        serial primary key,
-  entry_time                timestamp not null default now(),
+  entry_time                timestamp default now(),
   switch_name               text,
   port                      integer,
   macaddr                   text,
@@ -402,8 +430,11 @@ create table user_accounts (
   created                   date not null,
   expiration                date,
   enabled                   boolean,
-  last_updated              timestamp not null default now()
+  last_updated              timestamp default now()
 ) ;
+
+create trigger user_accounts_last_updated_trigger before insert or update on user_accounts
+  for each row execute procedure set_last_updated();
 
 create table mail_aliases (
   id                        serial primary key,
@@ -546,8 +577,11 @@ create table computers (
   memory                    text,
   hard_drives               text,
   video_cards               text,
-  last_updated              timestamp not null default now()
+  last_updated              timestamp default now()
 );
+
+create trigger computers_last_updated_trigger before insert or update on computers
+  for each row execute procedure set_last_updated();
 
 create table comp_classes (
   id                        serial primary key,

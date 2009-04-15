@@ -19,7 +19,7 @@ __PACKAGE__->add_columns(
   {
     data_type => "timestamp without time zone",
     default_value => "now()",
-    is_nullable => 0,
+    is_nullable => 1,
     size => 8,
   },
   "ethernet",
