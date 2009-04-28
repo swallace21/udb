@@ -4,13 +4,14 @@
 
 -- {{{
 
-set role tstaff;
-
+drop language if exists plpgsql cascade;
 create language plpgsql;
 
-create table log_db_export (
+drop table if exists db_export_log_entries cascade;
+create table db_export_log_entries (
+  id                        serial primary key,
   script_name               text not null,
-  last_run                  timestamp default now()
+  last_run                  timestamp not null default now()
 ) ;
 
 create or replace function commacat(acc text, instr text) returns text as
@@ -24,6 +25,7 @@ begin
 end;
 $$ language plpgsql;
 
+drop aggregate if exists textcat_all (text);
 create aggregate textcat_all (
   basetype    = text,
   sfunc       = commacat,
@@ -58,6 +60,7 @@ $$ language plpgsql;
 
 -- {{{
 
+drop table if exists places cascade;
 create table places (
   id                        serial primary key,
   city                      text,
@@ -67,45 +70,53 @@ create table places (
 
 -- }}}
 
------------------------------
--- Equipment documentation --
------------------------------
+--------------------------
+-- Device documentation --
+--------------------------
 
 -- {{{
 
+drop table if exists management_types cascade;
 create table management_types (
-  name                      text primary key
+  id                        serial primary key,
+  name                      text unique not null
 ) ;
 
+drop table if exists equip_status_types cascade;
 create table equip_status_types (
-  name                      text primary key
+  id                        serial primary key,
+  name                      text unique not null
 ) ;
 
+drop table if exists equip_usage_types cascade;
 create table equip_usage_types (
-  name                      text primary key
+  id                        serial primary key,
+  name                      text unique not null
 ) ;
 
-create table equipment (
-  name                      text primary key,
-  parent_equip_id           text references equipment
+drop table if exists devices cascade;
+create table devices (
+  id                        serial primary key,
+  name                      text unique not null,
+  parent_device_id          integer references devices
                               on update cascade
                               on delete cascade,
   place_id                  integer references places
                               on update cascade
                               on delete cascade,
-  equip_status              text not null references equip_status_types
+  equip_status_type_id      integer not null references equip_status_types
                               on update cascade
                               on delete restrict,
-  equip_usage               text not null references equip_usage_types
+  equip_usage_type_id       integer not null references equip_usage_types
                               on update cascade
                               on delete restrict,
-  managed_by                text not null references management_types
+  manager_id                integer not null references management_types
                               on update cascade
                               on delete restrict,
   protected                 boolean not null default false,
-  purchased_on              date default today,
-  installed_on              date default today,
-  last_contacted_on         date default today,
+  purchased_on              date default now(),
+  installed_on              date default now(),
+  last_contacted_on         date default now(),
   brown_inv_num             text,
   serial_num                text,
   po_num                    text,
@@ -114,16 +125,17 @@ create table equipment (
   comments                  text
 ) ;
 
-create table surplus_equipment (
+drop table if exists surplus_devices cascade;
+create table surplus_devices (
   id                        serial primary key,
-  parent_equip_id           integer references surplus_equipment
+  parent_surplus_device_id  integer references surplus_devices
                               on update cascade
                               on delete cascade,
-  surplus_date              date not null,
+  surplus_date              date,
   purchased_on              date,
   installed_on              date,
   name                      text,
-  buyer                     text not null,
+  buyer                     text,
   brown_inv_num             text,
   serial_num                text,
   po_num                    text,
@@ -138,36 +150,45 @@ create table surplus_equipment (
 
 -- {{{
 
+drop sequence if exists dns_serial_num_seq cascade;
 create sequence dns_serial_num_seq;
 
+drop table if exists routing_types cascade;
 create table routing_types (
-  name                      text primary key
+  id                        serial primary key,
+  name                      text unique not null
 ) ;
 
+drop table if exists dns_regions cascade;
 create table dns_regions (
-  name                      text primary key
+  id                        serial primary key,
+  name                      text unique not null
 ) ;
 
-create or replace function num_ports(text) returns integer as 'select 0' language 'sql';
-create or replace function vlan_zone(integer) returns text as 'select cast('''' as text)' language 'sql';
+create or replace function num_ports(integer) returns integer as 'select 0' language 'sql';
+create or replace function vlan_zone(integer) returns integer as 'select 0' language 'sql';
 
+drop table if exists net_zones cascade;
 create table net_zones (
-  name                      text primary key,
-  zone_manager              text not null references management_types
+  id                        serial primary key,
+  name                      text unique not null,
+  zone_manager_id           integer not null references management_types
                               on update cascade
                               on delete restrict,
-  equip_manager             text not null references management_types
+  equip_manager_id          integer not null references management_types
                               on update cascade
                               on delete restrict,
-  routing_type              text not null references routing_types
+  routing_type_id           integer not null references routing_types
                               on update cascade
                               on delete restrict,
   dynamic_dhcp              boolean not null default true
 ) ;
 
+drop table if exists net_vlans cascade;
 create table net_vlans (
-  vlan_num                  integer primary key,
-  zone                      text not null references net_zones
+  id                        serial primary key,
+  vlan_num                  integer unique not null,
+  zone_id                   integer not null references net_zones
                               on update cascade
                               on delete cascade,
   network                   cidr not null,
@@ -180,11 +201,11 @@ create table net_vlans (
 create or replace function update_zone_by_vlan() returns trigger as
 $$
 declare
-  new_vlan_zone             text;
+  new_vlan_zone             integer;
 begin
-  select (zone) into strict new_vlan_zone from net_vlans
-    where vlan_num = new.vlan_num;
-  new.zone := new_vlan_zone;
+  select (zone_id) into strict new_vlan_zone from net_vlans
+    where id = new.vlan_id;
+  new.zone_id := new_vlan_zone;
   return new;
 end;
 $$ language plpgsql;
@@ -198,183 +219,204 @@ returns boolean as $$
     ($2 > nv.dynamic_dhcp_end)
   ) from net_vlans nv
   where
-    nv.vlan_num = $1
+    nv.id = $1
 $$ language sql;
 
+drop table if exists net_addresses cascade;
 create table net_addresses (
   id                        serial primary key,
-  zone                      text not null references net_zones
+  zone_id                   integer not null references net_zones
                               on update cascade
                               on delete cascade,
-  vlan_num                  integer not null references net_vlans
+  vlan_id                   integer not null references net_vlans
                               on update cascade
                               on delete cascade,
   ipaddr                    inet,
   enabled                   boolean not null default true,
   monitored                 boolean not null,
-  last_updated              timestamp default now(),
+  last_updated              timestamp not null default now(),
   check (
     ipaddr is null or (
       masklen(ipaddr) = 32 and
-      non_dynamic_ip(vlan_num, ipaddr)
+      non_dynamic_ip(vlan_id, ipaddr)
     )
   )
 ) ;
 
-create trigger net_addresses_last_updated_trigger before insert or update on net_addresses
+drop trigger if exists last_updated_trigger on net_addresses;
+create trigger last_updated_trigger before insert or update on net_addresses
   for each row execute procedure set_last_updated();
 
+drop index if exists idx_net_addresses_vlan_ip;
 create unique index idx_net_addresses_vlan_ip on net_addresses (
-  vlan_num,
+  vlan_id,
   ipaddr
 ) where ipaddr is not null;
 
+drop trigger if exists vlan_zone_trigger on net_addresses;
 create trigger vlan_zone_trigger before insert or update on net_addresses
   for each row execute procedure update_zone_by_vlan();
 
+drop table if exists net_switches cascade;
 create table net_switches (
-  name                      text not null references equipment
+  id                        serial primary key,
+  device_id                 integer not null references devices
                               on update cascade
                               on delete cascade,
-  primary key (name),
   fqdn                      text not null,
   num_ports                 integer not null,
   num_blades                integer,
   switch_type               text not null,
   port_prefix               text not null,
-  connection                text not null default 'ssh',
+  connection_type           text not null default 'ssh',
   username                  text not null,
   pass                      text not null
 );
 
+drop table if exists net_ports cascade;
 create table net_ports (
   id                        serial primary key,
   place_id                  integer references places
                               on update cascade
                               on delete cascade,
-  switch                    text not null references net_switches
+  net_switch_id             integer not null references net_switches
                               on update cascade
                               on delete cascade,
   port_num                  integer not null,
   wall_plate                text not null,
-  last_updated              timestamp default now(),
+  last_updated              timestamp not null default now(),
   blade_num                 integer,
-  unique (switch, port_num, blade_num),
-  check (port_num >= 0 and port_num <= num_ports(switch)),
-  check (wall_plate = 'MR' or place_id is not null)
+  unique (net_switch_id, port_num, blade_num),
+  check (port_num >= 0 and port_num <= num_ports(net_switch_id))
+  --, check (wall_plate = 'MR' or place_id is not null)
 ) ;
 
-create trigger net_ports_last_updated_trigger before insert or update on net_ports
+drop trigger if exists last_updated_trigger on net_ports;
+create trigger last_updated_trigger before insert or update on net_ports
   for each row execute procedure set_last_updated();
 
+drop index if exists idx_wall_ports;
 create unique index idx_wall_ports on net_ports (
   wall_plate
 ) where wall_plate != 'MR';
 
+drop table if exists net_interfaces cascade;
 create table net_interfaces (
   id                        serial primary key,
-  equip_name                text not null references equipment
+  device_id                 integer not null references devices
                               on update cascade
                               on delete cascade,
-  port_id                   integer references net_ports
+  net_port_id               integer references net_ports
                               on update cascade
                               on delete set null,
   ethernet                  macaddr unique,
-  primary_address           integer references net_addresses
+  primary_address_id        integer references net_addresses
                               on update cascade
                               on delete set null,
-  last_updated              timestamp default now()
+  last_updated              timestamp not null default now()
 ) ;
 
-create trigger net_interfaces_last_updated_trigger before insert or update on net_interfaces
+drop trigger if exists last_updated_trigger on net_interfaces;
+create trigger last_updated_trigger before insert or update on net_interfaces
   for each row execute procedure set_last_updated();
 
+drop table if exists net_services cascade;
 create table net_services (
-  service                   text primary key
+  id                        serial primary key,
+  name                      text unique not null
 ) ;
 
+drop table if exists net_dns_entries cascade;
 create table net_dns_entries (
+  id                        serial primary key,
   dns_name                  text not null,
   domain                    text not null,
-  dns_region                text not null references dns_regions
+  dns_region_id             integer not null references dns_regions
                               on update cascade
                               on delete restrict,
-  address                   integer not null references net_addresses
+  net_address_id            integer not null references net_addresses
                               on update cascade
                               on delete cascade,
   authoritative             boolean not null,
-  last_updated              timestamp default now(),
-  primary key               (dns_name, domain, dns_region)
+  last_updated              timestamp not null default now()
 ) ;
 
-create trigger net_dns_entries_last_updated_trigger before insert or update on net_dns_entries
+drop trigger if exists last_updated_trigger on net_dns_entries;
+create trigger last_updated_trigger before insert or update on net_dns_entries
   for each row execute procedure set_last_updated();
 
+drop index if exists authoritative_dns_entries_index;
 create unique index authoritative_dns_entries_index on net_dns_entries (
   dns_name,
   domain,
-  dns_region
+  dns_region_id
 ) where authoritative = true;
 
 -- join tables {{{
+drop table if exists net_ports_net_vlans cascade;
 create table net_ports_net_vlans (
-  net_ports_id              integer not null references net_ports
+  id                        serial primary key,
+  net_port_id               integer not null references net_ports
                               on update cascade
                               on delete cascade,
-  vlan_num                  integer not null references net_vlans
+  net_vlan_id               integer not null references net_vlans
                               on update cascade
                               on delete cascade,
-  native                    boolean not null,
-  primary key               (net_ports_id, vlan_num)
+  native                    boolean not null
 ) ;
 
+drop index if exists port_native_vlan_index;
 create unique index port_native_vlan_index on net_ports_net_vlans (
-  net_ports_id
+  net_port_id
 ) where native = true;
 
+drop table if exists net_addresses_net_interfaces cascade;
 create table net_addresses_net_interfaces (
-  net_addresses_id          integer not null references net_addresses
+  id                        serial primary key,
+  net_address_id            integer not null references net_addresses
                               on update cascade
                               on delete cascade,
-  net_interfaces_id         integer not null references net_interfaces
+  net_interface_id          integer not null references net_interfaces
                               on update cascade
-                              on delete cascade,
-  primary key               (net_addresses_id, net_interfaces_id)
+                              on delete cascade
 ) ;
 
+drop table if exists net_addresses_net_services cascade;
 create table net_addresses_net_services (
-  net_addresses_id          integer not null references net_addresses
+  id                        serial primary key,
+  net_address_id            integer not null references net_addresses
                               on update cascade
                               on delete cascade,
-  net_services_id           text not null references net_services
+  net_service_id            integer not null references net_services
                               on update cascade
-                              on delete cascade,
-  primary key               (net_addresses_id, net_services_id)
+                              on delete cascade
 ) ;
 
 -- }}}
 
 create or replace function vlan_zone(integer)
-  returns text
-  as 'select zone from net_vlans where vlan_num = $1'
-  language 'sql';
-
-create or replace function num_ports(text)
   returns integer
-  as 'select num_ports from net_switches where name = $1'
+  as 'select zone_id from net_vlans where id = $1'
   language 'sql';
 
-create table log_dhcp (
+create or replace function num_ports(integer)
+  returns integer
+  as 'select num_ports from net_switches where id = $1'
+  language 'sql';
+
+drop table if exists dhcp_log_entries cascade;
+create table dhcp_log_entries (
   id                        serial primary key,
-  entry_time                timestamp default now(),
+  entry_time                timestamp not null default now(),
   ethernet                  macaddr not null,
   ipaddr                    inet not null,
   data                      text
 ) ;
 
-create table log_macaddr (
+drop table if exists macaddr_log_entries cascade;
+create table macaddr_log_entries (
   id                        serial primary key,
-  entry_time                timestamp default now(),
+  entry_time                timestamp not null default now(),
   switch_name               text,
   port                      integer,
   macaddr                   text,
@@ -389,17 +431,22 @@ create table log_macaddr (
 
 -- {{{
 
+drop table if exists user_status_types cascade;
 create table user_status_types (
-  name                      text primary key
+  id                        serial primary key,
+  name                      text unique not null
 ) ;
 
+drop sequence if exists uid_seq cascade;
 create sequence uid_seq;
 
+drop sequence if exists gid_seq cascade;
 create sequence gid_seq;
 
+drop table if exists people cascade;
 create table people (
   id                        serial primary key,
-  user_status               text not null references user_status_types
+  user_status_type_id       integer not null references user_status_types
                               on update cascade
                               on delete restrict,
   full_name                 text,
@@ -415,11 +462,16 @@ create table people (
   cell_phone                text
 ) ;
 
+drop index if exists idx_people_family_name;
 create index idx_people_family_name on people  (family_name) ;
 
+drop table if exists user_accounts cascade;
 create table user_accounts (
   id                        serial primary key,
-  people_id                 integer not null references people
+  person_id                 integer not null references people
+                              on update cascade
+                              on delete cascade,
+  sponsor_id                integer not null references people
                               on update cascade
                               on delete cascade,
   uid                       integer unique not null default nextval('uid_seq'),
@@ -430,15 +482,17 @@ create table user_accounts (
   created                   date not null,
   expiration                date,
   enabled                   boolean,
-  last_updated              timestamp default now()
+  last_updated              timestamp not null default now()
 ) ;
 
-create trigger user_accounts_last_updated_trigger before insert or update on user_accounts
+drop trigger if exists last_updated_trigger on user_accounts;
+create trigger last_updated_trigger before insert or update on user_accounts
   for each row execute procedure set_last_updated();
 
+drop table if exists mail_aliases cascade;
 create table mail_aliases (
   id                        serial primary key,
-  user_accounts_id          integer not null references user_accounts
+  user_account_id           integer not null references user_accounts
                               on update cascade
                               on delete cascade,
   alias                     text not null,
@@ -446,6 +500,7 @@ create table mail_aliases (
   alias_type                text not null
 ) ;
 
+drop table if exists user_groups cascade;
 create table user_groups (
   id                        serial primary key,
   gid                       integer unique not null,
@@ -454,6 +509,7 @@ create table user_groups (
   quota                     integer not null
 ) ;
 
+drop table if exists courses cascade;
 create table courses (
   id                        serial primary key,
   course                    text,
@@ -472,14 +528,15 @@ create table courses (
   scm_research              boolean
 ) ;
 
+drop table if exists enrollment cascade;
 create table enrollment (
-  student_id                integer not null references people
+  id                        serial primary key,
+  person_id                 integer not null references people
                               on update cascade
                               on delete cascade,
   course_id                 integer not null references courses
                               on update cascade
                               on delete cascade,
-  primary key               (student_id, course_id),
   year                      text,
   grade                     text,
   phd_seq                   text,
@@ -493,28 +550,19 @@ create table enrollment (
   scm_research              boolean
 ) ;
 
--- user_accounts_people
--- association between user_accounts and people
-create table user_accounts_people (
-  user_accounts_id          integer not null references user_accounts
-                              on update cascade
-                              on delete cascade,
-  sponsor_id                integer not null references people
-                              on update cascade
-                              on delete cascade,
-  primary key               (user_accounts_id, sponsor_id)
-) ;
+drop table if exists user_accounts_people cascade;
 
 -- user_groups_user_accounts
 -- association between user_groups and user_accounts
+drop table if exists user_groups_user_accounts cascade;
 create table user_groups_user_accounts (
-  user_groups_id            integer not null references user_groups
+  id                        serial primary key,
+  user_group_id             integer not null references user_groups
                               on update cascade
                               on delete cascade,
-  user_accounts_id          integer not null references user_accounts
+  user_account_id           integer not null references user_accounts
                               on update cascade
-                              on delete cascade,
-  primary key               (user_groups_id, user_accounts_id)
+                              on delete cascade
 ) ;
 
 -- }}}
@@ -542,6 +590,7 @@ create table user_groups_user_accounts (
 --   perms                     text
 -- ) ;
 
+drop table if exists fs_automounts cascade;
 create table fs_automounts (
   id                        serial primary key,
   client_path               text,
@@ -558,16 +607,20 @@ create table fs_automounts (
 
 -- {{{
 
+drop table if exists os_types cascade;
 create table os_types (
-  name                      text primary key,
+  id                        serial primary key,
+  name                      text unique not null,
   pxe_boot                  boolean not null default false
 ) ;
 
+drop table if exists computers cascade;
 create table computers (
-  name                      text not null references equipment
+  id                        serial primary key,
+  device_id                 integer not null references devices
                               on update cascade
                               on delete cascade,
-  os                        text references os_types
+  os_type_id                integer references os_types
                               on update cascade
                               on delete restrict,
   pxelink                   text,
@@ -577,30 +630,33 @@ create table computers (
   memory                    text,
   hard_drives               text,
   video_cards               text,
-  last_updated              timestamp default now()
+  last_updated              timestamp not null default now()
 );
 
-create trigger computers_last_updated_trigger before insert or update on computers
+drop trigger if exists last_updated_trigger on computers;
+create trigger last_updated_trigger before insert or update on computers
   for each row execute procedure set_last_updated();
 
+drop table if exists comp_classes cascade;
 create table comp_classes (
   id                        serial primary key,
   name                      text not null,
-  os                        text references os_types
+  os_type_id                integer references os_types
                               on update cascade
                               on delete cascade,
-  unique (name, os)
+  unique (name, os_type_id)
 ) ;
 
 -- join tables {{{
+drop table if exists comp_classes_computers cascade;
 create table comp_classes_computers (
-  comp_class                integer not null references comp_classes
+  id                        serial primary key,
+  comp_class_id             integer not null references comp_classes
                               on update cascade
                               on delete cascade,
-  computer                  text not null references computers
+  computer_id               integer not null references computers
                               on update cascade
-                              on delete cascade,
-  primary key               (comp_class, computer)
+                              on delete cascade
 ) ;
 -- }}}
 
@@ -612,15 +668,16 @@ create table comp_classes_computers (
 
 -- {{{
 
--- association between equipment and people
-create table equipment_people (
-  equipment_name            text not null references equipment
+-- association between devices and people
+drop table if exists device_users cascade;
+create table device_users (
+  id                        serial primary key,
+  device_id                 integer not null references devices
                               on update cascade
                               on delete cascade,
-  equip_user_id             integer not null references people
+  person_id                 integer not null references people
                               on update cascade
-                              on delete cascade,
-  primary key               (equipment_name, equip_user_id)
+                              on delete cascade
 ) ;
 
 -- }}}
