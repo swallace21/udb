@@ -53,6 +53,9 @@ __PACKAGE__->has_many(
   "net_interfaces",
   "BrownCS::udb::Schema::NetInterfaces",
   { "foreign.net_port_id" => "self.net_port_id" },
+  {
+    cascade_delete => 0,
+  }
 );
 __PACKAGE__->belongs_to(
   "net_switch",
@@ -68,6 +71,9 @@ __PACKAGE__->has_many(
   "net_ports_net_vlans",
   "BrownCS::udb::Schema::NetPortsNetVlans",
   { "foreign.net_port_id" => "self.net_port_id" },
+  {
+    cascade_delete => 0,
+  }
 );
 __PACKAGE__->many_to_many(net_vlans => 'net_ports_net_vlans', 'net_vlan');
 

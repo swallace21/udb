@@ -43,6 +43,9 @@ __PACKAGE__->has_many(
   "net_addresses_net_interfaces",
   "BrownCS::udb::Schema::NetAddressesNetInterfaces",
   { "foreign.net_interface_id" => "self.net_interface_id" },
+  {
+    cascade_delete => 0,
+  }
 );
 __PACKAGE__->belongs_to(
   "device",

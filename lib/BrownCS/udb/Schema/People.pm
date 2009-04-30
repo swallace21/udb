@@ -107,11 +107,17 @@ __PACKAGE__->has_many(
   "device_users",
   "BrownCS::udb::Schema::DeviceUsers",
   { "foreign.person_id" => "self.person_id" },
+  {
+    cascade_delete => 0,
+  }
 );
 __PACKAGE__->has_many(
   "enrollments",
   "BrownCS::udb::Schema::Enrollment",
   { "foreign.person_id" => "self.person_id" },
+  {
+    cascade_delete => 0,
+  }
 );
 __PACKAGE__->belongs_to(
   "status",
@@ -122,11 +128,17 @@ __PACKAGE__->has_many(
   "sponsors",
   "BrownCS::udb::Schema::UserAccounts",
   { "foreign.sponsor_id" => "self.person_id" },
+  {
+    cascade_delete => 0,
+  }
 );
 __PACKAGE__->has_many(
   "sponsored_accounts",
   "BrownCS::udb::Schema::UserAccounts",
   { "foreign.person_id" => "self.person_id" },
+  {
+    cascade_delete => 0,
+  }
 );
 
 

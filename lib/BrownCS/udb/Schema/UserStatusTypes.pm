@@ -22,6 +22,9 @@ __PACKAGE__->has_many(
   "people",
   "BrownCS::udb::Schema::People",
   { "foreign.status" => "self.user_status_type" },
+  {
+    cascade_delete => 0,
+  }
 );
 
 

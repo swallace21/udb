@@ -33,7 +33,7 @@ GetOptions ('help|h|?' => \$help,
 usage(0) if $help;
 
 my $udb = BrownCS::udb::Schema->connect;
-
+my $uc = new BrownCS::udb::Console(udb => $udb);
 
 if (@ARGV != 1) {
   usage(2);

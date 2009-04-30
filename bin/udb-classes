@@ -8,7 +8,7 @@ use Pod::Usage;
 
 use FindBin qw($RealBin);
 use lib "$RealBin/../lib";
-use BrownCS::udb::Model::DB;
+use BrownCS::udb::Schema;
 use BrownCS::udb::Util qw(:all);
 use BrownCS::udb::Console qw(:all);
 
@@ -33,7 +33,8 @@ if (@ARGV != 1) {
   usage(2);
 }
 
-my $udb = BrownCS::udb::Model::DB->new;
+my $udb = BrownCS::udb::Schema->connect;
+my $uc = new BrownCS::udb::Console(udb => $udb);
 
 my $name = shift @ARGV;
 

@@ -43,11 +43,17 @@ __PACKAGE__->has_many(
   "devices",
   "BrownCS::udb::Schema::Devices",
   { "foreign.place_id" => "self.place_id" },
+  {
+    cascade_delete => 0,
+  }
 );
 __PACKAGE__->has_many(
   "net_ports",
   "BrownCS::udb::Schema::NetPorts",
   { "foreign.place_id" => "self.place_id" },
+  {
+    cascade_delete => 0,
+  }
 );
 
 

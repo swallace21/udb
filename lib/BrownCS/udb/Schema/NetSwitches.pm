@@ -68,6 +68,9 @@ __PACKAGE__->has_many(
   "net_ports",
   "BrownCS::udb::Schema::NetPorts",
   { "foreign.switch_name" => "self.device_name" },
+  {
+    cascade_delete => 0,
+  }
 );
 __PACKAGE__->belongs_to(
   "device",

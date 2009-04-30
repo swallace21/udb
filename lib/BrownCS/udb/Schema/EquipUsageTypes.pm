@@ -22,6 +22,9 @@ __PACKAGE__->has_many(
   "devices",
   "BrownCS::udb::Schema::Devices",
   { "foreign.usage" => "self.equip_usage_type" },
+  {
+    cascade_delete => 0,
+  }
 );
 
 

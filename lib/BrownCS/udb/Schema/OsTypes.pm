@@ -29,11 +29,17 @@ __PACKAGE__->has_many(
   "comp_classes",
   "BrownCS::udb::Schema::CompClasses",
   { "foreign.os_type" => "self.os_type" },
+  {
+    cascade_delete => 0,
+  }
 );
 __PACKAGE__->has_many(
   "computers",
   "BrownCS::udb::Schema::Computers",
   { "foreign.os_type" => "self.os_type" },
+  {
+    cascade_delete => 0,
+  }
 );
 
 

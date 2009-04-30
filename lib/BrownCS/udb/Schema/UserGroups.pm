@@ -37,6 +37,9 @@ __PACKAGE__->has_many(
   "user_groups_user_accounts",
   "BrownCS::udb::Schema::UserGroupsUserAccounts",
   { "foreign.user_group_id" => "self.user_group_id" },
+  {
+    cascade_delete => 0,
+  }
 );
 
 

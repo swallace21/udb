@@ -107,21 +107,33 @@ __PACKAGE__->might_have(
   "computer",
   "BrownCS::udb::Schema::Computers",
   { "foreign.device_name" => "self.device_name" },
+  {
+    cascade_delete => 0,
+  }
 );
 __PACKAGE__->has_many(
   "users",
   "BrownCS::udb::Schema::DeviceUsers",
   { "foreign.device_name" => "self.device_name" },
+  {
+    cascade_delete => 0,
+  }
 );
 __PACKAGE__->might_have(
   "parent",
   "BrownCS::udb::Schema::Devices",
   { device_name => "parent_device_name" },
+  {
+    cascade_delete => 0,
+  }
 );
 __PACKAGE__->has_many(
   "children",
   "BrownCS::udb::Schema::Devices",
   { "foreign.parent_device_name" => "self.device_name" },
+  {
+    cascade_delete => 0,
+  }
 );
 __PACKAGE__->belongs_to(
   "manager",
@@ -147,11 +159,17 @@ __PACKAGE__->has_many(
   "net_interfaces",
   "BrownCS::udb::Schema::NetInterfaces",
   { "foreign.device_name" => "self.device_name" },
+  {
+    cascade_delete => 0,
+  }
 );
 __PACKAGE__->might_have(
   "net_switch",
   "BrownCS::udb::Schema::NetSwitches",
   { "foreign.device_name" => "self.device_name" },
+  {
+    cascade_delete => 0,
+  }
 );
 
 

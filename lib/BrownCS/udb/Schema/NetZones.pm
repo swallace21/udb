@@ -50,11 +50,17 @@ __PACKAGE__->has_many(
   "net_addresses",
   "BrownCS::udb::Schema::NetAddresses",
   { "foreign.zone_name" => "self.zone_name" },
+  {
+    cascade_delete => 0,
+  }
 );
 __PACKAGE__->has_many(
   "net_vlans",
   "BrownCS::udb::Schema::NetVlans",
   { "foreign.zone_name" => "self.zone_name" },
+  {
+    cascade_delete => 0,
+  }
 );
 __PACKAGE__->belongs_to(
   "routing_type",

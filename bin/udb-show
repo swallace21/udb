@@ -32,6 +32,7 @@ GetOptions ('help|h|?' => \$help,
 usage(0) if $help;
 
 my $udb = BrownCS::udb::Schema->connect;
+my $uc = new BrownCS::udb::Console (udb => $udb);
 
 if (@ARGV != 1) {
   usage(2);
@@ -41,7 +42,7 @@ my $name = shift @ARGV;
 
 my $device = $udb->resultset('Devices')->find($name);
 if ($device) {
-  print_record('', format_device($device));
+  $uc->print_record('', $uc->format_device($device));
   exit(0);
 }
 
@@ -52,7 +53,7 @@ my @candidate_addresses = ();
 
 # device with name LIKE what we're looking for
 my $device_rs = $udb->resultset('Devices')->search({
-    name => { '~*' => $name },
+    device_name => { '~*' => $name },
   });
 if ($device_rs) {
   while ($device = $device_rs->next) {
@@ -66,7 +67,7 @@ my $dns_rs = $udb->resultset('NetDnsEntries')->search({
   });
 if ($dns_rs) {
   while (my $dns = $dns_rs->next) {
-    my $address = $dns->address;
+    my $address = $dns->net_address;
     my $interface_rs = $address->net_interfaces;
     if ($interface_rs->count) {
       while (my $interface = $interface_rs->next) {
@@ -81,8 +82,8 @@ if ($dns_rs) {
 
 my %seen_devices = ();
 foreach my $device (@candidate_devices) {
-  if (not $seen_devices{$device->name}) {
-    $seen_devices{$device->name} = 1;
+  if (not $seen_devices{$device->device_name}) {
+    $seen_devices{$device->device_name} = 1;
     print "\n";
     print_record('', format_device($device));
   }

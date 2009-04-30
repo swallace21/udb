@@ -22,6 +22,9 @@ __PACKAGE__->has_many(
   "net_addresses_net_services",
   "BrownCS::udb::Schema::NetAddressesNetServices",
   { "foreign.net_service" => "self.net_service" },
+  {
+    cascade_delete => 0,
+  }
 );
 __PACKAGE__->many_to_many(net_addresses => 'net_addresses_net_services', 'net_address');
 

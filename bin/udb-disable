@@ -30,7 +30,7 @@ GetOptions ('help|h|?' => \$help,
 usage(0) if $help;
 
 my $udb = BrownCS::udb::Schema->connect;
-
+my $uc = new BrownCS::udb::Console(udb => $udb);
 
 if (@ARGV != 1) {
   usage(2);
@@ -42,12 +42,12 @@ my $device = $udb->resultset('Devices')->find($name);
 die "No record for device $name.\n" if not $device;
 
 if ($device->protected) {
-  printf("The device %s is protected!\n", $device->name);
+  printf("The device %s is protected!\n", $device->device_name);
   print "Do not modify or delete this entry unless you know what you're doing.\n";
   exit(1);
 }
 
-if ($device->equip_status->name eq 'spare') {
+if ($device->status->equip_status_type eq 'spare') {
   print "This device is already disabled.\n";
   exit(0);
 }
@@ -58,12 +58,12 @@ while (my $iface = $iface_rs->next) {
   while (my $ip = $ip_rs->next) {
     $ip->delete;
   }
-  $iface->port(undef);
+  $iface->net_port(undef);
   $iface->update;
 }
 
 my $spare_status = $udb->resultset('EquipStatusTypes')->find('spare');
-$device->equip_status($spare_status);
+$device->status($spare_status);
 $device->update;
 
 __END__

@@ -164,22 +164,20 @@ our ($sp_switches, $sp_hosts);
 
 print "deleting old data... ";
 
+$udb->resultset('SurplusDevices')->delete;
 $udb->resultset('CompClasses')->delete;
-$udb->resultset('CompClassesComputers')->delete;
 $udb->resultset('Computers')->delete;
-$udb->resultset('Devices')->delete;
 $udb->resultset('NetAddresses')->delete;
-$udb->resultset('NetAddressesNetInterfaces')->delete;
 $udb->resultset('NetDnsEntries')->delete;
 $udb->resultset('NetInterfaces')->delete;
 $udb->resultset('NetPorts')->delete;
 $udb->resultset('NetSwitches')->delete;
 $udb->resultset('NetVlans')->delete;
 $udb->resultset('NetZones')->delete;
-$udb->resultset('OsTypes')->delete;
+$udb->resultset('Devices')->delete;
 $udb->resultset('Places')->delete;
+$udb->resultset('OsTypes')->delete;
 $udb->resultset('RoutingTypes')->delete;
-$udb->resultset('SurplusDevices')->delete;
 $udb->resultset('DnsRegions')->delete;
 $udb->resultset('EquipStatusTypes')->delete;
 $udb->resultset('ManagementTypes')->delete;

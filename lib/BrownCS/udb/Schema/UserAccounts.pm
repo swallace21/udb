@@ -77,6 +77,9 @@ __PACKAGE__->has_many(
   "mail_aliases",
   "BrownCS::udb::Schema::MailAliases",
   { "foreign.user_account_id" => "self.user_account_id" },
+  {
+    cascade_delete => 0,
+  }
 );
 __PACKAGE__->belongs_to(
   "sponsor",
@@ -92,6 +95,9 @@ __PACKAGE__->has_many(
   "user_groups_user_accounts",
   "BrownCS::udb::Schema::UserGroupsUserAccounts",
   { "foreign.user_account_id" => "self.user_account_id" },
+  {
+    cascade_delete => 0,
+  }
 );
 
 

@@ -28,6 +28,7 @@ GetOptions (
   'help|h|?' => \$help, 
   'v|verbose' => \$verbose,
   'n|dryrun' => \$dryrun,
+  'u|username=s' => \$username
 ) or usage(1);
 usage(0) if $help;
 
@@ -40,12 +41,20 @@ if (@ARGV != 1) {
 
 my $name = shift @ARGV;
 
-my $existing_device = $udb->resultset('Devices')->find($name);
-die "Device $name already exists.\n" if $existing_device;
+my $device = $udb->resultset('Devices')->find($name);
+die "Device $name does not exist.\n" if not $device;
+die "Device $name is already enabled.\n" if ($device->status->equip_status_type ne "spare");
+
+my $comp = $device->computer;
+die "Device $name is not a computer.\n" if not $comp;
+
+my $iface = $device->net_interfaces->single;
+
+my @classes = $comp->comp_classes->get_column("name")->all;
 
 print <<'EOF';
 -----------------------------------------------------------
-This script assumes that you are adding a standard computer.
+This script assumes that you are enabling a standard computer.
 If any of the following are true:
 
   - The device is a printer/switch/etc., not a computer
@@ -60,17 +69,15 @@ then you need to use a different interface.
 -----------------------------------------------------------
 EOF
 
-my $managed_by = $uc->get_management_type;
-my $equip_usage_type = $uc->get_equip_usage_type;
-my $os = $uc->get_os_type;
-my $classes = $uc->get_comp_classes;
+my $managed_by = $uc->get_management_type($device->manager->management_type);
+my $equip_usage_type = $uc->get_equip_usage_type($device->usage->equip_usage_type);
+my $os = $uc->get_os_type($device->computer->os_type->os_type);
+my $classes = $uc->get_comp_classes(@classes);
 my ($ipaddr, $vlan) = $uc->get_ip_and_vlan;
 my $port = $uc->get_port;
-my $room = $uc->get_room;
-my $contact = $uc->get_contact;
-my $owner = $uc->get_owner($contact);
-my $mac = $uc->get_mac;
-my $comments = $uc->get_comments;
+my $room = $uc->get_room($device->place->room);
+my $contact = $uc->get_contact($device->contact);
+my $comments = $uc->get_comments($device->comments);
 
 my $rs;
 eval {
@@ -82,18 +89,13 @@ eval {
           room => $room,
         });
 
-      my $comp = $udb->resultset('Computers')->create({
-          os_type => $os,
-          device => {
-            status => 'deployed',
-            usage => $equip_usage_type,
-            manager => $managed_by,
-            device_name => $name,
-            contact => $contact,
-            owner => $owner,
-            place => $loc,
-            comments => $comments,
-          },
+      $device->update({
+          manager => $managed_by,
+          status => 'deployed',
+          usage => $equip_usage_type,
+          contact => $contact,
+          place => $loc,
+          comments => $comments,
         });
 
       if ($classes) {
@@ -106,9 +108,6 @@ eval {
         }
       }
 
-      my $device = $comp->device;
-
-
       my $addr = $udb->resultset('NetAddresses')->create({
           vlan => $vlan,
           ipaddr => $ipaddr,
@@ -117,18 +116,16 @@ eval {
 
       dns_insert_both($name, 'cs.brown.edu', $addr, 1);
 
-      my $iface = $device->add_to_net_interfaces({
-          device => $device,
-          ethernet => $mac,
-          primary_address => $addr,
-        });
-
       if ($port) {
         $iface->net_port($port);
         $iface->update;
       }
 
       $addr->add_to_net_interfaces($iface);
+
+      $iface->update({
+          primary_address => $addr,
+        });
 
 #  foreach my $vlan_num (@vlans) {
 #    print "bind port $wall_plate to vlan $vlan_num\n";
@@ -142,7 +139,7 @@ eval {
 };
 if ($@) {
   die <<EOF;
-Failed to add $name. Try again.
+Failed to enable $name. Try again.
 
 Details:
   $@
@@ -170,11 +167,11 @@ __END__
 
 =head1 NAME
 
-udb-add - Add a device to UDB
+udb-enable - Add a device to UDB
 
 =head1 SYNOPSIS
 
-udb-add [-u username] <device>
+udb-enable [-u username] <device>
 
 =head1 DESCRIPTION
 
@@ -187,11 +184,6 @@ adds a device to the database
 =item B<-h>, B<--help>
 
 Print a help message and exit.
-
-=item B<-u>, B<--username>=user
-
-Logs onto the database server as the specified username, instead of as
-the current user.
 
 =back
 

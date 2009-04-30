@@ -72,11 +72,17 @@ __PACKAGE__->might_have(
   "parent_surplus_device",
   "BrownCS::udb::Schema::SurplusDevices",
   { surplus_device_id => "parent_surplus_device_id" },
+  {
+    cascade_delete => 0,
+  }
 );
 __PACKAGE__->has_many(
   "surplus_devices",
   "BrownCS::udb::Schema::SurplusDevices",
   { "foreign.parent_surplus_device_id" => "self.surplus_device_id" },
+  {
+    cascade_delete => 0,
+  }
 );
 
 

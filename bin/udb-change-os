@@ -30,25 +30,59 @@ GetOptions ('help|h|?' => \$help,
 usage(0) if $help;
 
 my $udb = BrownCS::udb::Schema->connect;
-
+my $uc = new BrownCS::udb::Console(udb => $udb);
 
 if (@ARGV != 1) {
   usage(2);
 }
 
-my $hostname = shift @ARGV;
+my $name = shift @ARGV;
+my $device;
+my $comp;
 
-my $device = $udb->resultset('Devices')->find($name);
-die "No record for device $name.\n" if not $device;
+eval {
+  $device = $udb->resultset('Devices')->find($name);
+  $comp = $device->computer;
+};
+if ($@) {
+  die "No record for computer $name.\n";
+}
 
 if ($device->protected) {
-  printf("The device %s is protected!\n", $device->name);
+  printf("The device %s is protected!\n", $device->device_name);
   print "Do not modify or delete this entry unless you know what you're doing.\n";
   exit(1);
 }
 
-# What OS?
-# ask about classes
+my $os = $uc->get_os_type;
+my $classes = $uc->get_comp_classes;
+
+my $rs;
+eval {
+  $rs = $udb->txn_do(sub {
+      $comp->os_type($os);
+
+      $udb->resultset('CompClassesComputers')->search({
+          device_name => $name,
+        })->delete;
+
+      if ($classes) {
+        foreach (@$classes) {
+          my $class = $udb->resultset('CompClasses')->find_or_create({
+              name => $_,
+              os_type => $os,
+            });
+          $comp->add_to_comp_classes($class);
+        }
+      }
+    });
+};
+if ($@) {
+  die <<EOF;
+Operation failed. Details:
+  $@
+EOF
+}
 
 __END__
 

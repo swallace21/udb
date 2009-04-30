@@ -90,6 +90,9 @@ __PACKAGE__->has_many(
   "enrollments",
   "BrownCS::udb::Schema::Enrollment",
   { "foreign.course_id" => "self.course_id" },
+  {
+    cascade_delete => 0,
+  }
 );
 
 

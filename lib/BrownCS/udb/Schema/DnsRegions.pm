@@ -22,6 +22,9 @@ __PACKAGE__->has_many(
   "net_dns_entries",
   "BrownCS::udb::Schema::NetDnsEntries",
   { "foreign.dns_region" => "self.dns_region" },
+  {
+    cascade_delete => 0,
+  }
 );
 
 

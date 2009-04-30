@@ -85,7 +85,7 @@ my %udb_commands = (
     'desc' => "change a networked device's MAC address",
     'common' => 1,
   },
-  'change-owner' => {
+  'change-user' => {
     'desc' => "change a device's primary user",
     'common' => 1,
   },

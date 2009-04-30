@@ -22,16 +22,25 @@ __PACKAGE__->has_many(
   "devices",
   "BrownCS::udb::Schema::Devices",
   { "foreign.manager" => "self.management_type" },
+  {
+    cascade_delete => 0,
+  }
 );
 __PACKAGE__->has_many(
   "net_zones_equip_managers",
   "BrownCS::udb::Schema::NetZones",
   { "foreign.equip_manager" => "self.management_type" },
+  {
+    cascade_delete => 0,
+  }
 );
 __PACKAGE__->has_many(
   "net_zones_zone_managers",
   "BrownCS::udb::Schema::NetZones",
   { "foreign.zone_manager" => "self.management_type" },
+  {
+    cascade_delete => 0,
+  }
 );
 
 

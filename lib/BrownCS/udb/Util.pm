@@ -10,6 +10,7 @@ use NetAddr::IP;
 
 our @EXPORT_OK = qw(
   bool
+  def_msg
   find_unused_ip
   fmt_time
   get_date
@@ -18,6 +19,7 @@ our @EXPORT_OK = qw(
   verify_hostname
   verify_ip_or_vlan
   verify_mac
+  verify_nonempty
   verify_walljack
 );
 
@@ -49,6 +51,11 @@ sub fmt_time {
 sub bool {
   my ($bool) = @_;
   return $bool ? "yes" : "no";
+}
+
+sub def_msg {
+  my ($str) = @_;
+  return $str ? $str : "<blank>";
 }
 
 sub ipv4_n2x {
@@ -114,17 +121,27 @@ sub find_unused_ip {
   die "No addresses are available for the $subnet subnet.\n";
 }
 
+sub verify_nonempty {
+  my ($answer) = @_;
+  if ((defined $answer) and ($answer ne '')) {
+    return (1, $answer);
+  } else {
+    return (0, undef);
+  }
+}
+
 sub verify_hostname {
   my $udb = shift;
   # TODO: check that value is not in use
   return sub {
     my($hostname) = @_;
+    $hostname = lc($hostname);
 
-    if($hostname !~ /^[a-zA-Z]([a-zA-Z0-9\-]*[a-zA-Z0-9])?$/) {
-      return undef;
+    if($hostname !~ /^[a-z0-9]([a-z0-9\-\_]{0,253}[a-z0-9])?$/) {
+      return (0, undef);
     }
 
-    return $hostname;
+    return (1, $hostname);
   };
 }
 
@@ -138,9 +155,9 @@ sub verify_mac {
       $mac = Net::MAC->new('mac' => $mac_str);
     };
     if ($@) {
-      return undef;
+      return (0, undef);
     } else {
-      return $mac_str;
+      return (1, $mac_str);
     }
   };
 }
@@ -154,19 +171,19 @@ sub verify_ip {
     my $netaddr_ip = new NetAddr::IP ($ipaddr);
     if (not $netaddr_ip) {
       print "Invalid IP address: $netaddr_ip!\n";
-      return undef;
+      return (0, undef);
     }
 
-    my $vlan = $udb->db->resultset('NetVlans')->search({
+    my $vlan = $udb->resultset('NetVlans')->search({
         network => {'>>', $ipaddr},
       })->single;
 
     if (not $vlan) {
       print "Invalid IP address: $netaddr_ip is not on a recognized subnet.\n";
-      return undef;
+      return (0, undef);
     }
 
-    return ($ipaddr, $vlan);
+    return (1, $ipaddr, $vlan);
   };
 }
 
@@ -176,24 +193,26 @@ sub verify_ip_or_vlan {
   return sub {
     my ($ip_or_vlan_str) = @_;
 
+    return (0, undef) if not $ip_or_vlan_str;
+
     if ($ip_or_vlan_str =~ /\./) {
       # we got an IP address
       my ($ipaddr, $vlan) = verify_ip($udb, $ip_or_vlan_str);
-      return ($ipaddr, $vlan);
+      return (1, $ipaddr, $vlan);
     }
 
     # we got a VLAN
-    my $vlan = $udb->db->resultset('NetVlans')->search({
+    my $vlan = $udb->resultset('NetVlans')->search({
         vlan_num => $ip_or_vlan_str,
       })->single;
 
     if (not $vlan) {
       print "Invalid VLAN: $ip_or_vlan_str!\n";
-      return undef;
+      return (0, undef);
     }
 
-    my $ipaddr = $udb->find_unused_ip($vlan);
-    return ($ipaddr, $vlan);
+    my $ipaddr = find_unused_ip($udb, $vlan);
+    return (1, $ipaddr, $vlan);
   };
 }
 
@@ -201,10 +220,10 @@ sub verify_walljack {
   my $udb = shift;
   return sub {
     my ($walljack_str) = @_;
-    my $walljack = $udb->db->resultset('NetPorts')->search({
+    my $walljack = $udb->resultset('NetPorts')->search({
         wall_plate => $walljack_str,
       })->single;
-    return ($walljack ? $walljack : undef);
+    return ($walljack ? (1, $walljack) : (0, undef));
   };
 }
 

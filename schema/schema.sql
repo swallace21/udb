@@ -52,6 +52,12 @@ begin
 end;
 $$ language plpgsql;
 
+drop domain if exists dns_safe_text cascade;
+create domain dns_safe_text as text
+check(
+  value ~ '^[a-z0-9]([a-z0-9_-]){0,253}[a-z0-9]?$'
+);
+
 -- }}}
 
 ------------
@@ -93,8 +99,8 @@ create table equip_usage_types (
 
 drop table if exists devices cascade;
 create table devices (
-  device_name               text primary key,
-  parent_device_name        text references devices
+  device_name               dns_safe_text primary key,
+  parent_device_name        dns_safe_text references devices
                               on update cascade
                               on delete cascade,
   place_id                  integer references places
@@ -251,7 +257,7 @@ create trigger vlan_zone_trigger before insert or update on net_addresses
 
 drop table if exists net_switches cascade;
 create table net_switches (
-  device_name               text not null references devices
+  device_name               dns_safe_text not null references devices
                               on update cascade
                               on delete cascade,
   primary key (device_name),
@@ -271,7 +277,7 @@ create table net_ports (
   place_id                  integer references places
                               on update cascade
                               on delete cascade,
-  switch_name               text not null references net_switches
+  switch_name               dns_safe_text not null references net_switches
                               on update cascade
                               on delete cascade,
   port_num                  integer not null,
@@ -295,7 +301,7 @@ create unique index idx_wall_ports on net_ports (
 drop table if exists net_interfaces cascade;
 create table net_interfaces (
   net_interface_id          serial primary key,
-  device_name               text not null references devices
+  device_name               dns_safe_text not null references devices
                               on update cascade
                               on delete cascade,
   net_port_id               integer references net_ports
@@ -312,6 +318,18 @@ drop trigger if exists last_updated_trigger on net_interfaces;
 create trigger last_updated_trigger before insert or update on net_interfaces
   for each row execute procedure set_last_updated();
 
+create or replace function delete_primary_address() returns trigger as
+$$
+begin
+  delete from net_addresses na where na.net_address_id = old.primary_address_id;
+  return old;
+end;
+$$ language plpgsql;
+
+drop trigger if exists delete_primary_address_trigger on net_interfaces;
+create trigger delete_primary_address_trigger after delete on net_interfaces
+  for each row execute procedure delete_primary_address();
+
 drop table if exists net_services cascade;
 create table net_services (
   net_service               text primary key
@@ -320,7 +338,7 @@ create table net_services (
 drop table if exists net_dns_entries cascade;
 create table net_dns_entries (
   net_dns_entry_id          serial primary key,
-  dns_name                  text not null,
+  dns_name                  dns_safe_text not null,
   domain                    text not null,
   dns_region                text not null references dns_regions
                               on update cascade
@@ -605,7 +623,7 @@ create table os_types (
 
 drop table if exists computers cascade;
 create table computers (
-  device_name               text not null references devices
+  device_name               dns_safe_text not null references devices
                               on update cascade
                               on delete cascade,
   primary key (device_name),
@@ -642,7 +660,7 @@ create table comp_classes_computers (
   comp_class_id             integer not null references comp_classes
                               on update cascade
                               on delete cascade,
-  device_name               text not null references computers
+  device_name               dns_safe_text not null references computers
                               on update cascade
                               on delete cascade,
   primary key               (comp_class_id, device_name)
@@ -660,7 +678,7 @@ create table comp_classes_computers (
 -- association between devices and people
 drop table if exists device_users cascade;
 create table device_users (
-  device_name               text not null references devices
+  device_name               dns_safe_text not null references devices
                               on update cascade
                               on delete cascade,
   person_id                 integer not null references people

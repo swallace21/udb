@@ -1,16 +1,7 @@
-schema:
-
 VERIFY:
 
-- aliases are 256 chars or shorter
-- alias must match [a-z][a-z0-9_\-]* format
 - equipment managed_by and zone managed_by must match
 - NetPortsNetVlans matches NetAddressesNetPorts
-
-CLEAN:
-
-- convert hostname to lowercase and remove whitespace
-- convert aliases to lowercase and remove whitespace
 
 TRIGGER:
 

@@ -37,7 +37,7 @@ GetOptions ('help|h|?' => \$help,
 usage(0) if $help;
 
 my $udb = BrownCS::udb::Schema->connect;
-
+my $uc = new BrownCS::udb::Console(udb => $udb);
 
 if (@ARGV < 1) {
   usage(2);
@@ -54,7 +54,7 @@ foreach my $hostname (@hostnames) {
   }
 
   if ($comp->device->protected) {
-    printf("The device %s is protected!\n", $comp->name);
+    printf("The device %s is protected!\n", $comp->device_name);
     print "Do not modify or delete this entry unless you know what you're doing.\n";
     next;
   }

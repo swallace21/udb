@@ -30,13 +30,13 @@ GetOptions ('help|h|?' => \$help,
 usage(0) if $help;
 
 my $udb = BrownCS::udb::Schema->connect;
-
+my $uc = new BrownCS::udb::Console(udb => $udb);
 
 if (@ARGV != 1) {
   usage(2);
 }
 
-my $hostname = shift @ARGV;
+my $name = shift @ARGV;
 
 my $device = $udb->resultset('Devices')->find($name);
 die "No record for device $name.\n" if not $device;
@@ -47,27 +47,34 @@ if ($device->protected) {
   exit(1);
 }
 
-my $new_room = get_new(0, "room number", \&verify_location);
-my $new_user = get_new(0, "room number", sub{1;});
-my $new_port;
+my $room = $uc->get_room;
+my $port = $uc->get_port;
 
-while ($new_port = get_new(0, "wall plate", sub{1;})) {
+my $rs;
+eval {
+  $rs = $udb->txn_do(sub {
+      my $new_place = $udb->resultset('Places')->find_or_create({
+          city => 'Providence',
+          building => 'CIT',
+          room => $room,
+        });
+      $device->place($new_place);
+      $device->update;
 
-  my $port_id = $udb->query("select np.id from net_ports np where
-    np.wall_plate = ?")->flat;
-
-  if (not $port_id) {
-    $new_port = undef;
-    next;
-  }
-
-  my @vlans = $udb->query("select npnv.vlan_num from net_ports_net_vlans
-    npnv where npnv.net_ports_id = ?")->flat;
-
-  print "vlans are: @vlans\n";
-
+      my $ifaces_rs = $device->net_interfaces;
+      while (my $iface = $ifaces_rs->next) {
+        $iface->net_port($port);
+        $iface->update;
+      }
+    });
+};
+if ($@) {
+  die <<EOF;
+Operation failed. Details:
+  $@
+EOF
 }
-    
+
 __END__
 
 =head1 NAME

@@ -64,21 +64,33 @@ __PACKAGE__->has_many(
   "net_addresses_net_interfaces",
   "BrownCS::udb::Schema::NetAddressesNetInterfaces",
   { "foreign.net_address_id" => "self.net_address_id" },
+  {
+    cascade_delete => 0,
+  }
 );
 __PACKAGE__->has_many(
   "net_addresses_net_services",
   "BrownCS::udb::Schema::NetAddressesNetServices",
   { "foreign.net_address_id" => "self.net_address_id" },
+  {
+    cascade_delete => 0,
+  }
 );
 __PACKAGE__->has_many(
   "net_dns_entries",
   "BrownCS::udb::Schema::NetDnsEntries",
   { "foreign.net_address_id" => "self.net_address_id" },
+  {
+    cascade_delete => 0,
+  }
 );
 __PACKAGE__->has_one(
   "primary_interface",
   "BrownCS::udb::Schema::NetInterfaces",
   { "foreign.primary_address_id" => "self.net_address_id" },
+  {
+    cascade_delete => 0,
+  }
 );
 __PACKAGE__->many_to_many(net_interfaces => 'net_addresses_net_interfaces', 'net_interface');
 __PACKAGE__->many_to_many(net_services => 'net_addresses_net_services', 'net_service');

@@ -31,7 +31,7 @@ GetOptions ('help|h|?' => \$help,
 usage(0) if $help;
 
 my $udb = BrownCS::udb::Schema->connect;
-
+my $uc = new BrownCS::udb::Console(udb => $udb);
 
 if (@ARGV != 1) {
   usage(2);
@@ -53,9 +53,9 @@ foreach my $device (@devices) {
   my @interfaces = $device->net_interfaces;
   my @addresses = map { $_->net_addresses } @interfaces;
   my @services = map { $_->net_services } @addresses;
-  my @service_names = map { $_->service } @services;
+  my @service_names = map { $_->net_service } @services;
   my $services = join(",",@service_names);
-  printf "%-18s%-10s%-18s%-40s\n", $device->name, $services, $contact, $comments;
+  printf "%-18s%-10s%-18s%-40s\n", $device->device_name, $services, $contact, $comments;
 }
 
 __END__

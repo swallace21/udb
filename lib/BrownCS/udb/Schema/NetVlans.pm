@@ -59,11 +59,17 @@ __PACKAGE__->has_many(
   "net_addresses",
   "BrownCS::udb::Schema::NetAddresses",
   { "foreign.vlan_num" => "self.vlan_num" },
+  {
+    cascade_delete => 0,
+  }
 );
 __PACKAGE__->has_many(
   "net_ports_net_vlans",
   "BrownCS::udb::Schema::NetPortsNetVlans",
   { "foreign.vlan_num" => "self.vlan_num" },
+  {
+    cascade_delete => 0,
+  }
 );
 __PACKAGE__->belongs_to(
   "zone",

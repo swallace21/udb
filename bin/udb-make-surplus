@@ -30,7 +30,7 @@ GetOptions ('help|h|?' => \$help,
 usage(0) if $help;
 
 my $udb = BrownCS::udb::Schema->connect;
-
+my $uc = new BrownCS::udb::Console(udb => $udb);
 
 if (@ARGV != 1) {
   usage(2);
@@ -42,13 +42,13 @@ my $device = $udb->resultset('Devices')->find($name);
 die "No record for device $name.\n" if not $device;
 
 if ($device->protected) {
-  printf("The device %s is protected!\n", $device->name);
+  printf("The device %s is protected!\n", $device->device_name);
   print "Do not modify or delete this entry unless you know what you're doing.\n";
   exit(1);
 }
 
-if ($device->equip_status->name ne 'spare') {
-  printf("The device %s is currently in use!\n", $device->name);
+if ($device->status->equip_status_type ne 'spare') {
+  printf("The device %s is currently in use!\n", $device->device_name);
   print "You must disable this device with udb-disable before you can surplus it.\n";
   exit(1);
 }
@@ -62,13 +62,13 @@ sub make_surplus {
   my ($device, $parent) = @_;
 
   if ($device->protected) {
-    printf("The device %s is protected!\n", $device->name);
+    printf("The device %s is protected!\n", $device->device_name);
     print "Do not modify or delete this entry unless you know what you're doing.\n";
     return;
   }
   
-  if ($device->equip_status->name ne 'spare') {
-    printf("The device %s is currently in use!\n", $device->name);
+  if ($device->status->equip_status_type ne 'spare') {
+    printf("The device %s is currently in use!\n", $device->device_name);
     print "You must disable this device with udb-disable before you can surplus it.\n";
     return;
   }
@@ -77,7 +77,7 @@ sub make_surplus {
       surplus_date => $surplus_date,
       purchased_on => $device->purchased_on,
       installed_on => $device->installed_on,
-      name => $device->name,
+      name => $device->device_name,
       buyer => $buyer,
       brown_inv_num => $device->brown_inv_num,
       serial_num => $device->serial_num,

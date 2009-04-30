@@ -80,6 +80,9 @@ __PACKAGE__->has_many(
   "comp_classes_computers",
   "BrownCS::udb::Schema::CompClassesComputers",
   { "foreign.device_name" => "self.device_name" },
+  {
+    cascade_delete => 0,
+  }
 );
 __PACKAGE__->belongs_to(
   "os_type",

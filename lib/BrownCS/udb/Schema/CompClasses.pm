@@ -42,6 +42,9 @@ __PACKAGE__->has_many(
   "comp_classes_computers",
   "BrownCS::udb::Schema::CompClassesComputers",
   { "foreign.comp_class_id" => "self.comp_class_id" },
+  {
+    cascade_delete => 0,
+  }
 );
 __PACKAGE__->many_to_many(computers => 'comp_classes_computers', 'computer');
 

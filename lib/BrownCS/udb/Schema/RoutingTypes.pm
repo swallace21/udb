@@ -22,6 +22,9 @@ __PACKAGE__->has_many(
   "net_zones",
   "BrownCS::udb::Schema::NetZones",
   { "foreign.routing_type" => "self.routing_type" },
+  {
+    cascade_delete => 0,
+  }
 );
 
 

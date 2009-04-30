@@ -30,7 +30,7 @@ GetOptions ('help|h|?' => \$help,
 usage(0) if $help;
 
 my $udb = BrownCS::udb::Schema->connect;
-
+my $uc = new BrownCS::udb::Console(udb => $udb);
 
 if ((@ARGV < 1) or (@ARGV > 2)) {
   usage(2);
@@ -43,7 +43,7 @@ my $device = $udb->resultset('Devices')->find($old_name);
 die "No record for device $old_name.\n" if not $device;
 
 if ($device->protected) {
-  printf("The device %s is protected!\n", $device->name);
+  printf("The device %s is protected!\n", $device->device_name);
   print "Do not modify or delete this entry unless you know what you're doing.\n";
   exit(1);
 }
@@ -58,7 +58,7 @@ if (not $new_name) {
   exit(0);
 }
 
-$device->name($new_name);
+$device->device_name($new_name);
 $device->update;
 
 __END__
