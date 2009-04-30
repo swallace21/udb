@@ -8,34 +8,35 @@ use base 'DBIx::Class';
 __PACKAGE__->load_components("Core");
 __PACKAGE__->table("comp_classes_computers");
 __PACKAGE__->add_columns(
-  "id",
+  "comp_class_id",
+  { data_type => "integer", default_value => undef, is_nullable => 0, size => 4 },
+  "device_name",
   {
-    data_type => "integer",
-    default_value => "nextval('comp_classes_computers_id_seq'::regclass)",
+    data_type => "text",
+    default_value => undef,
     is_nullable => 0,
-    size => 4,
+    size => undef,
   },
-  "comp_class_id",
-  { data_type => "integer", default_value => undef, is_nullable => 0, size => 4 },
-  "computer_id",
-  { data_type => "integer", default_value => undef, is_nullable => 0, size => 4 },
 );
-__PACKAGE__->set_primary_key("id");
-__PACKAGE__->add_unique_constraint("comp_classes_computers_pkey", ["id"]);
+__PACKAGE__->set_primary_key("comp_class_id", "device_name");
+__PACKAGE__->add_unique_constraint(
+  "comp_classes_computers_pkey",
+  ["comp_class_id", "device_name"],
+);
 __PACKAGE__->belongs_to(
-  "comp_class_id",
+  "comp_class",
   "BrownCS::udb::Schema::CompClasses",
-  { id => "comp_class_id" },
+  { comp_class_id => "comp_class_id" },
 );
 __PACKAGE__->belongs_to(
-  "computer_id",
+  "computer",
   "BrownCS::udb::Schema::Computers",
-  { id => "computer_id" },
+  { device_name => "device_name" },
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.04005 @ 2009-04-28 14:00:44
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:n49r2u+Ft0qsj7E6DEM3/Q
+# Created by DBIx::Class::Schema::Loader v0.04005 @ 2009-04-28 16:23:19
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:RURQBlG2b9j38jRyiPmTHA
 
 
 # You can replace this text with custom content, and it will be preserved on regeneration

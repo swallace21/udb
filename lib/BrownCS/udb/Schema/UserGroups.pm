@@ -8,10 +8,10 @@ use base 'DBIx::Class';
 __PACKAGE__->load_components("Core");
 __PACKAGE__->table("user_groups");
 __PACKAGE__->add_columns(
-  "id",
+  "user_group_id",
   {
     data_type => "integer",
-    default_value => "nextval('user_groups_id_seq'::regclass)",
+    default_value => "nextval('user_groups_user_group_id_seq'::regclass)",
     is_nullable => 0,
     size => 4,
   },
@@ -29,19 +29,19 @@ __PACKAGE__->add_columns(
   "quota",
   { data_type => "integer", default_value => undef, is_nullable => 0, size => 4 },
 );
-__PACKAGE__->set_primary_key("id");
+__PACKAGE__->set_primary_key("user_group_id");
 __PACKAGE__->add_unique_constraint("user_groups_gid_key", ["gid"]);
-__PACKAGE__->add_unique_constraint("user_groups_pkey", ["id"]);
+__PACKAGE__->add_unique_constraint("user_groups_pkey", ["user_group_id"]);
 __PACKAGE__->add_unique_constraint("user_groups_group_name_key", ["group_name"]);
 __PACKAGE__->has_many(
   "user_groups_user_accounts",
   "BrownCS::udb::Schema::UserGroupsUserAccounts",
-  { "foreign.user_group_id" => "self.id" },
+  { "foreign.user_group_id" => "self.user_group_id" },
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.04005 @ 2009-04-28 14:00:44
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:OoU0sSFD6MkhQ5LnditTZw
+# Created by DBIx::Class::Schema::Loader v0.04005 @ 2009-04-28 16:23:19
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:cNlvmZ/glHeeHyelRAdT7Q
 
 
 # You can replace this text with custom content, and it will be preserved on regeneration

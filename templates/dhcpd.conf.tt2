@@ -65,7 +65,7 @@ allow bootp;
 #
 deny unknown-clients;
 
-[% FOREACH subnet IN DBI.query("select nv.vlan_num, host(network(nv.network)) as network, host(nv.gateway) as gateway, host(broadcast(nv.network)) as broadcast, netmask(nv.network) as netmask, host(nv.dynamic_dhcp_start) as range_start, host(dynamic_dhcp_end) as range_end from net_vlans nv, net_zones nz where nv.zone = nz.name and nz.zone_manager = 'tstaff' and nv.dhcp order by nv.vlan_num") -%]
+[% FOREACH subnet IN DBI.query("select nv.vlan_num, host(network(nv.network)) as network, host(nv.gateway) as gateway, host(broadcast(nv.network)) as broadcast, netmask(nv.network) as netmask, host(nv.dynamic_dhcp_start) as range_start, host(dynamic_dhcp_end) as range_end from net_vlans nv, net_zones nz where nv.zone_name = nz.zone_name and nz.zone_manager = 'tstaff' and nv.dhcp order by nv.vlan_num") -%]
 #
 # subnet declaration for the [% subnet.vlan_num %] subnet
 #
@@ -116,7 +116,7 @@ group {
     next-server pxe.cs.brown.edu;
     filename "pxelinux.0";
 
-[% FOREACH host IN DBI.query("select ni.ethernet, na.ipaddr, c.os, c.pxelink, fqdn_brown(nde.dns_name, nde.domain) as hostname from net_addresses na, net_interfaces ni, net_addresses_net_interfaces nani, computers c, os_types o, net_dns_entries nde where ni.equip_name = c.name and nani.net_addresses_id = na.id and nani.net_interfaces_id = ni.id and ni.primary_address = na.id and ni.ethernet is not null and na.ipaddr is not null and na.enabled and c.os = o.name and o.pxe_boot and nde.authoritative and nde.address = na.id and nde.dns_region = 'external' order by hostname") -%]
+[% FOREACH host IN DBI.query("select ni.ethernet, na.ipaddr, c.os_type, c.pxelink, fqdn_brown(nde.dns_name, nde.domain) as hostname from net_addresses na, net_interfaces ni, net_addresses_net_interfaces nani, computers c, os_types o, net_dns_entries nde where ni.device_name = c.device_name and nani.net_address_id = na.net_address_id and nani.net_interface_id = ni.net_interface_id and ni.primary_address_id = na.net_address_id and ni.ethernet is not null and na.ipaddr is not null and na.enabled and c.os_type = o.os_type and o.pxe_boot and nde.authoritative and nde.net_address_id = na.net_address_id and nde.dns_region = 'external' order by hostname") -%]
     host [% host.hostname %] {
         hardware ethernet [% host.ethernet %];
         fixed-address [% host.ipaddr %]
@@ -131,7 +131,7 @@ group {
 group {
     use-host-decl-names on;
 
-[% FOREACH host IN DBI.query("select ni.ethernet, na.ipaddr, c.os, c.pxelink, fqdn_brown(nde.dns_name, nde.domain) as hostname from net_addresses na, net_interfaces ni, net_addresses_net_interfaces nani, computers c, os_types o, net_dns_entries nde where ni.equip_name = c.name and nani.net_addresses_id = na.id and nani.net_interfaces_id = ni.id and ni.primary_address = na.id and ni.ethernet is not null and na.ipaddr is not null and na.enabled and c.os = o.name and not o.pxe_boot and nde.authoritative and nde.address = na.id and nde.dns_region = 'external' order by hostname") -%]
+[% FOREACH host IN DBI.query("select ni.ethernet, na.ipaddr, c.os_type, c.pxelink, fqdn_brown(nde.dns_name, nde.domain) as hostname from net_addresses na, net_interfaces ni, net_addresses_net_interfaces nani, computers c, os_types o, net_dns_entries nde where ni.device_name = c.device_name and nani.net_address_id = na.net_address_id and nani.net_interface_id = ni.net_interface_id and ni.primary_address_id = na.net_address_id and ni.ethernet is not null and na.ipaddr is not null and na.enabled and c.os_type = o.os_type and not o.pxe_boot and nde.authoritative and nde.net_address_id = na.net_address_id and nde.dns_region = 'external' order by hostname") -%]
     host [% host.hostname %] {
         hardware ethernet [% host.ethernet %];
         fixed-address [% host.ipaddr %]
@@ -145,7 +145,7 @@ group {
 group {
     use-host-decl-names on;
 
-[% FOREACH host IN DBI.query("select ni.ethernet, na.ipaddr, c.pxelink, fqdn_brown(nde.dns_name, nde.domain) as hostname from net_addresses na, net_interfaces ni, net_addresses_net_interfaces nani, computers c, net_zones nz, net_dns_entries nde where ni.equip_name = c.name and nani.net_addresses_id = na.id and nani.net_interfaces_id = ni.id and ni.primary_address = na.id and ni.ethernet is not null and na.ipaddr is null and na.enabled and nz.name = na.zone and nz.dynamic_dhcp and nde.authoritative and nde.address = na.id and nde.dns_region = 'external' order by hostname") -%]
+[% FOREACH host IN DBI.query("select ni.ethernet, na.ipaddr, c.pxelink, fqdn_brown(nde.dns_name, nde.domain) as hostname from net_addresses na, net_interfaces ni, net_addresses_net_interfaces nani, computers c, net_zones nz, net_dns_entries nde where ni.device_name = c.device_name and nani.net_address_id = na.net_address_id and nani.net_interface_id = ni.net_interface_id and ni.primary_address_id = na.net_address_id and ni.ethernet is not null and na.ipaddr is null and na.enabled and nz.zone_name = na.zone_name and nz.dynamic_dhcp and nde.authoritative and nde.net_address_id = na.net_address_id and nde.dns_region = 'external' order by hostname") -%]
     host [% host.hostname %] {
         hardware ethernet [% host.ethernet %];
     }

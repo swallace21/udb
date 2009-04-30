@@ -8,15 +8,13 @@ use base 'DBIx::Class';
 __PACKAGE__->load_components("Core");
 __PACKAGE__->table("net_switches");
 __PACKAGE__->add_columns(
-  "id",
+  "device_name",
   {
-    data_type => "integer",
-    default_value => "nextval('net_switches_id_seq'::regclass)",
+    data_type => "text",
+    default_value => undef,
     is_nullable => 0,
-    size => 4,
+    size => undef,
   },
-  "device_id",
-  { data_type => "integer", default_value => undef, is_nullable => 0, size => 4 },
   "fqdn",
   {
     data_type => "text",
@@ -42,6 +40,13 @@ __PACKAGE__->add_columns(
     is_nullable => 0,
     size => undef,
   },
+  "connection_type",
+  {
+    data_type => "text",
+    default_value => "'ssh'::text",
+    is_nullable => 0,
+    size => undef,
+  },
   "username",
   {
     data_type => "text",
@@ -56,30 +61,23 @@ __PACKAGE__->add_columns(
     is_nullable => 0,
     size => undef,
   },
-  "connection_type",
-  {
-    data_type => "text",
-    default_value => "'ssh'::text",
-    is_nullable => 0,
-    size => undef,
-  },
 );
-__PACKAGE__->set_primary_key("id");
-__PACKAGE__->add_unique_constraint("net_switches_pkey", ["id"]);
+__PACKAGE__->set_primary_key("device_name");
+__PACKAGE__->add_unique_constraint("net_switches_pkey", ["device_name"]);
 __PACKAGE__->has_many(
   "net_ports",
   "BrownCS::udb::Schema::NetPorts",
-  { "foreign.net_switch_id" => "self.id" },
+  { "foreign.switch_name" => "self.device_name" },
 );
 __PACKAGE__->belongs_to(
-  "device_id",
+  "device",
   "BrownCS::udb::Schema::Devices",
-  { id => "device_id" },
+  { device_name => "device_name" },
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.04005 @ 2009-04-28 14:00:44
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:SNJGoQHdySFoLYbvDYQY2w
+# Created by DBIx::Class::Schema::Loader v0.04005 @ 2009-04-28 16:23:19
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:w1sfEkDmP/p0Y5k0+hSxyA
 
 
 # You can replace this text with custom content, and it will be preserved on regeneration

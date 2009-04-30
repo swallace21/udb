@@ -8,10 +8,10 @@ use base 'DBIx::Class';
 __PACKAGE__->load_components("Core");
 __PACKAGE__->table("user_accounts");
 __PACKAGE__->add_columns(
-  "id",
+  "user_account_id",
   {
     data_type => "integer",
-    default_value => "nextval('user_accounts_id_seq'::regclass)",
+    default_value => "nextval('user_accounts_user_account_id_seq'::regclass)",
     is_nullable => 0,
     size => 4,
   },
@@ -68,35 +68,35 @@ __PACKAGE__->add_columns(
     size => 8,
   },
 );
-__PACKAGE__->set_primary_key("id");
+__PACKAGE__->set_primary_key("user_account_id");
 __PACKAGE__->add_unique_constraint("user_accounts_gid_key", ["gid"]);
 __PACKAGE__->add_unique_constraint("user_accounts_uid_key", ["uid"]);
-__PACKAGE__->add_unique_constraint("user_accounts_pkey", ["id"]);
+__PACKAGE__->add_unique_constraint("user_accounts_pkey", ["user_account_id"]);
 __PACKAGE__->add_unique_constraint("user_accounts_login_key", ["login"]);
 __PACKAGE__->has_many(
   "mail_aliases",
   "BrownCS::udb::Schema::MailAliases",
-  { "foreign.user_account_id" => "self.id" },
+  { "foreign.user_account_id" => "self.user_account_id" },
 );
 __PACKAGE__->belongs_to(
-  "sponsor_id",
+  "sponsor",
   "BrownCS::udb::Schema::People",
-  { id => "sponsor_id" },
+  { person_id => "sponsor_id" },
 );
 __PACKAGE__->belongs_to(
-  "person_id",
+  "person",
   "BrownCS::udb::Schema::People",
-  { id => "person_id" },
+  { person_id => "person_id" },
 );
 __PACKAGE__->has_many(
   "user_groups_user_accounts",
   "BrownCS::udb::Schema::UserGroupsUserAccounts",
-  { "foreign.user_account_id" => "self.id" },
+  { "foreign.user_account_id" => "self.user_account_id" },
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.04005 @ 2009-04-28 14:00:44
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:v2xrGQ7mfp0yh5/+aY5ycA
+# Created by DBIx::Class::Schema::Loader v0.04005 @ 2009-04-28 16:23:19
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:C8DonN4WtYAUH7z7Rn9uwg
 
 
 # You can replace this text with custom content, and it will be preserved on regeneration

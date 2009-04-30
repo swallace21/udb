@@ -8,15 +8,20 @@ use base 'DBIx::Class';
 __PACKAGE__->load_components("Core");
 __PACKAGE__->table("people");
 __PACKAGE__->add_columns(
-  "id",
+  "person_id",
   {
     data_type => "integer",
-    default_value => "nextval('people_id_seq'::regclass)",
+    default_value => "nextval('people_person_id_seq'::regclass)",
     is_nullable => 0,
     size => 4,
   },
-  "user_status_type_id",
-  { data_type => "integer", default_value => undef, is_nullable => 0, size => 4 },
+  "status",
+  {
+    data_type => "text",
+    default_value => undef,
+    is_nullable => 0,
+    size => undef,
+  },
   "full_name",
   {
     data_type => "text",
@@ -95,38 +100,38 @@ __PACKAGE__->add_columns(
     size => undef,
   },
 );
-__PACKAGE__->set_primary_key("id");
+__PACKAGE__->set_primary_key("person_id");
 __PACKAGE__->add_unique_constraint("people_brown_card_id_key", ["brown_card_id"]);
-__PACKAGE__->add_unique_constraint("people_pkey", ["id"]);
+__PACKAGE__->add_unique_constraint("people_pkey", ["person_id"]);
 __PACKAGE__->has_many(
   "device_users",
   "BrownCS::udb::Schema::DeviceUsers",
-  { "foreign.person_id" => "self.id" },
+  { "foreign.person_id" => "self.person_id" },
 );
 __PACKAGE__->has_many(
   "enrollments",
   "BrownCS::udb::Schema::Enrollment",
-  { "foreign.person_id" => "self.id" },
+  { "foreign.person_id" => "self.person_id" },
 );
 __PACKAGE__->belongs_to(
-  "user_status_type_id",
+  "status",
   "BrownCS::udb::Schema::UserStatusTypes",
-  { id => "user_status_type_id" },
+  { user_status_type => "status" },
 );
 __PACKAGE__->has_many(
-  "user_accounts_sponsor_ids",
+  "sponsors",
   "BrownCS::udb::Schema::UserAccounts",
-  { "foreign.sponsor_id" => "self.id" },
+  { "foreign.sponsor_id" => "self.person_id" },
 );
 __PACKAGE__->has_many(
-  "user_accounts_person_ids",
+  "sponsored_accounts",
   "BrownCS::udb::Schema::UserAccounts",
-  { "foreign.person_id" => "self.id" },
+  { "foreign.person_id" => "self.person_id" },
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.04005 @ 2009-04-28 14:00:44
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:QWYiOD996Bbw5l6tXZf3fw
+# Created by DBIx::Class::Schema::Loader v0.04005 @ 2009-04-28 16:23:19
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:KEoNjnieLBoveFsmEfL5Ug
 
 
 # You can replace this text with custom content, and it will be preserved on regeneration

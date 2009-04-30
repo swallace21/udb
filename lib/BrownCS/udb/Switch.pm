@@ -1,11 +1,11 @@
-package BrownCS::UDB::Switch;
+package BrownCS::udb::Switch;
 use Moose;
 
 use DBI qw(:sql_types);
 use DBD::Pg qw(:pg_types);
 use Expect;
 
-use BrownCS::UDB::Util qw(:all);
+use BrownCS::udb::Util qw(:all);
 
 has 'name' => ( is => 'ro', isa => 'Str', required => 1 );
 has 'switch' => (

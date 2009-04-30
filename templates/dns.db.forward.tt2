@@ -139,12 +139,12 @@ pbcup                               IN          A               192.168.10.6
 pbcup                               IN          MX              10 mx.cs.brown.edu.
 [% END -%]
 
-[% FOREACH entry IN DBI.query("select nde.dns_name, na.ipaddr from net_dns_entries nde, net_addresses na where nde.dns_region = 'external' and nde.address = na.id and na.ipaddr is not null and na.enabled and nde.domain = '$domain' and nde.authoritative order by nde.dns_name") -%]
-[% entry.dns_name.fix_width(35) %] IN          A               [% entry.ipaddr %]
-[% entry.dns_name.fix_width(35) %] IN          MX              10 mx.cs.brown.edu.
+[% FOREACH entry IN DBI.query("select nde.dns_name, na.ipaddr from net_dns_entries nde, net_addresses na where nde.dns_region = 'external' and nde.net_address_id = na.net_address_id and na.ipaddr is not null and na.enabled and nde.domain = '$domain' and nde.authoritative order by nde.dns_name") -%]
+[% entry.dns_name | format('%-35s') %] IN          A               [% entry.ipaddr %]
+[% entry.dns_name | format('%-35s') %] IN          MX              10 mx.cs.brown.edu.
 [% END -%]
 
-[% FOREACH entry IN DBI.query("select nde.dns_name, cnames.dns_name as cname from net_dns_entries cnames, net_dns_entries nde inner join net_addresses na on nde.address = na.id where nde.dns_region = 'external' and cnames.dns_region = nde.dns_region and na.ipaddr is not null and na.enabled and nde.domain = '$domain' and not cnames.authoritative and nde.authoritative and cnames.address = nde.address order by cname") -%]
-[% entry.cname.fix_width(35) %] IN          CNAME           [% entry.dns_name %].[% domain %].
+[% FOREACH entry IN DBI.query("select nde.dns_name, cnames.dns_name as cname from net_dns_entries cnames inner join (net_dns_entries nde inner join net_addresses na using (net_address_id)) using (dns_region, net_address_id) where nde.dns_region = 'external' and na.ipaddr is not null and na.enabled and nde.domain = '$domain' and not cnames.authoritative and nde.authoritative order by cname") -%]
+[% entry.cname | format('%-35s') %] IN          CNAME           [% entry.dns_name %].[% domain %].
 [% END -%]
 

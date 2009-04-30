@@ -8,14 +8,7 @@ use base 'DBIx::Class';
 __PACKAGE__->load_components("Core");
 __PACKAGE__->table("dns_regions");
 __PACKAGE__->add_columns(
-  "id",
-  {
-    data_type => "integer",
-    default_value => "nextval('dns_regions_id_seq'::regclass)",
-    is_nullable => 0,
-    size => 4,
-  },
-  "name",
+  "dns_region",
   {
     data_type => "text",
     default_value => undef,
@@ -23,18 +16,17 @@ __PACKAGE__->add_columns(
     size => undef,
   },
 );
-__PACKAGE__->set_primary_key("id");
-__PACKAGE__->add_unique_constraint("dns_regions_name_key", ["name"]);
-__PACKAGE__->add_unique_constraint("dns_regions_pkey", ["id"]);
+__PACKAGE__->set_primary_key("dns_region");
+__PACKAGE__->add_unique_constraint("dns_regions_pkey", ["dns_region"]);
 __PACKAGE__->has_many(
   "net_dns_entries",
   "BrownCS::udb::Schema::NetDnsEntries",
-  { "foreign.dns_region_id" => "self.id" },
+  { "foreign.dns_region" => "self.dns_region" },
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.04005 @ 2009-04-28 14:00:44
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:z6GCEaA6LwAG14XdcK7Neg
+# Created by DBIx::Class::Schema::Loader v0.04005 @ 2009-04-28 16:23:19
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:Bef16oLYcRU4EqgbVx9DxA
 
 
 # You can replace this text with custom content, and it will be preserved on regeneration

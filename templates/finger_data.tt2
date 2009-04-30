@@ -1,4 +1,4 @@
 [%- USE DBI( dbh = dbh ) -%]
-[% FOREACH host IN DBI.query("select e.name, e.contact, p.room, e.comments from equipment e, places p where e.place_id = p.id order by name") -%]
+[% FOREACH host IN DBI.query("select d.device_name, d.contact, p.room, d.comments from devices d join places p using (place_id) order by device_name") -%]
 [% host.name.fix_width(10) %]	[% host.contact.fix_width(18) %]	[% host.room.fix_width(10) %]	[% host.comments %]
 [% END -%]

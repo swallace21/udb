@@ -9,9 +9,9 @@ use Data::Dumper;
 
 use FindBin qw($RealBin);
 use lib "$RealBin/../lib";
-use BrownCS::UDB;
-use BrownCS::UDB::Util qw(:all);
-use BrownCS::UDB::View qw(print_record format_device format_address);
+use BrownCS::udb::Schema;
+use BrownCS::udb::Util qw(:all);
+use BrownCS::udb::Console qw(:all);
 
 # Print a simple help message.
 sub usage {
@@ -31,8 +31,7 @@ GetOptions ('help|h|?' => \$help,
             'u|username=s' => \$username) or usage(1);
 usage(0) if $help;
 
-my $udb = BrownCS::UDB->new;
-$udb->start($username);
+my $udb = BrownCS::udb::Schema->connect;
 
 if (@ARGV != 1) {
   usage(2);
@@ -40,7 +39,7 @@ if (@ARGV != 1) {
 
 my $name = shift @ARGV;
 
-my $device = $udb->db->resultset('Equipment')->find($name);
+my $device = $udb->resultset('Devices')->find($name);
 if ($device) {
   print_record('', format_device($device));
   exit(0);
@@ -52,7 +51,7 @@ my @candidate_devices = ();
 my @candidate_addresses = ();
 
 # device with name LIKE what we're looking for
-my $device_rs = $udb->db->resultset('Equipment')->search({
+my $device_rs = $udb->resultset('Devices')->search({
     name => { '~*' => $name },
   });
 if ($device_rs) {
@@ -61,7 +60,7 @@ if ($device_rs) {
   }
 }
 
-my $dns_rs = $udb->db->resultset('NetDnsEntries')->search({
+my $dns_rs = $udb->resultset('NetDnsEntries')->search({
     dns_name => { '~*' => $name },
     dns_region => 'internal',
   });
@@ -120,8 +119,8 @@ udb-show [-u <username>] <device>
 
 =head1 DESCRIPTION
 
-udb-show queries the UDB database for information about a piece of
-equipment, and prints it out to the console. It is designed to resemble
+udb-show queries the UDB database for information about a device,
+and prints it out to the console. It is designed to resemble
 the old I<cdb profile> or I<index pc> commands.
 
 =head1 OPTIONS

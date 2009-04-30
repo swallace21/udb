@@ -8,36 +8,29 @@ use base 'DBIx::Class';
 __PACKAGE__->load_components("Core");
 __PACKAGE__->table("net_ports_net_vlans");
 __PACKAGE__->add_columns(
-  "id",
-  {
-    data_type => "integer",
-    default_value => "nextval('net_ports_net_vlans_id_seq'::regclass)",
-    is_nullable => 0,
-    size => 4,
-  },
   "net_port_id",
   { data_type => "integer", default_value => undef, is_nullable => 0, size => 4 },
-  "net_vlan_id",
+  "vlan_num",
   { data_type => "integer", default_value => undef, is_nullable => 0, size => 4 },
   "native",
   { data_type => "boolean", default_value => undef, is_nullable => 0, size => 1 },
 );
-__PACKAGE__->set_primary_key("id");
-__PACKAGE__->add_unique_constraint("net_ports_net_vlans_pkey", ["id"]);
+__PACKAGE__->set_primary_key("net_port_id", "vlan_num");
+__PACKAGE__->add_unique_constraint("net_ports_net_vlans_pkey", ["net_port_id", "vlan_num"]);
 __PACKAGE__->belongs_to(
-  "net_port_id",
+  "net_port",
   "BrownCS::udb::Schema::NetPorts",
-  { id => "net_port_id" },
+  { net_port_id => "net_port_id" },
 );
 __PACKAGE__->belongs_to(
-  "net_vlan_id",
+  "vlan_num",
   "BrownCS::udb::Schema::NetVlans",
-  { id => "net_vlan_id" },
+  { vlan_num => "vlan_num" },
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.04005 @ 2009-04-28 14:00:44
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:lRKyfGWeUJy+mA7U88XC7A
+# Created by DBIx::Class::Schema::Loader v0.04005 @ 2009-04-28 16:23:19
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:eVNhDTP8cMsvGWz1be+hoA
 
 
 # You can replace this text with custom content, and it will be preserved on regeneration

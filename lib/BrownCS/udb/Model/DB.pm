@@ -5,12 +5,6 @@ use base 'Catalyst::Model::DBIC::Schema';
 
 __PACKAGE__->config(
     schema_class => 'BrownCS::udb::Schema',
-    connect_info => [
-        'dbi:Pg:dbname=udb;host=sysdb',
-        'aleks',
-        'NohR0kei',
-        
-    ],
 );
 
 =head1 NAME

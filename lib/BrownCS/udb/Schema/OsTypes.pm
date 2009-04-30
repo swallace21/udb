@@ -8,14 +8,7 @@ use base 'DBIx::Class';
 __PACKAGE__->load_components("Core");
 __PACKAGE__->table("os_types");
 __PACKAGE__->add_columns(
-  "id",
-  {
-    data_type => "integer",
-    default_value => "nextval('os_types_id_seq'::regclass)",
-    is_nullable => 0,
-    size => 4,
-  },
-  "name",
+  "os_type",
   {
     data_type => "text",
     default_value => undef,
@@ -30,23 +23,22 @@ __PACKAGE__->add_columns(
     size => 1,
   },
 );
-__PACKAGE__->set_primary_key("id");
-__PACKAGE__->add_unique_constraint("os_types_pkey", ["id"]);
-__PACKAGE__->add_unique_constraint("os_types_name_key", ["name"]);
+__PACKAGE__->set_primary_key("os_type");
+__PACKAGE__->add_unique_constraint("os_types_pkey", ["os_type"]);
 __PACKAGE__->has_many(
   "comp_classes",
   "BrownCS::udb::Schema::CompClasses",
-  { "foreign.os_type_id" => "self.id" },
+  { "foreign.os_type" => "self.os_type" },
 );
 __PACKAGE__->has_many(
   "computers",
   "BrownCS::udb::Schema::Computers",
-  { "foreign.os_type_id" => "self.id" },
+  { "foreign.os_type" => "self.os_type" },
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.04005 @ 2009-04-28 14:00:44
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:4gG/iBuNWhdBKSCxPHbbFw
+# Created by DBIx::Class::Schema::Loader v0.04005 @ 2009-04-28 16:23:19
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:IPvamFd3sin0Hmq931xFoA
 
 
 # You can replace this text with custom content, and it will be preserved on regeneration

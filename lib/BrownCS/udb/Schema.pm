@@ -7,10 +7,21 @@ use base 'DBIx::Class::Schema';
 
 __PACKAGE__->load_classes;
 
+__PACKAGE__->connection(
+  'dbi:Pg:dbname=udb;host=sysdb',
+  'udbuser',
+  '0=ckf5j/_es1ZsSh&I"$pXTp$9a2TG0y4!5t8K:hSzPZKzRN-S)6N+wa./CqIdrC',
+);
 
-# Created by DBIx::Class::Schema::Loader v0.04005 @ 2009-04-28 14:00:44
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:SvnP7fp7NsZ/aRhLPd0TMg
+sub do {
+  my $self = shift;
+  my ($sql, @args) = @_;
+  $self->storage->dbh_do(
+    sub {
+      my ($storage, $dbh) = @_;
+      $dbh->do($sql, @args);
+    }
+  );
+}
 
-
-# You can replace this text with custom content, and it will be preserved on regeneration
 1;

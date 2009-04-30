@@ -8,16 +8,21 @@ use base 'DBIx::Class';
 __PACKAGE__->load_components("Core");
 __PACKAGE__->table("net_addresses");
 __PACKAGE__->add_columns(
-  "id",
+  "net_address_id",
   {
     data_type => "integer",
-    default_value => "nextval('net_addresses_id_seq'::regclass)",
+    default_value => "nextval('net_addresses_net_address_id_seq'::regclass)",
     is_nullable => 0,
     size => 4,
   },
-  "zone_id",
-  { data_type => "integer", default_value => undef, is_nullable => 0, size => 4 },
-  "vlan_id",
+  "zone_name",
+  {
+    data_type => "text",
+    default_value => undef,
+    is_nullable => 0,
+    size => undef,
+  },
+  "vlan_num",
   { data_type => "integer", default_value => undef, is_nullable => 0, size => 4 },
   "ipaddr",
   {
@@ -43,42 +48,43 @@ __PACKAGE__->add_columns(
     size => 8,
   },
 );
-__PACKAGE__->set_primary_key("id");
-__PACKAGE__->add_unique_constraint("net_addresses_pkey", ["id"]);
+__PACKAGE__->set_primary_key("net_address_id");
+__PACKAGE__->add_unique_constraint("net_addresses_pkey", ["net_address_id"]);
 __PACKAGE__->belongs_to(
-  "zone_id",
+  "zone",
   "BrownCS::udb::Schema::NetZones",
-  { id => "zone_id" },
+  { zone_name => "zone_name" },
 );
 __PACKAGE__->belongs_to(
-  "vlan_id",
+  "vlan",
   "BrownCS::udb::Schema::NetVlans",
-  { id => "vlan_id" },
+  { vlan_num => "vlan_num" },
 );
 __PACKAGE__->has_many(
   "net_addresses_net_interfaces",
   "BrownCS::udb::Schema::NetAddressesNetInterfaces",
-  { "foreign.net_address_id" => "self.id" },
+  { "foreign.net_address_id" => "self.net_address_id" },
 );
 __PACKAGE__->has_many(
   "net_addresses_net_services",
   "BrownCS::udb::Schema::NetAddressesNetServices",
-  { "foreign.net_address_id" => "self.id" },
+  { "foreign.net_address_id" => "self.net_address_id" },
 );
 __PACKAGE__->has_many(
   "net_dns_entries",
   "BrownCS::udb::Schema::NetDnsEntries",
-  { "foreign.net_address_id" => "self.id" },
+  { "foreign.net_address_id" => "self.net_address_id" },
 );
-__PACKAGE__->has_many(
-  "net_interfaces",
+__PACKAGE__->has_one(
+  "primary_interface",
   "BrownCS::udb::Schema::NetInterfaces",
-  { "foreign.primary_address_id" => "self.id" },
+  { "foreign.primary_address_id" => "self.net_address_id" },
 );
+__PACKAGE__->many_to_many(net_interfaces => 'net_addresses_net_interfaces', 'net_interface');
+__PACKAGE__->many_to_many(net_services => 'net_addresses_net_services', 'net_service');
 
-
-# Created by DBIx::Class::Schema::Loader v0.04005 @ 2009-04-28 14:00:44
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:EHwWjnF8g//mfJsEcKlQjg
+# Created by DBIx::Class::Schema::Loader v0.04005 @ 2009-04-28 16:23:19
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:kd/GnTPhy83ozW63db+evA
 
 
 # You can replace this text with custom content, and it will be preserved on regeneration

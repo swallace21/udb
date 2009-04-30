@@ -9,9 +9,9 @@ use NetAddr::IP;
 
 use FindBin qw($RealBin);
 use lib "$RealBin/../lib";
-use BrownCS::UDB;
-use BrownCS::UDB::Util qw(:all);
-use BrownCS::UDB::Verify qw(verify_mac verify_ip_or_vlan verify_walljack);
+use BrownCS::udb::Schema;
+use BrownCS::udb::Util qw(:all);
+use BrownCS::udb::Console qw(:all);
 
 # Print a simple help message.
 sub usage {
@@ -32,8 +32,8 @@ GetOptions (
 ) or usage(1);
 usage(0) if $help;
 
-my $udb = BrownCS::UDB->new;
-$udb->start($username);
+my $udb = BrownCS::udb::Schema->connect;
+
 
 if (@ARGV != 1) {
   usage(2);
@@ -41,7 +41,7 @@ if (@ARGV != 1) {
 
 my $name = shift @ARGV;
 
-my $existing_device = $udb->db->resultset('Equipment')->find($name);
+my $existing_device = $udb->resultset('Equipment')->find($name);
 die "Device $name already exists.\n" if $existing_device;
 
 print <<'EOF';
@@ -61,14 +61,14 @@ then you need to use udb-long-add instead.
 -----------------------------------------------------------
 EOF
 
-my @management_types = $udb->db->resultset('ManagementTypes')->get_column("name")->all;
+my @management_types = $udb->resultset('ManagementTypes')->get_column("name")->all;
 my $management_preamble = <<EOF;
 Who is in charge of managing this computer?
 EOF
 my $management_prompt = "\n${management_preamble}Managed by:";
 my $managed_by = choose($management_prompt, \@management_types);
 
-my @os_types = ('', $udb->db->resultset('OsTypes')->get_column("name")->all);
+my @os_types = ('', $udb->resultset('OsTypes')->get_column("name")->all);
 my $os_preamble = <<EOF;
 What OS will this computer have?
 If you don't know, or if this computer is user-maintained,
@@ -113,13 +113,13 @@ my $comments = ask("\nComments [optional]:",undef);
 
 my $db_coderef = sub {
 
-  my $loc = $udb->db->resultset('Places')->find_or_create({
+  my $loc = $udb->resultset('Places')->find_or_create({
       city => 'Providence',
       building => 'CIT',
       room => $room,
     });
 
-  my $comp = $udb->db->resultset('Computers')->create({
+  my $comp = $udb->resultset('Computers')->create({
       os => $os,
       device => {
         equip_status => 'deployed',
@@ -137,11 +137,11 @@ my $db_coderef = sub {
 
   if ( $#classes != -1 ) {
     foreach (@classes) {
-      my $class = $udb->db->resultset('CompClasses')->find_or_create({
+      my $class = $udb->resultset('CompClasses')->find_or_create({
           name => $_,
-          os => $os,
+          os_type => $os,
         });
-      $comp->add_to_classes($class);
+      $comp->add_to_comp_classes($class);
     }
   }
 
@@ -150,7 +150,7 @@ my $db_coderef = sub {
   my ($ipaddr, $vlan) = verify_ip_or_vlan($udb)->($ip_or_vlan_str);
   print $vlan, "\n";
   
-  my $addr = $udb->db->resultset('NetAddresses')->create({
+  my $addr = $udb->resultset('NetAddresses')->create({
         vlan => $vlan,
         ipaddr => $ipaddr,
         monitored => 0,
@@ -171,7 +171,7 @@ my $db_coderef = sub {
 
 #  foreach my $vlan_num (@vlans) {
 #    print "bind port $wall_plate to vlan $vlan_num\n";
-#    my $vlan = $udb->db->resultset('NetVlans')->find($vlan_num);
+#    my $vlan = $udb->resultset('NetVlans')->find($vlan_num);
 #    $port->add_to_net_vlans($vlan);
 #  }
 
@@ -181,7 +181,7 @@ my $db_coderef = sub {
 
 my $rs;
 eval {
-  $rs = $udb->db->txn_do($db_coderef);
+  $rs = $udb->txn_do($db_coderef);
 };
 
 if ($@) {
@@ -195,7 +195,7 @@ EOF
 
 sub dns_insert {
   my ($a, $b, $c, $d, $e) = @_;
-  $udb->db->resultset('NetDnsEntries')->find_or_create({
+  $udb->resultset('NetDnsEntries')->find_or_create({
       dns_name => $a,
       domain => $b,
       address => $c,

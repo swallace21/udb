@@ -13,8 +13,8 @@ use Template::Stash;
 
 use FindBin qw($RealBin);
 use lib "$RealBin/../lib";
-use BrownCS::UDB;
-use BrownCS::UDB::Util qw(:all);
+use BrownCS::udb::Schema;
+use BrownCS::udb::Util qw(:all);
 
 # Print a simple help message.
 sub usage {
@@ -24,21 +24,19 @@ sub usage {
 
 my $help = 0;
 my $username = $ENV{'USER'};
-my $udb = BrownCS::UDB->new;
+my $udb = BrownCS::udb::Schema->connect;
 my $dry_run = 1;
 my $verbose = 0;
 
 GetOptions ('help|h|?' => \$help, 
             'n|dryrun' => \$dry_run,
             'v|verbose' => \$verbose,
-            'u|username=s' => \$username) or usage(2);
+          ) or usage(2);
 usage(1) if $help;
 
 if (@ARGV > 0) {
   usage(2);
 }
-
-$udb->start($username);
 
 my $tt = Template->new({INCLUDE_PATH => "$RealBin/../templates"}) || die "$Template::ERROR\n";
 
@@ -73,50 +71,50 @@ sub build_tftpboot {
 
   my $tftpboot_path = "/tftpboot/pxelinux.cfg";
 
-  my $addrs = $udb->db->resultset('NetAddresses')->search({},
+  my $addrs = $udb->resultset('NetAddresses')->search({},
     {
       prefetch => {
         'primary_interface' => {
           'device' => {
-            'computer' => 'os'
+            'computer' => 'os_type'
           }
         }
       },
       order_by => [qw(ipaddr)],
     });
 
-  while (my $addr = $addrs->next) {
+  my $host_classes = get_host_class_map($udb);
 
+  while (my $addr = $addrs->next) {
     my $comp = $addr->primary_interface->device->computer;
 
     my $bootimage;
 
-    my $os = ($comp->os and $comp->os->get_column('name'));
+    my $os = ($comp->os_type);
     next if not defined $os;
-    next if not defined $addr->ipaddr;
 
     if (defined $comp->pxelink) {
       $bootimage = $comp->pxelink;
-    } elsif ($os eq 'linux') {
+    } elsif ($os->os_type eq 'debian') {
       $bootimage = "fai-workstation-i386";
-    } elsif ($os eq 'linux64') {
+    } elsif ($os->os_type eq 'debian64') {
       $bootimage = "fai-workstation-amd64";
-    } elsif ($os eq 'linux-server') {
-      $bootimage = "fai-server-i386";
-    } elsif ($os eq 'linux-server') {
-      $bootimage = "fai-server-amd64";
     }
 
     next if not defined($bootimage);
 
+    if (grep /^server$/, @{$host_classes->{$comp->device_name}}) {
+      $bootimage =~ s/workstation/server/g;
+    }
+
+    next if not defined $addr->ipaddr;
     my $hex_ip = ipv4_n2x($addr->ipaddr);
 
     if($dry_run) {
-      print "DEBUG: $hex_ip -> $bootimage\n";
+      printf "DEBUG: %s (%s) -> %s\n", $comp->device_name, $hex_ip, $bootimage;
     } else {
       unlink("$tftpboot_path/$hex_ip");
-      symlink("$bootimage", "$tftpboot_path/$hex_ip") ||
-        warn "$0: ERROR: Failed to create link $hex_ip: $!\n";
+      symlink("$bootimage", "$tftpboot_path/$hex_ip");
     }
   }
 }
@@ -135,21 +133,21 @@ sub add_to_group {
 sub build_netgroup {
   my(%netgroups) = ();
 
-  my $hosts = $udb->db->resultset('Computers')->search(
+  my $hosts = $udb->resultset('Computers')->search(
     {
       'net_dns_entries.authoritative' => 1,
       'net_dns_entries.dns_region' => 'internal',
     },
     {
       prefetch => [
-      'os',
+      'os_type',
       {
         'device' => [
-        'managed_by',
+        'manager',
         {
           'net_interfaces' => {
             'net_addresses_net_interfaces' => {
-              'net_addresses' => 'net_dns_entries',
+              'net_address' => 'net_dns_entries',
             },
           },
         },
@@ -158,18 +156,18 @@ sub build_netgroup {
       ],
       '+select' => [ 'net_dns_entries.domain' ],
       '+as'     => [ 'Domain' ],
-      order_by => [qw(me.name)],
+      order_by => [qw(me.device_name)],
     });
 
-  my $host_classes = $udb->get_host_class_map;
+  my $host_classes = get_host_class_map($udb);
 
   while (my $host = $hosts->next) {
 
-    my $hostname = $host->name;
-    my $fqdn = ($host->name . "." . $host->get_column('Domain'));
-    my $manager = $host->device->managed_by;
+    my $hostname = $host->device_name;
+    my $fqdn = ($host->device_name . "." . $host->get_column('Domain'));
+    my $manager = $host->device->manager;
 
-    my $os = ($host->os and $host->os->get_column('name'));
+    my $os = ($host->os_type and $host->os_type->get_column('os_type'));
     next if not defined $os;
 
     if (($manager eq 'tstaff') and (defined $os) and ($os =~ /^(?:linux|linux-server|solaris)$/)) {
@@ -217,7 +215,7 @@ sub build_dhcp {
 
   my $file = $dry_run ? '/tmp/dhcpd.conf' : '/maytag/sys0/dhcp/dhcpd.conf';
   my $PATH_TMPFILE = $file . '.tmp';
-  my $vars = {filename => $file, date => get_date(), dbh => $udb->db->storage->dbh};
+  my $vars = {filename => $file, date => get_date(), dbh => $udb->storage->dbh};
   $tt->process('dhcpd.conf.tt2', $vars, $PATH_TMPFILE) || die $tt->error(), "\n";
 
   # send new config file to each server
@@ -236,7 +234,7 @@ sub build_nagios_hosts {
 
   my $file = $dry_run ? '/tmp/hosts.cfg' : '/maytag/sys0/Linux/files/add/group.debian.server.nagios3/etc/nagios3/conf.d/hosts.cfg';
   my $PATH_TMPFILE = $file . '.tmp';
-  my $vars = {filename => $file, date => get_date(), dbh => $udb->db->storage->dbh};
+  my $vars = {filename => $file, date => get_date(), dbh => $udb->storage->dbh};
   $tt->process('hosts.cfg.tt2', $vars, $PATH_TMPFILE) || die $tt->error(), "\n";
 
   # send new config file to each server
@@ -252,7 +250,7 @@ sub build_nagios_services {
 
   my $file = $dry_run ? '/tmp/services.cfg' : '/maytag/sys0/Linux/files/add/group.debian.server.nagios3/etc/nagios3/conf.d/services.cfg';
   my $PATH_TMPFILE = $file . '.tmp';
-  my $vars = {filename => $file, date => get_date(), dbh => $udb->db->storage->dbh};
+  my $vars = {filename => $file, date => get_date(), dbh => $udb->storage->dbh};
   $tt->process('services.cfg.tt2', $vars, $PATH_TMPFILE) || die $tt->error(), "\n";
 
   # send new config file to each server
@@ -277,33 +275,33 @@ sub build_wpkg_hosts {
     hosts => [],
   };
 
-  my $host_classes = $udb->get_host_class_map;
+  my $host_classes = get_host_class_map($udb);
 
-  my $hosts = $udb->db->resultset('Computers')->search(
+  my $hosts = $udb->resultset('Computers')->search(
     {
-      'device.managed_by' => 'tstaff',
+      'device.manager' => 'tstaff',
     },
     {
       prefetch => [
-      'os',
+      'os_type',
       {
-        'device' => 'managed_by',
+        'device' => 'manager',
       },
       ],
-      order_by => [qw(me.name)],
+      order_by => [qw(me.device_name)],
     });
 
 
   while (my $host = $hosts->next) {
 
-    my $os = ($host->os and $host->os->get_column('name'));
+    my $os = ($host->os_type and $host->os_type->get_column('os_type'));
     next unless((defined $os) and (($os eq 'winxp') or ($os eq 'vista')));
 
     # generate profile list
 
     my @wpkg_profiles = ();
 
-    my $classes_ref = $host_classes->{$host->name};
+    my $classes_ref = $host_classes->{$host->device_name};
     next unless defined $classes_ref;
     my @classes = @{$classes_ref};
 
@@ -390,7 +388,7 @@ sub build_wpkg_hosts {
     my $first_profile = shift(@wpkg_profiles);
 
     my $host_var = {
-      hostname => $host->name,
+      hostname => $host->device_name,
       first_profile => $first_profile,
       other_profiles => \@wpkg_profiles,
     };
@@ -413,7 +411,7 @@ sub build_dns_map_forward {
   my $vars = {
     filename => $file,
     date => get_date(),
-    dbh => $udb->db->storage->dbh,
+    dbh => $udb->storage->dbh,
     zone => $zone,
     serial_num => $serial_num,
     domain => $domain,
@@ -432,7 +430,7 @@ sub build_dns_map_reverse {
   my $vars = {
     filename => $file,
     date => get_date(),
-    dbh => $udb->db->storage->dbh,
+    dbh => $udb->storage->dbh,
     zone => $zone,
     serial_num => $serial_num,
     cidr => $subnet->cidr,
@@ -453,9 +451,9 @@ sub build_dns {
   };
 
   # TODO increment the SOA line
-  my ($serial_num) = $udb->db->storage->dbh->selectrow_array("select nextval('dns_serial_num_seq')");
+  my ($serial_num) = $udb->storage->dbh->selectrow_array("select nextval('dns_serial_num_seq')");
 
-  my $subnets = $udb->db->resultset("NetVlans")->search(
+  my $subnets = $udb->resultset("NetVlans")->search(
     {
       'zone.zone_manager' => 'tstaff',
     },
@@ -518,7 +516,7 @@ sub build_dns {
 sub build_finger_data {
   my $file = $dry_run ? '/tmp/finger_data' : '/u/system/sysadmin/data';
   my $PATH_TMPFILE = $file . '.tmp';
-  my $vars = {filename => $file, date => get_date(), dbh => $udb->db->storage->dbh};
+  my $vars = {filename => $file, date => get_date(), dbh => $udb->storage->dbh};
   $tt->process('finger_data.tt2', $vars, $PATH_TMPFILE) || die $tt->error(), "\n";
   maybe_rename($PATH_TMPFILE, $file);
 }

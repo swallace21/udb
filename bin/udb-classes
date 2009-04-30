@@ -8,8 +8,9 @@ use Pod::Usage;
 
 use FindBin qw($RealBin);
 use lib "$RealBin/../lib";
-use BrownCS::UDB;
-use BrownCS::UDB::Util qw(:all);
+use BrownCS::udb::Model::DB;
+use BrownCS::udb::Util qw(:all);
+use BrownCS::udb::Console qw(:all);
 
 # Print a simple help message.
 sub usage {
@@ -28,23 +29,23 @@ GetOptions ('help|h|?' => \$help,
             'u|username=s' => \$username) or usage(1);
 usage(0) if $help;
 
-my $udb = BrownCS::UDB->new;
-$udb->start($username);
-
 if (@ARGV != 1) {
   usage(2);
 }
 
+my $udb = BrownCS::udb::Model::DB->new;
+
 my $name = shift @ARGV;
 
-my $device = $udb->db->resultset('Equipment')->find($name);
-die "No record for device $name.\n" if not $device;
-
-my $comp = $device->computer;
-die "Device $name is not a computer.\n" if not $comp;
-
-my @classes = $comp->classes()->get_column('name')->all;
-print join(' ',@classes) . "\n";
+eval {
+  my $device = $udb->resultset('Devices')->find($name);
+  my $comp = $device->computer;
+  my @classes = $comp->comp_classes->get_column('name')->all;
+  print join(' ',@classes) . "\n";
+};
+if ($@) {
+  die "No record for computer $name.\n";
+}
 
 __END__
 

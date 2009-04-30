@@ -9,8 +9,9 @@ use Data::Dumper;
 
 use FindBin qw($RealBin);
 use lib "$RealBin/../lib";
-use BrownCS::UDB;
-use BrownCS::UDB::Util qw(:all);
+use BrownCS::udb::Schema;
+use BrownCS::udb::Util qw(:all);
+use BrownCS::udb::Console qw(:all);
 
 # Print a simple help message.
 sub usage {
@@ -36,8 +37,8 @@ GetOptions ('help|h|?' => \$help,
             'u|username=s' => \$username) or usage(1);
 usage(0) if $help;
 
-my $udb = BrownCS::UDB->new;
-$udb->start($username);
+my $udb = BrownCS::udb::Schema->connect;
+
 
 if (@ARGV < 1) {
   usage(2);
@@ -47,31 +48,31 @@ my $classname = shift @ARGV;
 my @hostnames = @ARGV;
 
 foreach my $hostname (@hostnames) {
-  my $comp = $udb->db->resultset('Computers')->find($hostname);
+  my $comp = $udb->resultset('Computers')->find($hostname);
   if (not $comp) {
     print "No record for computer $hostname.\n" if not $comp;
     next;
   }
 
-  if ($comp->protected) {
+  if ($comp->device->protected) {
     printf("The device %s is protected!\n", $comp->name);
     print "Do not modify or delete this entry unless you know what you're doing.\n";
     next;
   }
 
-  my $class = $udb->db->resultset('CompClasses')->find({name => $classname, os => $comp->os});
+  my $class = $udb->resultset('CompClasses')->find({name => $classname, os_type => $comp->os_type});
   if (not $class) {
-    vprint("no record for class $classname on OS " . $comp->os);
+    vprint("no record for class $classname on OS " . $comp->os_type);
     next;
   }
 
   if ($class->computers->find($hostname)) {
     vprint("removing computer $hostname from class $classname");
-    $comp->remove_from_classes($class);
+    $comp->remove_from_comp_classes($class);
   }
 
   if (not $class->computers->count) {
-    vprint("removing empty class $classname on OS " . $comp->os);
+    vprint("removing empty class $classname on OS " . $comp->os_type);
     $class->delete;
   }
 }

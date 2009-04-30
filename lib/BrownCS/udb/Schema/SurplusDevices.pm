@@ -8,10 +8,10 @@ use base 'DBIx::Class';
 __PACKAGE__->load_components("Core");
 __PACKAGE__->table("surplus_devices");
 __PACKAGE__->add_columns(
-  "id",
+  "surplus_device_id",
   {
     data_type => "integer",
-    default_value => "nextval('surplus_devices_id_seq'::regclass)",
+    default_value => "nextval('surplus_devices_surplus_device_id_seq'::regclass)",
     is_nullable => 0,
     size => 4,
   },
@@ -66,22 +66,22 @@ __PACKAGE__->add_columns(
     size => undef,
   },
 );
-__PACKAGE__->set_primary_key("id");
-__PACKAGE__->add_unique_constraint("surplus_devices_pkey", ["id"]);
-__PACKAGE__->belongs_to(
-  "parent_surplus_device_id",
+__PACKAGE__->set_primary_key("surplus_device_id");
+__PACKAGE__->add_unique_constraint("surplus_devices_pkey", ["surplus_device_id"]);
+__PACKAGE__->might_have(
+  "parent_surplus_device",
   "BrownCS::udb::Schema::SurplusDevices",
-  { id => "parent_surplus_device_id" },
+  { surplus_device_id => "parent_surplus_device_id" },
 );
 __PACKAGE__->has_many(
   "surplus_devices",
   "BrownCS::udb::Schema::SurplusDevices",
-  { "foreign.parent_surplus_device_id" => "self.id" },
+  { "foreign.parent_surplus_device_id" => "self.surplus_device_id" },
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.04005 @ 2009-04-28 14:00:44
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:CS7mvACY3cjCemaUrdq+7A
+# Created by DBIx::Class::Schema::Loader v0.04005 @ 2009-04-28 16:23:19
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:ZoXtdFBmgz3SzoXJYFxO6w
 
 
 # You can replace this text with custom content, and it will be preserved on regeneration

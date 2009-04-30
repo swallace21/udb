@@ -8,30 +8,43 @@ use base 'DBIx::Class';
 __PACKAGE__->load_components("Core");
 __PACKAGE__->table("devices");
 __PACKAGE__->add_columns(
-  "id",
-  {
-    data_type => "integer",
-    default_value => "nextval('devices_id_seq'::regclass)",
-    is_nullable => 0,
-    size => 4,
-  },
-  "name",
+  "device_name",
   {
     data_type => "text",
     default_value => undef,
     is_nullable => 0,
     size => undef,
   },
-  "parent_device_id",
-  { data_type => "integer", default_value => undef, is_nullable => 1, size => 4 },
+  "parent_device_name",
+  {
+    data_type => "text",
+    default_value => undef,
+    is_nullable => 1,
+    size => undef,
+  },
   "place_id",
   { data_type => "integer", default_value => undef, is_nullable => 1, size => 4 },
-  "equip_status_type_id",
-  { data_type => "integer", default_value => undef, is_nullable => 0, size => 4 },
-  "equip_usage_type_id",
-  { data_type => "integer", default_value => undef, is_nullable => 0, size => 4 },
-  "manager_id",
-  { data_type => "integer", default_value => undef, is_nullable => 0, size => 4 },
+  "status",
+  {
+    data_type => "text",
+    default_value => undef,
+    is_nullable => 0,
+    size => undef,
+  },
+  "usage",
+  {
+    data_type => "text",
+    default_value => undef,
+    is_nullable => 0,
+    size => undef,
+  },
+  "manager",
+  {
+    data_type => "text",
+    default_value => undef,
+    is_nullable => 0,
+    size => undef,
+  },
   "protected",
   {
     data_type => "boolean",
@@ -88,63 +101,62 @@ __PACKAGE__->add_columns(
     size => undef,
   },
 );
-__PACKAGE__->set_primary_key("id");
-__PACKAGE__->add_unique_constraint("devices_pkey", ["id"]);
-__PACKAGE__->add_unique_constraint("devices_name_key", ["name"]);
-__PACKAGE__->has_many(
-  "computers",
+__PACKAGE__->set_primary_key("device_name");
+__PACKAGE__->add_unique_constraint("devices_pkey", ["device_name"]);
+__PACKAGE__->might_have(
+  "computer",
   "BrownCS::udb::Schema::Computers",
-  { "foreign.device_id" => "self.id" },
+  { "foreign.device_name" => "self.device_name" },
 );
 __PACKAGE__->has_many(
-  "device_users",
+  "users",
   "BrownCS::udb::Schema::DeviceUsers",
-  { "foreign.device_id" => "self.id" },
+  { "foreign.device_name" => "self.device_name" },
 );
-__PACKAGE__->belongs_to(
-  "parent_device_id",
+__PACKAGE__->might_have(
+  "parent",
   "BrownCS::udb::Schema::Devices",
-  { id => "parent_device_id" },
+  { device_name => "parent_device_name" },
 );
 __PACKAGE__->has_many(
-  "devices",
+  "children",
   "BrownCS::udb::Schema::Devices",
-  { "foreign.parent_device_id" => "self.id" },
+  { "foreign.parent_device_name" => "self.device_name" },
 );
 __PACKAGE__->belongs_to(
-  "equip_status_type_id",
-  "BrownCS::udb::Schema::EquipStatusTypes",
-  { id => "equip_status_type_id" },
-);
-__PACKAGE__->belongs_to(
-  "manager_id",
+  "manager",
   "BrownCS::udb::Schema::ManagementTypes",
-  { id => "manager_id" },
+  { management_type => "manager" },
 );
 __PACKAGE__->belongs_to(
-  "equip_usage_type_id",
+  "status",
+  "BrownCS::udb::Schema::EquipStatusTypes",
+  { equip_status_type => "status" },
+);
+__PACKAGE__->belongs_to(
+  "usage",
   "BrownCS::udb::Schema::EquipUsageTypes",
-  { id => "equip_usage_type_id" },
+  { equip_usage_type => "usage" },
 );
 __PACKAGE__->belongs_to(
-  "place_id",
+  "place",
   "BrownCS::udb::Schema::Places",
-  { id => "place_id" },
+  { place_id => "place_id" },
 );
 __PACKAGE__->has_many(
   "net_interfaces",
   "BrownCS::udb::Schema::NetInterfaces",
-  { "foreign.device_id" => "self.id" },
+  { "foreign.device_name" => "self.device_name" },
 );
-__PACKAGE__->has_many(
-  "net_switches",
+__PACKAGE__->might_have(
+  "net_switch",
   "BrownCS::udb::Schema::NetSwitches",
-  { "foreign.device_id" => "self.id" },
+  { "foreign.device_name" => "self.device_name" },
 );
 
 
-# Created by DBIx::Class::Schema::Loader v0.04005 @ 2009-04-28 14:00:44
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:pTMIzVRQo5oQw5r/wYhcHA
+# Created by DBIx::Class::Schema::Loader v0.04005 @ 2009-04-28 16:23:19
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:b9+pVWjyhcT9+rXULi2nUQ
 
 
 # You can replace this text with custom content, and it will be preserved on regeneration

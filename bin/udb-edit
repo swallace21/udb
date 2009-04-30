@@ -11,8 +11,9 @@ use YAML::Tiny qw(Load Dump);
 
 use FindBin qw($RealBin);
 use lib "$RealBin/../lib";
-use BrownCS::UDB;
-use BrownCS::UDB::Util qw(:all);
+use BrownCS::udb::Schema;
+use BrownCS::udb::Util qw(:all);
+use BrownCS::udb::Console qw(:all);
 
 # Print a simple help message.
 sub usage {
@@ -31,8 +32,8 @@ GetOptions ('help|h|?' => \$help,
             'u|username=s' => \$username) or usage(1);
 usage(0) if $help;
 
-my $udb = BrownCS::UDB->new;
-$udb->start($username);
+my $udb = BrownCS::udb::Schema->connect;
+
 
 if (@ARGV != 1) {
   usage(2);
@@ -40,7 +41,7 @@ if (@ARGV != 1) {
 
 my $name = shift @ARGV;
 
-my $device = $udb->db->resultset('Equipment')->find($name);
+my $device = $udb->resultset('Equipment')->find($name);
 die "No record for device $name.\n" if not $device;
 
 if ($device->protected) {

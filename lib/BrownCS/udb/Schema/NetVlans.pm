@@ -8,17 +8,15 @@ use base 'DBIx::Class';
 __PACKAGE__->load_components("Core");
 __PACKAGE__->table("net_vlans");
 __PACKAGE__->add_columns(
-  "id",
-  {
-    data_type => "integer",
-    default_value => "nextval('net_vlans_id_seq'::regclass)",
-    is_nullable => 0,
-    size => 4,
-  },
   "vlan_num",
   { data_type => "integer", default_value => undef, is_nullable => 0, size => 4 },
-  "zone_id",
-  { data_type => "integer", default_value => undef, is_nullable => 0, size => 4 },
+  "zone_name",
+  {
+    data_type => "text",
+    default_value => undef,
+    is_nullable => 0,
+    size => undef,
+  },
   "network",
   {
     data_type => "cidr",
@@ -55,28 +53,28 @@ __PACKAGE__->add_columns(
     size => undef,
   },
 );
-__PACKAGE__->set_primary_key("id");
-__PACKAGE__->add_unique_constraint("net_vlans_vlan_num_key", ["vlan_num"]);
-__PACKAGE__->add_unique_constraint("net_vlans_pkey", ["id"]);
+__PACKAGE__->set_primary_key("vlan_num");
+__PACKAGE__->add_unique_constraint("net_vlans_pkey", ["vlan_num"]);
 __PACKAGE__->has_many(
   "net_addresses",
   "BrownCS::udb::Schema::NetAddresses",
-  { "foreign.vlan_id" => "self.id" },
+  { "foreign.vlan_num" => "self.vlan_num" },
 );
 __PACKAGE__->has_many(
   "net_ports_net_vlans",
   "BrownCS::udb::Schema::NetPortsNetVlans",
-  { "foreign.net_vlan_id" => "self.id" },
+  { "foreign.vlan_num" => "self.vlan_num" },
 );
 __PACKAGE__->belongs_to(
-  "zone_id",
+  "zone",
   "BrownCS::udb::Schema::NetZones",
-  { id => "zone_id" },
+  { zone_name => "zone_name" },
 );
+__PACKAGE__->many_to_many(net_ports => 'net_ports_net_vlans', 'net_port');
 
 
-# Created by DBIx::Class::Schema::Loader v0.04005 @ 2009-04-28 14:00:44
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:6EP9qMsZyBlRPUeSMtx+EA
+# Created by DBIx::Class::Schema::Loader v0.04005 @ 2009-04-28 16:23:19
+# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:NuqnXDox8BkBf/AJ9vIhmw
 
 
 # You can replace this text with custom content, and it will be preserved on regeneration
