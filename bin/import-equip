@@ -378,12 +378,12 @@ while ( my ($key, $data) = each(%$sp_switches) ) {
     });
 
   my $device = $udb->resultset('Devices')->find_or_create({
-      name => $name,
-      equip_status => "deployed",
-      equip_usage => 'tstaff',
-      managed_by => "cis",
+      device_name => $name,
+      status => "deployed",
+      usage => 'tstaff',
+      manager => "cis",
       contact => 'help@brown.edu',
-      location => $loc,
+      place => $loc,
     });
 
   my $switch = $udb->resultset('NetSwitches')->find_or_create({
@@ -393,11 +393,11 @@ while ( my ($key, $data) = each(%$sp_switches) ) {
       num_blades => $data->{'numblades'},
       switch_type => $data->{'type'},
       port_prefix => $data->{'prefix'},
-      connection => $data->{'mode'},
+      connection_type => $data->{'mode'},
       username => $data->{'user'},
       pass => $data->{'login'},
     });
-  $device->switch($switch);
+  $device->net_switch($switch);
 }
 
 print "done.\n";
@@ -433,7 +433,7 @@ while ( my ($hostname, $data) = each(%$sp_hosts) ) {
   # create port
 
   my $port = $udb->resultset('NetPorts')->find_or_create({
-      switch => $switch,
+      net_switch => $switch,
       port_num => $port_num,
       blade_num => $blade_num,
       wall_plate => $wall_plate,
@@ -445,17 +445,23 @@ while ( my ($hostname, $data) = each(%$sp_hosts) ) {
   # table entry
 
   my @vlans = split(/,/,$data->{"vlan"});
+  my $native = 1;
 
   foreach my $vlan_num (@vlans) {
     print "bind port $wall_plate to vlan $vlan_num\n";
     my $vlan = $udb->resultset('NetVlans')->find($vlan_num);
-    $port->add_to_net_vlans($vlan);
+    my $port = $udb->resultset('NetPortsNetVlans')->find_or_create({
+        net_port => $port,
+        net_vlan => $vlan,
+        native => $native,
+      });
+    $native = 0;
   }
 
-  my $ifaces = $udb->resultset('NetInterfaces')->search({'equip_name' => $hostname});
+  my $ifaces = $udb->resultset('NetInterfaces')->search({'device_name' => $hostname});
   while (my $iface = $ifaces->next) {
     print "bind interface $hostname to port $wall_plate\n";
-    $iface->port($port);
+    $iface->net_port($port);
     $iface->update;
   }
 }
@@ -490,10 +496,10 @@ while ( <FH> ) {
   print "updating $name\n";
 
   my $device = $udb->resultset('Devices')->find_or_create({
-      equip_status => 'spare',
-      equip_usage => 'tstaff',
-      managed_by => 'tstaff',
-      name => $name,
+      status => 'spare',
+      usage => 'tstaff',
+      manager => 'tstaff',
+      device_name => $name,
     });
 
   if ($device->comments) {
@@ -524,7 +530,7 @@ while ( <FH> ) {
   $device->purchased_on($purchase_date);
   $device->installed_on($install_date);
   $device->comments($comments);
-  $device->location($loc);
+  $device->place($loc);
   $device->contact($users),
 
   $device->update;

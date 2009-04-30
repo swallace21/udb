@@ -102,7 +102,7 @@ sub get_devices {
     };
   }
 
-  return $udb->resultset('Equipment')->search($query, {
+  return $udb->resultset('Devices')->search($query, {
       page => 1,
       rows => 1,
       order_by => 'name',

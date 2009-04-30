@@ -44,7 +44,7 @@ my $name = shift @ARGV;
 my @candidate_devices = ();
 
 # device with name LIKE what we're looking for
-my $device_rs = $udb->resultset('SurplusEquipment')->search({
+my $device_rs = $udb->resultset('SurplusDevices')->search({
     name => { '~*' => $name },
   });
 if ($device_rs) {

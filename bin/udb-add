@@ -41,7 +41,7 @@ if (@ARGV != 1) {
 
 my $name = shift @ARGV;
 
-my $existing_device = $udb->resultset('Equipment')->find($name);
+my $existing_device = $udb->resultset('Devices')->find($name);
 die "Device $name already exists.\n" if $existing_device;
 
 print <<'EOF';

@@ -352,7 +352,7 @@ create table net_ports_net_vlans (
   vlan_num                  integer not null references net_vlans
                               on update cascade
                               on delete cascade,
-  native                    boolean not null,
+  native                    boolean not null default true,
   primary key               (net_port_id, vlan_num)
 ) ;
 

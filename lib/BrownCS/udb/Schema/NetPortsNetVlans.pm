@@ -23,7 +23,7 @@ __PACKAGE__->belongs_to(
   { net_port_id => "net_port_id" },
 );
 __PACKAGE__->belongs_to(
-  "vlan_num",
+  "net_vlan",
   "BrownCS::udb::Schema::NetVlans",
   { vlan_num => "vlan_num" },
 );
