@@ -134,7 +134,7 @@ sub ask {
   my($prompt, $default) = @_;
   return $self->query({
       prompt => $prompt,
-      default => '',
+      default => $default ? $default : '',
       verify_sub => sub {
         my ($answer) = @_;
         return (1, $answer);

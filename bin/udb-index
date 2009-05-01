@@ -21,10 +21,6 @@ sub usage {
 }
 
 my $help = 0;
-my $verbose = 0;
-my $dryrun = 0;
-my $username = $ENV{'USER'};
-my $view = 'all';
 
 GetOptions (
   'help|h|?' => \$help, 
@@ -111,15 +107,15 @@ __END__
 
 =head1 NAME
 
-udb-show - Print out information about a device
+udb-index - Print out information about a device
 
 =head1 SYNOPSIS
 
-udb-show [-u <username>] [-m <view-mode>] <device>
+udb-index <device>
 
 =head1 DESCRIPTION
 
-udb-show queries the UDB database for information about a piece of
+udb-index queries the UDB database for information about a piece of
 equipment, and prints it out to the console. It is designed to resemble
 the old I<cdb profile> or I<index pc> commands.
 
@@ -130,11 +126,6 @@ the old I<cdb profile> or I<index pc> commands.
 =item B<-h>, B<--help>
 
 Print a help message and exit.
-
-=item B<-u>, B<--username>=user
-
-Logs onto the database server as the specified username, instead of as
-the current user.
 
 =back
 

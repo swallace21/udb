@@ -21,7 +21,6 @@ sub usage {
 }
 
 my $help = 0;
-my $username = $ENV{'USER'};
 my $udb = BrownCS::udb::Schema->connect;
 
 sub dns_insert {
@@ -667,15 +666,15 @@ __END__
 
 =head1 NAME
 
-import-cdb - import from cdb
+import-equip - import from cdb and index dbs
 
 =head1 SYNOPSIS
 
-import-cdb [-u username]
+import-equip
 
 =head1 DESCRIPTION
 
-imports from cdb
+imports from cdb and index dbs
 
 =head1 OPTIONS
 
@@ -685,10 +684,13 @@ imports from cdb
 
 Print a help message and exit.
 
-=item B<-u>, B<--username>=user
+=item B<-n>, B<--dryrun>
 
-Logs onto the database server as the specified username, instead of as
-the current user.
+Don't make any changes; just print what would be done.
+
+=item B<-v>, B<--verbose>
+
+Print lots of text about what is going on.
 
 =back
 

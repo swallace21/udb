@@ -21,12 +21,12 @@ sub usage {
 my $help = 0;
 my $verbose = 0;
 my $dryrun = 0;
-my $username = $ENV{'USER'};
 
-GetOptions ('help|h|?' => \$help, 
-            'v|verbose' => \$verbose,
-            'n|dryrun' => \$dryrun,
-            'u|username=s' => \$username) or usage(1);
+GetOptions (
+  'help|h|?' => \$help, 
+  'v|verbose' => \$verbose,
+  'n|dryrun' => \$dryrun,
+) or usage(1);
 usage(0) if $help;
 
 my $udb = BrownCS::udb::Schema->connect;
@@ -55,11 +55,11 @@ __END__
 
 =head1 NAME
 
-udb-modify - Perform maintenance on an existing device record in UDB
+udb-change-user - Perform maintenance on an existing device record in UDB
 
 =head1 SYNOPSIS
 
-udb-modify [-u username] <device>
+udb-change-user <device>
 
 =head1 DESCRIPTION
 
@@ -73,10 +73,13 @@ Perform maintenance on an existing device record in UDB.
 
 Print a help message and exit.
 
-=item B<-u>, B<--username>=user
+=item B<-n>, B<--dryrun>
 
-Logs onto the database server as the specified username, instead of as
-the current user.
+Don't make any changes; just print what would be done.
+
+=item B<-v>, B<--verbose>
+
+Print lots of text about what is going on.
 
 =back
 

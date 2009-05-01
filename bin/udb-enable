@@ -22,13 +22,11 @@ sub usage {
 my $help = 0;
 my $verbose = 0;
 my $dryrun = 0;
-my $username = $ENV{'USER'};
 
 GetOptions (
   'help|h|?' => \$help, 
   'v|verbose' => \$verbose,
   'n|dryrun' => \$dryrun,
-  'u|username=s' => \$username
 ) or usage(1);
 usage(0) if $help;
 
@@ -171,7 +169,7 @@ udb-enable - Add a device to UDB
 
 =head1 SYNOPSIS
 
-udb-enable [-u username] <device>
+udb-enable <device>
 
 =head1 DESCRIPTION
 
@@ -184,6 +182,14 @@ adds a device to the database
 =item B<-h>, B<--help>
 
 Print a help message and exit.
+
+=item B<-n>, B<--dryrun>
+
+Don't make any changes; just print what would be done.
+
+=item B<-v>, B<--verbose>
+
+Print lots of text about what is going on.
 
 =back
 

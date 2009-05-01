@@ -150,7 +150,7 @@ udb - main interface to the Universal DataBase
 
 =head1 SYNOPSIS
 
-udb [-v] [-n] [-u username] <command> [<arg> ...]
+udb <command> [<arg> ...]
 
 =head1 DESCRIPTION
 
@@ -163,19 +163,6 @@ Wrapper script for running other udb commands.
 =item B<-h>, B<--help>
 
 Print a help message and exit.
-
-=item B<-u>, B<--username>=user
-
-Logs onto the database server as the specified username, instead of as
-the current user.
-
-=item B<-v>, B<--verbose>
-
-Print lots of information about what udb is doing.
-
-=item B<-n>, B<--dryrun>
-
-Don't make any changes; just print what would be done.
 
 =back
 

@@ -19,14 +19,10 @@ sub usage {
 }
 
 my $help = 0;
-my $verbose = 0;
-my $dryrun = 0;
-my $username = $ENV{'USER'};
 
-GetOptions ('help|h|?' => \$help, 
-            'v|verbose' => \$verbose,
-            'n|dryrun' => \$dryrun,
-            'u|username=s' => \$username) or usage(1);
+GetOptions (
+  'help|h|?' => \$help, 
+) or usage(1);
 usage(0) if $help;
 
 if (@ARGV != 1) {
@@ -56,7 +52,7 @@ udb-classes - Print out the classes a computer belongs to
 
 =head1 SYNOPSIS
 
-udb-classes [-u username] <hostname>
+udb-classes <hostname>
 
 =head1 DESCRIPTION
 
@@ -70,11 +66,6 @@ computer belongs to, and prints it out to the console.
 =item B<-h>, B<--help>
 
 Print a help message and exit.
-
-=item B<-u>, B<--username>=user
-
-Logs onto the database server as the specified username, instead of as
-the current user.
 
 =back
 

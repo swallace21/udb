@@ -18,14 +18,10 @@ sub usage {
 }
 
 my $help = 0;
-my $verbose = 0;
-my $dryrun = 0;
-my $username = $ENV{'USER'};
 
-GetOptions ('help|h|?' => \$help, 
-            'v|verbose' => \$verbose,
-            'n|dryrun' => \$dryrun,
-            'u|username=s' => \$username) or usage(1);
+GetOptions (
+  'help|h|?' => \$help, 
+) or usage(1);
 usage(0) if $help;
 
 my $udb = BrownCS::udb::Schema->connect;
@@ -52,7 +48,7 @@ udb-show-class - Print out a list of all computers in a class
 
 =head1 SYNOPSIS
 
-udb-show-class [-u username] <class> <os>
+udb-show-class <class> <os>
 
 =head1 DESCRIPTION
 
@@ -66,11 +62,6 @@ a given class and OS.
 =item B<-h>, B<--help>
 
 Print a help message and exit.
-
-=item B<-u>, B<--username>=user
-
-Logs onto the database server as the specified username, instead of as
-the current user.
 
 =back
 

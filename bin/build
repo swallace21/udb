@@ -23,15 +23,15 @@ sub usage {
 }
 
 my $help = 0;
-my $username = $ENV{'USER'};
 my $udb = BrownCS::udb::Schema->connect;
 my $dry_run = 1;
 my $verbose = 0;
 
-GetOptions ('help|h|?' => \$help, 
-            'n|dryrun' => \$dry_run,
-            'v|verbose' => \$verbose,
-          ) or usage(2);
+GetOptions (
+  'help|h|?' => \$help, 
+  'n|dryrun' => \$dry_run,
+  'v|verbose' => \$verbose,
+) or usage(2);
 usage(1) if $help;
 
 if (@ARGV > 0) {
@@ -543,7 +543,7 @@ build - build system databases/config files from udb
 
 =head1 SYNOPSIS
 
-build [-u username]
+build
 
 =head1 DESCRIPTION
 
@@ -557,15 +557,10 @@ builds stuff
 
 Print a help message and exit.
 
-=item B<-u>, B<--username>=user
-
-Logs onto the database server as the specified username, instead of as
-the current user.
-
 =item B<-n>, B<--dryrun>
 
-Instead of modifying the system, print out a record of what would be
-done. Some files are written to /tmp.
+Don't make any changes; just print what would be done. Files which would
+normally be copied to servers are instead left in /tmp. 
 
 =item B<-v>, B<--verbose>
 

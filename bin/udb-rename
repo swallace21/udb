@@ -21,12 +21,12 @@ sub usage {
 my $help = 0;
 my $verbose = 0;
 my $dryrun = 0;
-my $username = $ENV{'USER'};
 
-GetOptions ('help|h|?' => \$help, 
-            'v|verbose' => \$verbose,
-            'n|dryrun' => \$dryrun,
-            'u|username=s' => \$username) or usage(1);
+GetOptions (
+  'help|h|?' => \$help, 
+  'v|verbose' => \$verbose,
+  'n|dryrun' => \$dryrun,
+) or usage(1);
 usage(0) if $help;
 
 my $udb = BrownCS::udb::Schema->connect;
@@ -49,7 +49,7 @@ if ($device->protected) {
 }
 
 if (not $new_name) {
-  $new_name = get_new(0, "name", \&verify_hostname);
+  $new_name = $uc->get_device_name;
 } elsif (not verify_hostname($new_name)) {
   exit(1);
 }
@@ -61,6 +61,28 @@ if (not $new_name) {
 $device->device_name($new_name);
 $device->update;
 
+# find all authoritative DNS entries, delete, recreate
+
+my $dns_entries = $udb->resultset('NetDnsEntries')->search(
+  {
+    'me.authoritative' => 1,
+    'device.device_name' => $device->device_name,
+  },
+  {
+    prefetch => {
+      'net_address' => {
+        'net_addresses_net_interfaces' => {
+          'net_interface' => 'device',
+        },
+      },
+    },
+  });
+
+while (my $dns_entry = $dns_entries->next) {
+  $dns_entry->dns_name($new_name);
+  $dns_entry->update;
+}
+
 __END__
 
 =head1 NAME
@@ -69,7 +91,7 @@ udb-rename - Perform maintenance on an existing device record in UDB
 
 =head1 SYNOPSIS
 
-udb-rename [-u username] <device> [<new-name>]
+udb-rename <device> [<new-name>]
 
 =head1 DESCRIPTION
 
@@ -83,10 +105,13 @@ Perform maintenance on an existing device record in UDB.
 
 Print a help message and exit.
 
-=item B<-u>, B<--username>=user
+=item B<-n>, B<--dryrun>
 
-Logs onto the database server as the specified username, instead of as
-the current user.
+Don't make any changes; just print what would be done.
+
+=item B<-v>, B<--verbose>
+
+Print lots of text about what is going on.
 
 =back
 

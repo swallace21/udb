@@ -22,7 +22,6 @@ sub usage {
 my $help = 0;
 my $verbose = 0;
 my $dryrun = 0;
-my $username = $ENV{'USER'};
 
 GetOptions (
   'help|h|?' => \$help, 
@@ -174,7 +173,7 @@ udb-add - Add a device to UDB
 
 =head1 SYNOPSIS
 
-udb-add [-u username] <device>
+udb-add <device>
 
 =head1 DESCRIPTION
 
@@ -188,10 +187,13 @@ adds a device to the database
 
 Print a help message and exit.
 
-=item B<-u>, B<--username>=user
+=item B<-n>, B<--dryrun>
 
-Logs onto the database server as the specified username, instead of as
-the current user.
+Don't make any changes; just print what would be done.
+
+=item B<-v>, B<--verbose>
+
+Print lots of text about what is going on.
 
 =back
 
