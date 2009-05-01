@@ -272,7 +272,7 @@ define service{
 }
 
 [% FOREACH host IN DBI.query("select na.ipaddr, fqdn_brown(nde.dns_name, nde.domain) as hostname, ns.net_service from net_addresses na, net_services ns, net_addresses_net_services nans, net_dns_entries nde where nans.net_address_id = na.net_address_id and nans.net_service = ns.net_service and na.monitored and na.enabled and nde.authoritative and nde.net_address_id = na.net_address_id and nde.dns_region = 'external' order by ns.net_service, hostname") -%]
-[% SWITCH host.service %]
+[% SWITCH host.net_service %]
 [%  CASE 'printer' %]
 define service{
         use                             printer_template
