@@ -13,6 +13,10 @@ my %udb_commands = (
     'desc' => "add a new device",
     'common' => 1,
   },
+  'build' => {
+    'desc' => "build server configuration based on the database",
+    'common' => 1,
+  },
   'add-to-class' => {
     'desc' => "add one or more computers to a class",
     'common' => 0,
