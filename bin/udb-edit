@@ -5,15 +5,14 @@ use warnings;
 
 use Getopt::Long;
 use Pod::Usage;
-use DBI qw(:sql_types);
-use DBD::Pg qw(:pg_types);
 use YAML::Tiny qw(Load Dump);
 
 use FindBin qw($RealBin);
 use lib "$RealBin/../lib";
 use BrownCS::udb::Schema;
 use BrownCS::udb::Util qw(:all);
-use BrownCS::udb::Console qw(:all);
+use BrownCS::udb::Console;
+use BrownCS::udb::DeviceHash;
 
 # Print a simple help message.
 sub usage {
@@ -34,6 +33,7 @@ usage(0) if $help;
 
 my $udb = BrownCS::udb::Schema->connect;
 my $uc = new BrownCS::udb::Console(udb => $udb);
+my $udh = new BrownCS::udb::DeviceHash(udb => $udb);
 
 if (@ARGV != 1) {
   usage(2);
@@ -50,8 +50,23 @@ if ($device->protected) {
   exit(1);
 }
 
-my $old_device = $udb->get_equip($name);
-my $new_device = Load(&edit(Dump($old_device)));
+my $old_device_hash = $udh->format_device($device);
+my $new_device_hash = Load($uc->edit(Dump($old_device_hash)));
+
+my $rs;
+eval {
+  $rs = $udb->txn_do(sub {
+      $udh->update_device($device, $new_device_hash)
+    });
+};
+if ($@) {
+  die <<EOF;
+Failed to update $name. Try again.
+
+Details:
+  $@
+EOF
+}
 
 __END__
 

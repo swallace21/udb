@@ -11,7 +11,8 @@ use FindBin qw($RealBin);
 use lib "$RealBin/../lib";
 use BrownCS::udb::Schema;
 use BrownCS::udb::Util qw(:all);
-use BrownCS::udb::Console qw(:all);
+use BrownCS::udb::Console;
+use BrownCS::udb::DeviceHash;
 
 # Print a simple help message.
 sub usage {
@@ -28,6 +29,7 @@ usage(0) if $help;
 
 my $udb = BrownCS::udb::Schema->connect;
 my $uc = new BrownCS::udb::Console(udb => $udb);
+my $udh = new BrownCS::udb::DeviceHash(udb => $udb);
 
 if (@ARGV != 1) {
   usage(2);
@@ -52,7 +54,7 @@ foreach my $device (@candidate_devices) {
   if (not $seen_devices{$device->name}) {
     $seen_devices{$device->name} = 1;
     print "\n";
-    $uc->print_record('', $uc->format_surplus($device));
+    $uc->print_record('', $udh->format_surplus($device));
   }
 }
 

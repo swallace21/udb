@@ -12,7 +12,8 @@ use FindBin qw($RealBin);
 use lib "$RealBin/../lib";
 use BrownCS::udb::Schema;
 use BrownCS::udb::Util qw(:all);
-use BrownCS::udb::Console qw(:all);
+use BrownCS::udb::Console;
+use BrownCS::udb::DeviceHash;
 
 # Print a simple help message.
 sub usage {
@@ -29,6 +30,7 @@ usage(0) if $help;
 
 my $udb = BrownCS::udb::Schema->connect;
 my $uc = new BrownCS::udb::Console(udb => $udb);
+my $udh = new BrownCS::udb::DeviceHash(udb => $udb);
 
 if ((@ARGV < 0) or (@ARGV > 1)) {
   usage(2);
@@ -46,7 +48,7 @@ while (my $device = $devices->page($device_pager->current_page)->single) {
   system("clear");
   my ($wchar, $hchar, $wpixels, $hpixels) = GetTerminalSize();
 
-  my $out = $uc->sprint_record('', $uc->format_device($device));
+  my $out = $uc->sprint_record('', $udh->format_device($device));
   my @newlines = ($out =~ m/\n/g);
   my $newlines = $hchar - $#newlines - 7;
   print $out;

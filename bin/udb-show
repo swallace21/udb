@@ -11,7 +11,8 @@ use FindBin qw($RealBin);
 use lib "$RealBin/../lib";
 use BrownCS::udb::Schema;
 use BrownCS::udb::Util qw(:all);
-use BrownCS::udb::Console qw(:all);
+use BrownCS::udb::Console;
+use BrownCS::udb::DeviceHash;
 
 # Print a simple help message.
 sub usage {
@@ -28,6 +29,7 @@ usage(0) if $help;
 
 my $udb = BrownCS::udb::Schema->connect;
 my $uc = new BrownCS::udb::Console (udb => $udb);
+my $udh = new BrownCS::udb::DeviceHash(udb => $udb);
 
 if (@ARGV != 1) {
   usage(2);
@@ -37,7 +39,7 @@ my $name = shift @ARGV;
 
 my $device = $udb->resultset('Devices')->find($name);
 if ($device) {
-  $uc->print_record('', $uc->format_device($device));
+  $uc->print_record('', $udh->format_device($device));
   exit(0);
 }
 
@@ -80,7 +82,7 @@ foreach my $device (@candidate_devices) {
   if (not $seen_devices{$device->device_name}) {
     $seen_devices{$device->device_name} = 1;
     print "\n";
-    $uc->print_record('', $uc->format_device($device));
+    $uc->print_record('', $udh->format_device($device));
   }
 }
 
@@ -93,7 +95,7 @@ foreach my $address (@candidate_addresses) {
   if (not $seen_addresses{$address->id}) {
     $seen_addresses{$address->id} = 1;
     print "\n";
-    $uc->print_record('', $uc->format_address($address));
+    $uc->print_record('', $udh->format_address($address));
   }
 }
 

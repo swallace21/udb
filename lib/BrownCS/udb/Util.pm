@@ -9,7 +9,8 @@ use Net::MAC;
 use NetAddr::IP;
 
 our @EXPORT_OK = qw(
-  bool
+  bool2str
+  str2bool
   def_msg
   find_unused_ip
   fmt_time
@@ -48,9 +49,24 @@ sub fmt_time {
   return "${mday}${moname[$mon]}${year} ${hour}:${min}:${sec}";
 }
 
-sub bool {
+sub bool2str {
   my ($bool) = @_;
   return $bool ? "yes" : "no";
+}
+
+sub str2bool {
+  my ($str) = @_;
+  if ($str =~ /y(es)?/i) {
+    return 1;
+  } elsif ($str =~ /t(rue)?/i) {
+    return 1;
+  } elsif ($str =~ /n(o)?/i) {
+    return 0;
+  } elsif ($str =~ /f(alse)?/i) {
+    return 0;
+  } else {
+    die "Don't know how to coerce '$str' into a bool.\n";
+  }
 }
 
 sub def_msg {
