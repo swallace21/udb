@@ -430,6 +430,8 @@ sub build_dns_map_reverse {
   my $zone = $subnet->prefix;
 
   my $file = $dry_run ? "/tmp/db.$zone" : "/maytag/sys0/DNS/db.$zone";
+  chop($file);
+
   my $PATH_TMPFILE = $file . '.tmp';
   my $vars = {
     filename => $file,
