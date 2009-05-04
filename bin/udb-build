@@ -50,18 +50,20 @@ my $tt = Template->new({INCLUDE_PATH => "$RealBin/../templates"}) || die "$Templ
 &build_ypmake;
 
 sub maybe_system {
-  if ($dry_run) {
-    print "DEBUG: @_\n";
-  } else {
+  if ($verbose) {
+    print "@_\n";
+  }
+  if (not $dry_run) {
     system(@_);
   }
 }
 
 sub maybe_rename {
   my ($old, $new) = @_;
-  if ($dry_run) {
-    print "DEBUG: rename $old to $new\n";
-  } else {
+  if ($verbose) {
+    print "rename $old to $new\n";
+  }
+  if (not $dry_run) {
     die "$0: ERROR: Failed to rename $new: $!\n" if(!rename("$old", "$new"));
   }
 }
@@ -109,9 +111,10 @@ sub build_tftpboot {
     next if not defined $addr->ipaddr;
     my $hex_ip = ipv4_n2x($addr->ipaddr);
 
-    if($dry_run) {
-      printf "DEBUG: %s (%s) -> %s\n", $comp->device_name, $hex_ip, $bootimage;
-    } else {
+    if ($verbose) {
+      printf "link %s (%s) -> %s\n", $comp->device_name, $hex_ip, $bootimage;
+    }
+    if (not $dry_run) {
       unlink("$tftpboot_path/$hex_ip");
       symlink("$bootimage", "$tftpboot_path/$hex_ip");
     }
@@ -489,9 +492,10 @@ sub build_dns {
   # fix permissions
   foreach my $file (@files) {
     maybe_rename("$file.tmp", $file);
-    if ($dry_run) {
+    if ($verbose) {
       print "DEBUG: fix permissions\n";
-    } else {
+    }
+    if (not $dry_run) {
       # fix permissions the file
       chown(0, (getgrnam('sys'))[2], $file) || warn "$0: WARNING: Failed to chown $file: $!\n";
       chmod(0444, $file) || warn "$0: WARNING: Failed to chmod $file: $!\n";
