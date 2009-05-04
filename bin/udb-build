@@ -150,8 +150,6 @@ sub add_to_group {
 }
 
 sub build_netgroup {
-  my(%netgroups) = ();
-
   my $hosts = $udb->resultset('Computers')->search(
     {
       'net_dns_entries.authoritative' => 1,
@@ -180,17 +178,19 @@ sub build_netgroup {
 
   my $host_classes = get_host_class_map($udb);
 
+  my $netgroups = {};
+
   while (my $host = $hosts->next) {
 
     my $hostname = $host->device_name;
     my $fqdn = ($host->device_name . "." . $host->get_column('Domain'));
-    my $manager = $host->device->manager;
+    my $manager = $host->device->manager->management_type;
 
-    my $os = ($host->os_type and $host->os_type->get_column('os_type'));
+    my $os = $host->os_type;
     next if not defined $os;
 
-    if (($manager eq 'tstaff') and (defined $os) and ($os =~ /^(?:linux|linux-server|solaris)$/)) {
-      add_to_group(\%netgroups, "trusted", $fqdn);
+    if (($manager eq 'tstaff') and ($os->trusted_nfs)) {
+      add_to_group($netgroups, "trusted", $fqdn);
     }
 
     my $classes_ref = $host_classes->{$hostname};
@@ -200,31 +200,30 @@ sub build_netgroup {
     for (@classes) {
 
       if (/^camera$/) {
-        add_to_group(\%netgroups, "camera", $fqdn);
+        add_to_group($netgroups, "camera", $fqdn);
       } elsif (/^cgc$/) {
-        add_to_group(\%netgroups, "cgc", $fqdn);
+        add_to_group($netgroups, "cgc", $fqdn);
       } elsif (/^graphics$/) {
-        add_to_group(\%netgroups, "graphics", $fqdn);
+        add_to_group($netgroups, "graphics", $fqdn);
       } elsif (/^fun$/) {
-        add_to_group(\%netgroups, "ugrad", $fqdn);
+        add_to_group($netgroups, "ugrad", $fqdn);
       } elsif (/^ssh\.forward$/) {
-        add_to_group(\%netgroups, "sunlab", $fqdn);
+        add_to_group($netgroups, "sunlab", $fqdn);
       } elsif (/^tstaff-netgroup$/) {
-        add_to_group(\%netgroups, "tstaff", $fqdn);
+        add_to_group($netgroups, "tstaff", $fqdn);
       } elsif (/^thermo$/) {
-        add_to_group(\%netgroups, "thermo", $fqdn);
+        add_to_group($netgroups, "thermo", $fqdn);
       } elsif (/^liebert$/) {
-        add_to_group(\%netgroups, "liebert", $fqdn);
+        add_to_group($netgroups, "liebert", $fqdn);
       } elsif (/^server$/) {
-        add_to_group(\%netgroups, "server", $fqdn);
+        add_to_group($netgroups, "server", $fqdn);
       } elsif (/^sge\.dedicated$/) {
-        add_to_group(\%netgroups, "sge", $fqdn);
+        add_to_group($netgroups, "sge", $fqdn);
       }
     }
   }
 
-  foreach my $grp (sort(keys(%netgroups))) {
-    my $val = $netgroups{$grp};
+  while (my ($grp, $val) = each(%{$netgroups})) {
     maybe_system("/tstaff/bin/ldap-netgroup -e '$val' set $grp 2>/dev/null >/dev/null");
   }
 
