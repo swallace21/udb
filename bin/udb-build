@@ -87,7 +87,7 @@ sub maybe_rename {
 
 sub build_tftpboot {
 
-  my $tftpboot_path = "/tftpboot/pxelinux.cfg";
+  my $tftpboot_path = "/maytag/sys0/tftpboot/pxelinux.cfg";
 
   my $addrs = $udb->resultset('NetAddresses')->search({},
     {
@@ -142,7 +142,7 @@ sub add_to_group {
   my ($netgroups, $grp, $host) = @_;
 
   if(defined($netgroups->{$grp})) {
-    $netgroups->{$grp} .= " (${host},,)";
+    $netgroups->{$grp} .= ":(${host},,)";
   } else {
     $netgroups->{$grp} = "(${host},,)";
   }
