@@ -24,7 +24,7 @@ sub usage {
 
 my $help = 0;
 my $udb = BrownCS::udb::Schema->connect;
-my $dry_run = 1;
+my $dry_run = 0;
 my $verbose = 0;
 
 GetOptions (
