@@ -40,6 +40,23 @@ if (@ARGV > 0) {
 
 my $tt = Template->new({INCLUDE_PATH => "$RealBin/../templates"}) || die "$Template::ERROR\n";
 
+if (not $dry_run) {
+  my $hostname;
+  chomp($hostname = `hostname`);
+
+  if ($hostname ne 'adminhost') {
+    die "Error: you may only build from adminhost.\n";
+  }
+
+  if ($> != 0) {
+    die "Error: you must be root to build.\n";
+  }
+
+  if (system("klist -5 2> /dev/null | grep '/admin' -q")) {
+    die "Error: you need Kerberos admin credentials to build.\n";
+  }
+}
+
 &build_tftpboot;
 &build_netgroup;
 &build_dhcp;
