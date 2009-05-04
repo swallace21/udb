@@ -630,7 +630,15 @@ create table computers (
   os_type                   text references os_types
                               on update cascade
                               on delete restrict,
-  pxelink                   text,
+  pxelink                   text
+);
+
+drop table if exists comp_sysinfo cascade;
+create table comp_sysinfo (
+  device_name               dns_safe_text not null references devices
+                              on update cascade
+                              on delete cascade,
+  primary key (device_name),
   num_cpus                  integer,
   cpu_type                  text,
   cpu_speed                 text,
@@ -640,8 +648,8 @@ create table computers (
   last_updated              timestamp not null default now()
 );
 
-drop trigger if exists last_updated_trigger on computers;
-create trigger last_updated_trigger before insert or update on computers
+drop trigger if exists last_updated_trigger on comp_sysinfo;
+create trigger last_updated_trigger before insert or update on comp_sysinfo
   for each row execute procedure set_last_updated();
 
 drop table if exists comp_classes cascade;

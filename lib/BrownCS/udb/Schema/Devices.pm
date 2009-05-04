@@ -111,6 +111,14 @@ __PACKAGE__->might_have(
     cascade_delete => 0,
   }
 );
+__PACKAGE__->might_have(
+  "comp_sysinfo",
+  "BrownCS::udb::Schema::CompSysinfo",
+  { "foreign.device_name" => "self.device_name" },
+  {
+    cascade_delete => 0,
+  }
+);
 __PACKAGE__->has_many(
   "users",
   "BrownCS::udb::Schema::DeviceUsers",

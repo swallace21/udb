@@ -33,6 +33,7 @@ sub format_device {
   $out->{"Comments"} = $device->comments;
   if ($device->computer) {
     $self->format_computer($out, $device->computer);
+    $self->format_sysinfo($out, $device->comp_sysinfo);
   } elsif ($device->net_switch) {
     $self->format_switch($out, $device->net_switch);
   }
@@ -49,14 +50,19 @@ sub format_computer {
   my ($out, $comp) = @_;
   $out->{"OS"} = ($comp->os_type and $comp->os_type->os_type);
   $out->{"PXE link"} = $comp->pxelink;
-  $out->{"CPUs"} = $comp->num_cpus;
-  $out->{"CPU type"} = $comp->cpu_type;
-  $out->{"CPU speed"} = $comp->cpu_speed;
-  $out->{"Memory"} = $comp->memory;
-  $out->{"Hard drives"} = $comp->hard_drives;
-  $out->{"Video cards"} = $comp->video_cards;
-  $out->{"Last updated"} = $comp->last_updated;
   @{$out->{"Classes"}} = $comp->comp_classes->get_column("name")->all;
+}
+
+sub format_sysinfo {
+  my $self = shift;
+  my ($out, $sysinfo) = @_;
+  $out->{"CPUs"} = $sysinfo->num_cpus;
+  $out->{"CPU type"} = $sysinfo->cpu_type;
+  $out->{"CPU speed"} = $sysinfo->cpu_speed;
+  $out->{"Memory"} = $sysinfo->memory;
+  $out->{"Hard drives"} = $sysinfo->hard_drives;
+  $out->{"Video cards"} = $sysinfo->video_cards;
+  $out->{"Last updated"} = $sysinfo->last_updated;
 }
 
 sub format_switch {
@@ -182,12 +188,6 @@ sub update_computer {
   $comp->update({
       os_type => $in->{"OS"},
       pxelink => $in->{"PXE link"},
-      num_cpus => $in->{"CPUs"},
-      cpu_type => $in->{"CPU type"},
-      cpu_speed => $in->{"CPU speed"},
-      memory => $in->{"Memory"},
-      hard_drives => $in->{"Hard drives"},
-      video_cards => $in->{"Video cards"},
     });
 
   $self->update_classes($comp, $in->{"Classes"});

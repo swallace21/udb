@@ -166,6 +166,7 @@ print "deleting old data... ";
 $udb->resultset('SurplusDevices')->delete;
 $udb->resultset('CompClasses')->delete;
 $udb->resultset('Computers')->delete;
+$udb->resultset('CompSysinfo')->delete;
 $udb->resultset('NetAddresses')->delete;
 $udb->resultset('NetDnsEntries')->delete;
 $udb->resultset('NetInterfaces')->delete;
@@ -319,6 +320,11 @@ while ( my ($key, $data) = each(%$cdb_by_hostname) ) {
           pxelink => $pxelink,
         });
       $device->computer($comp);
+
+      my $sysinfo = $udb->resultset('CompSysinfo')->find_or_create({
+          device => $device,
+        });
+      $device->comp_sysinfo($sysinfo);
 
       my $iface = $device->add_to_net_interfaces({
           device => $device,
