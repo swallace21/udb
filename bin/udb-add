@@ -107,6 +107,10 @@ eval {
 
       my $device = $comp->device;
 
+      my $sysinfo = $udb->resultset('CompSysinfo')->find_or_create({
+          device => $device,
+        });
+      $device->comp_sysinfo($sysinfo);
 
       my $addr = $udb->resultset('NetAddresses')->create({
           vlan => $vlan,
