@@ -133,11 +133,10 @@ eval {
 
       $addr->add_to_net_interfaces($iface);
 
-#  foreach my $vlan_num (@vlans) {
-#    print "bind port $wall_plate to vlan $vlan_num\n";
-#    my $vlan = $udb->resultset('NetVlans')->find($vlan_num);
-#    $port->add_to_net_vlans($vlan);
-#  }
+      if (! grep { $_ = $vlan } $port->net_vlans) {
+        printf("bind port %s to vlan %s\n", $port->wall_plate, $vlan->vlan_num);
+        $port->add_to_net_vlans($vlan);
+      }
 
       #switchport
 

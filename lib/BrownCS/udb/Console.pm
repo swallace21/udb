@@ -212,6 +212,9 @@ sub choose_from_menu {
       default => undef,
       verify_sub => sub {
         my ($answer) = @_;
+        if ((not defined $answer) or ($answer eq '')) {
+          return (0, undef);
+        }
         foreach my $choice (@{$choices}) {
           if ($choice->{'key'} eq $answer) {
             return (1, $choice->{'name'});

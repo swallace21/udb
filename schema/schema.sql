@@ -265,7 +265,6 @@ create table net_switches (
   num_ports                 integer not null,
   num_blades                integer,
   switch_type               text not null,
-  port_prefix               text not null,
   connection_type           text not null default 'ssh',
   username                  text not null,
   pass                      text not null

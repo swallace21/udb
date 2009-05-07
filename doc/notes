@@ -2,6 +2,7 @@ VERIFY:
 
 - equipment managed_by and zone managed_by must match
 - NetPortsNetVlans matches NetAddressesNetPorts
+- disallow interfaces on one port with primary addrs on different vlans
 
 TRIGGER:
 

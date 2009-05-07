@@ -81,8 +81,8 @@ my %udb_commands = (
     'desc' => "change a computer's software configuration",
     'common' => 1,
   },
-  'change-subnet' => {
-    'desc' => "change a networked device's subnet",
+  'change-ip' => {
+    'desc' => "change a networked device's IP or VLAN",
     'common' => 1,
   },
   'change-mac' => {
