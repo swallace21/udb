@@ -62,7 +62,9 @@ my $classes = $uc->get_comp_classes;
 my $rs;
 eval {
   $rs = $udb->txn_do(sub {
-      $comp->os_type($os);
+      $comp->update({
+          os_type => $os,
+        });
       $udh->update_classes($comp, $classes);
     });
 };
