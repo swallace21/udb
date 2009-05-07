@@ -64,7 +64,6 @@ if (not $dry_run) {
 &build_wpkg_hosts;
 &build_dns;
 &build_finger_data;
-&build_ypmake;
 
 sub maybe_system {
   if ($verbose) {
@@ -86,6 +85,8 @@ sub maybe_rename {
 }
 
 sub build_tftpboot {
+
+  print "Building tftpboot... ";
 
   my $tftpboot_path = "/maytag/sys0/tftpboot/pxelinux.cfg";
 
@@ -136,6 +137,8 @@ sub build_tftpboot {
       symlink("$bootimage", "$tftpboot_path/$hex_ip");
     }
   }
+
+  print "done.\n";
 }
 
 sub add_to_group {
@@ -150,6 +153,9 @@ sub add_to_group {
 }
 
 sub build_netgroup {
+
+  print "Building netgroups... ";
+
   my $hosts = $udb->resultset('Computers')->search(
     {
       'net_dns_entries.authoritative' => 1,
@@ -227,9 +233,13 @@ sub build_netgroup {
     maybe_system("/tstaff/bin/ldap-netgroup -e '$val' set $grp 2>/dev/null >/dev/null");
   }
 
+  print "done.\n";
+
 }
 
 sub build_dhcp {
+
+  print "Building dhcp... ";
 
   my $file = $dry_run ? '/tmp/dhcpd.conf' : '/maytag/sys0/dhcp/dhcpd.conf';
   my $PATH_TMPFILE = $file . '.tmp';
@@ -246,12 +256,17 @@ sub build_dhcp {
     }
   }
   maybe_system('ssh', '-x', 'dhcp', '/etc/init.d/dhcp restart');
+
+  print "done.\n";
+
 }
 
 sub build_nagios {
+  print "Building nagios files... ";
   &build_nagios_hosts;
   &build_nagios_services;
   maybe_system('ssh', '-x', 'storm', '/etc/init.d/nagios3 restart');
+  print "done.\n";
 }
 
 sub build_nagios_hosts {
@@ -285,6 +300,8 @@ sub build_nagios_services {
 }
 
 sub build_wpkg_hosts {
+
+  print "Building wpkg hosts file... ";
 
   my $file = $dry_run ? '/tmp/wpkg-hosts.xml' : '/u/system/win32/WPKG/hosts/cdb.xml';
   my $PATH_TMPFILE = $file . '.tmp';
@@ -418,6 +435,9 @@ sub build_wpkg_hosts {
 
   $tt->process('wpkg-hosts.xml.tt2', $vars, $PATH_TMPFILE) || die $tt->error(), "\n";
   maybe_rename($PATH_TMPFILE, $file);
+
+  print "done.\n";
+
 }
 
 sub build_dns_map_forward {
@@ -463,6 +483,8 @@ sub build_dns_map_reverse {
 }
 
 sub build_dns {
+
+  print "Building dns... ";
 
   $Template::Stash::SCALAR_OPS->{fix_width} = \&fix_width;
 
@@ -534,28 +556,18 @@ sub build_dns {
     }
   }
 
+  print "done.\n";
+
 }
 
 sub build_finger_data {
+  print "Building finger data... ";
   my $file = $dry_run ? '/tmp/finger_data' : '/u/system/sysadmin/data';
   my $PATH_TMPFILE = $file . '.tmp';
   my $vars = {filename => $file, date => get_date(), dbh => $udb->storage->dbh};
   $tt->process('finger_data.tt2', $vars, $PATH_TMPFILE) || die $tt->error(), "\n";
   maybe_rename($PATH_TMPFILE, $file);
-}
-
-sub build_ypmake {
-
-  my $cmd;
-
-  if($verbose) {
-    $cmd = "/u/system/bin/ypmake";
-  } else {
-    $cmd = "/u/system/bin/ypmake >/dev/null"
-  }
-
-  maybe_system($cmd);
-
+  print "done.\n";
 }
 
 __END__
