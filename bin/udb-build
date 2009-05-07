@@ -27,6 +27,8 @@ my $udb = BrownCS::udb::Schema->connect;
 my $dry_run = 0;
 my $verbose = 0;
 
+BEGIN { $| = 1 }
+
 GetOptions (
   'help|h|?' => \$help, 
   'n|dryrun' => \$dry_run,
