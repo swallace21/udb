@@ -9,9 +9,21 @@ use Pod::Usage;
 use FindBin qw($RealBin);
 
 my %udb_commands = (
+  'get-next-uid' => {
+    'desc' => "get the next free uid",
+    'common' => 0,
+  },
+  'get-next-gid' => {
+    'desc' => "get the next free gid",
+    'common' => 0,
+  },
   'add' => {
     'desc' => "add a new device",
     'common' => 1,
+  },
+  'mkvm' => {
+    'desc' => "add a new xen vm",
+    'common' => 0,
   },
   'build' => {
     'desc' => "build server configuration based on the database",

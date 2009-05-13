@@ -333,8 +333,8 @@ sub build_wpkg_hosts {
 
   while (my $host = $hosts->next) {
 
-    my $os = ($host->os_type and $host->os_type->get_column('os_type'));
-    next unless((defined $os) and (($os eq 'winxp') or ($os eq 'vista')));
+    my $os = ($host->os_type);
+    next unless((defined $os) and ($os->wpkg));
 
     # generate profile list
 
@@ -344,11 +344,7 @@ sub build_wpkg_hosts {
     next unless defined $classes_ref;
     my @classes = @{$classes_ref};
 
-    if ($os eq 'winxp') {
-      push @wpkg_profiles, "winxp";
-    } elsif ($os eq 'vista') {
-      push @wpkg_profiles, "vista";
-    }
+    push @wpkg_profiles, $os->os_type;
 
     for (@classes) {
 

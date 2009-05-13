@@ -28,7 +28,7 @@ sub format_device {
   $out->{"Brown inv number"} = $device->brown_inv_num;
   $out->{"Serial number"} = $device->serial_num;
   $out->{"Purchase order"} = $device->po_num;
-  $out->{"Primary user"} = $device->contact;
+  $out->{"Contact"} = $device->contact;
   $out->{"Owner"} = $device->owner;
   $out->{"Comments"} = $device->comments;
   if ($device->computer) {
@@ -159,7 +159,7 @@ sub update_device {
       brown_inv_num => $in->{"Brown inv number"},
       serial_num => $in->{"Serial number"},
       po_num => $in->{"Purchase order"},
-      contact => $in->{"Primary user"},
+      contact => $in->{"Contact"},
       owner => $in->{"Owner"},
       comments => $in->{"Comments"},
     });

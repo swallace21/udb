@@ -11,6 +11,7 @@ __PACKAGE__->add_columns(
   "os_type"     => { data_type => "text", default_value => undef, is_nullable => 0, size => undef, },
   "pxe_boot"    => { data_type => "boolean", default_value => "false", is_nullable => 0, size => 1, },
   "trusted_nfs" => { data_type => "boolean", default_value => "false", is_nullable => 0, size => 1, },
+  "wpkg"        => { data_type => "boolean", default_value => "false", is_nullable => 0, size => 1, },
 );
 __PACKAGE__->set_primary_key("os_type");
 __PACKAGE__->add_unique_constraint("os_types_pkey", ["os_type"]);

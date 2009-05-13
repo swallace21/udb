@@ -42,55 +42,64 @@ my $name = shift @ARGV;
 my $existing_device = $udb->resultset('Devices')->find($name);
 die "Device $name already exists.\n" if $existing_device;
 
-print <<'EOF';
------------------------------------------------------------
-This script assumes that you are adding a standard computer.
-If any of the following are true:
+my $vm_type = $uc->choose_from_menu(
+  "What type of VM is this?",
+  [
+  {
+    key => 1,
+    name => "tstaff",
+    desc => "tstaff",
+  },
+  {
+    key => 2,
+    name => "unsup",
+    desc => "user-managed, unsupported network",
+  },
+  {
+    key => 3,
+    name => "userdmz",
+    desc => "user-managed dmz",
+  },
+  ],
+  "unsup",
+);
 
-  - The device is a printer/switch/etc., not a computer
-  - The device has more than one network card
-  - The device will have more than one IP address
-  - The device will be a server
-  - The device will be a virtual host
-  - The device will not located inside the CIT
-  - The device's domain name is not 'cs.brown.edu' (e.g. ilab)
+my ($managed_by, $equip_usage_type);
+my ($ipaddr, $vlan);
 
-then you need to use a different interface.
------------------------------------------------------------
-EOF
+if ($vm_type eq 'tstaff') {
+  $managed_by = 'tstaff';
+  $equip_usage_type = 'tstaff';
+  ($ipaddr, $vlan) = $uc->get_ip_and_vlan;
+} elsif ($vm_type eq 'unsup') {
+  $managed_by = 'user';
+  $equip_usage_type = 'userserver';
+  (undef, $ipaddr, $vlan) = verify_ip_or_vlan($udb)->("36");
+} elsif ($vm_type eq 'userdmz') {
+  $managed_by = 'user';
+  $equip_usage_type = 'userserver';
+  (undef, $ipaddr, $vlan) = verify_ip_or_vlan($udb)->("892");
+}
 
-my $managed_by = $uc->get_management_type;
-my $equip_usage_type = $uc->get_equip_usage_type;
-my $os = $uc->get_os_type;
+my $os = 'debian';
 my $classes = $uc->get_comp_classes;
-my ($ipaddr, $vlan) = $uc->get_ip_and_vlan;
-my $port = $uc->get_port;
-my $room = $uc->get_room;
 my $contact = $uc->get_contact;
-my $owner = $uc->get_owner($contact);
-my $mac = $uc->get_mac;
 my $comments = $uc->get_comments;
+
+# do xm list to determine which host
 
 my $rs;
 eval {
   $rs = $udb->txn_do(sub {
 
-      my $loc = $udb->resultset('Places')->find_or_create({
-          city => 'Providence',
-          building => 'CIT',
-          room => $room,
-        });
-
       my $comp = $udb->resultset('Computers')->create({
           os_type => $os,
           device => {
-            status => 'deployed',
+            status => 'virtual',
             usage => $equip_usage_type,
             manager => $managed_by,
             device_name => $name,
             contact => $contact,
-            owner => $owner,
-            place => $loc,
             comments => $comments,
           },
         });
@@ -122,23 +131,10 @@ eval {
 
       my $iface = $device->add_to_net_interfaces({
           device => $device,
-          ethernet => $mac,
           primary_address => $addr,
         });
 
-      if ($port) {
-        $iface->net_port($port);
-        $iface->update;
-      }
-
       $addr->add_to_net_interfaces($iface);
-
-      if ($port and (! grep { $_ = $vlan } $port->net_vlans)) {
-        printf("bind port %s to vlan %s\n", $port->wall_plate, $vlan->vlan_num);
-        $port->add_to_net_vlans($vlan);
-      }
-
-      #switchport
 
     });
 };
@@ -168,15 +164,71 @@ sub dns_insert_both {
   dns_insert($a, $b, $c, $d, "external");
 }
 
+### #!/bin/sh
+### 
+### # assume we're on the DMZ
+### 
+### usage() {
+###   echo "usage: $0 vm_name xen_host owner"
+###   exit 1
+### }
+### 
+### if [ $# -lt 3 ]
+### then
+###   usage
+### fi
+### 
+### VM_NAME=$1
+### XEN_HOST=$2
+### OWNER=$3
+### 
+### #cdb insert
+### #cdb make
+### 
+### vim /maytag/sys0/Linux/groups
+### 
+### IPTABLES_RULES=/maytag/sys0/Linux/files/add/group.debian.external.firewall/etc/iptables.rules
+### 
+### vim $IPTABLES_RULES
+### 
+### # scp $IPTABLES_RULES fw:/etc/iptables.rules
+### # ssh fw /etc/iptables.rules
+### 
+### # ssh dmznfs "lvcreate -L5G -n$VM_NAME vol && \
+### #               mkfs -t ext3 /dev/vol/$VM_NAME && \
+### #               /etc/ha.d/resource.d/mntlvms start"
+### 
+### DMZNFS_EXPORTS=/maytag/sys0/Linux/files/add/group.debian.server.baby_ruth/etc/exports
+### 
+### vim $DMZNFS_EXPORTS
+### 
+### for dmznfs in baby ruth
+### do
+###   scp $DMZNFS_EXPORTS $dmznfs:/etc/exports
+###   ssh $dmznfs /etc/init.d/nfs-kernel-server restart
+### done
+### 
+### vm_ip=`host $VM_NAME | grep address | awk '{print $4}'`
+### 
+### ssh $XEN_HOST "xen-create-image --hostname=$VM_NAME --ip=$vm_ip && \
+###                  xm create -c /xen/configs/$XEN_HOST/$VM_NAME.cfg"
+### 
+### /tstaff/bin/pushsshhosts $vmname
+### 
+### /u/system/bin/push_run -i $vmname
+### 
+### ssh $vmname shutdown -r now
+
+
 __END__
 
 =head1 NAME
 
-udb-add - Add a device to UDB
+udb-mkvm - Add a Xen guest to UDB
 
 =head1 SYNOPSIS
 
-udb-add <device>
+udb-mkvm <device>
 
 =head1 DESCRIPTION
 
