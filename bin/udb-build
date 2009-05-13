@@ -335,6 +335,7 @@ sub build_wpkg_hosts {
 
     my $os = ($host->os_type);
     next unless((defined $os) and ($os->wpkg));
+    my $os_type = $os->os_type;
 
     # generate profile list
 
@@ -344,13 +345,13 @@ sub build_wpkg_hosts {
     next unless defined $classes_ref;
     my @classes = @{$classes_ref};
 
-    push @wpkg_profiles, $os->os_type;
+    push @wpkg_profiles, $os_type;
 
     for (@classes) {
 
       if (/^desktop$/) {
         push @wpkg_profiles, "desktop";
-        push @wpkg_profiles, "$os-dept";
+        push @wpkg_profiles, "$os_type-dept";
       }
 
       if (/^classroom$/) {
@@ -375,7 +376,7 @@ sub build_wpkg_hosts {
 
       if (/^research$/) {
         push @wpkg_profiles, "research";
-        push @wpkg_profiles, "$os-research";
+        push @wpkg_profiles, "$os_type-research";
       }
 
       if (/^server$/) {
@@ -385,20 +386,20 @@ sub build_wpkg_hosts {
       if (/^remote$/) {
         push @wpkg_profiles, "desktop";
         push @wpkg_profiles, "remote";
-        push @wpkg_profiles, "$os-remote";
+        push @wpkg_profiles, "$os_type-remote";
       }
 
       if (/^laptop$/) {
-        push @wpkg_profiles, "$os-laptop";
+        push @wpkg_profiles, "$os_type-laptop";
       }
 
       if (/^laptop.loaner$/) {
-        push @wpkg_profiles, "$os-laptop";
+        push @wpkg_profiles, "$os_type-laptop";
         push @wpkg_profiles, "loaner-laptop";
       }
 
       if (/^laptop.x61$/) {
-        push @wpkg_profiles, "$os-laptop";
+        push @wpkg_profiles, "$os_type-laptop";
         push @wpkg_profiles, "x61";
       }
 
