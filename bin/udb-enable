@@ -44,18 +44,27 @@ die "Device $name does not exist.\n" if not $device;
 die "Device $name is already enabled.\n" if ($device->status->equip_status_type ne "spare");
 
 my $comp = $device->computer;
-die "Device $name is not a computer.\n" if not $comp;
+my $os_type;
+my @classes = ();
+if ($comp) {
+  if ($comp->os_type) {
+    $os_type = $comp->os_type->os_type;
+  }
+  @classes = $comp->comp_classes->get_column("name")->all;
+}
 
 my $iface = $device->net_interfaces->single;
-
-my @classes = $comp->comp_classes->get_column("name")->all;
+my $mac_addr;
+if ($iface) {
+  $mac_addr = $iface->ethernet;
+}
 
 print <<'EOF';
 -----------------------------------------------------------
 This script assumes that you are enabling a standard computer.
 If any of the following are true:
 
-  - The device is a printer/switch/etc., not a computer
+  - The device is a switch
   - The device has more than one network card
   - The device will have more than one IP address
   - The device will be a server
@@ -69,9 +78,14 @@ EOF
 
 my $managed_by = $uc->get_management_type($device->manager->management_type);
 my $equip_usage_type = $uc->get_equip_usage_type($device->usage->equip_usage_type);
-my $os = $uc->get_os_type($device->computer->os_type->os_type);
-my $classes = $uc->get_comp_classes(@classes);
+my $is_comp = $uc->confirm("\nIs this device a computer? (Y/n)", "y");
+my $classes;
+if ($is_comp) {
+  $os_type = $uc->get_os_type($os_type);
+  $classes = $uc->get_comp_classes(@classes);
+}
 my ($ipaddr, $vlan) = $uc->get_ip_and_vlan;
+$mac_addr = $uc->get_mac($mac_addr);
 my $port = $uc->get_port;
 my $room = $uc->get_room($device->place->room);
 my $contact = $uc->get_contact($device->contact);
@@ -96,14 +110,33 @@ eval {
           comments => $comments,
         });
 
-      if ($classes) {
-        foreach (@$classes) {
-          my $class = $udb->resultset('CompClasses')->find_or_create({
-              name => $_,
-              os_type => $os,
+      if ($is_comp) {
+        if (not $comp) {
+          $comp = $udb->resultset('Computers')->find_or_create({
+              device_name => $name,
             });
-          $comp->add_to_comp_classes($class);
+          $device->computer($comp);
+
+          my $sysinfo = $udb->resultset('CompSysinfo')->find_or_create({
+              device => $device,
+            });
+          $device->comp_sysinfo($sysinfo);
+
         }
+
+        $comp->os_type($os_type);
+        $comp->update();
+
+        if ($classes) {
+          foreach (@$classes) {
+            my $class = $udb->resultset('CompClasses')->find_or_create({
+                name => $_,
+                os_type => $os_type,
+              });
+            $comp->add_to_comp_classes($class);
+          }
+        }
+
       }
 
       my $addr = $udb->resultset('NetAddresses')->create({
@@ -113,6 +146,13 @@ eval {
         });
 
       dns_insert_both($name, 'cs.brown.edu', $addr, 1);
+
+      if (not $iface) {
+        $iface = $device->add_to_net_interfaces({
+            device => $device,
+            ethernet => $mac_addr,
+          });
+      }
 
       if ($port) {
         $iface->net_port($port);
