@@ -26,7 +26,6 @@ my $dryrun = 0;
 GetOptions (
   'help|h|?' => \$help, 
   'v|verbose' => \$verbose,
-  'n|dryrun' => \$dryrun,
 ) or usage(1);
 usage(0) if $help;
 
@@ -39,105 +38,115 @@ if (@ARGV != 1) {
 
 my $name = shift @ARGV;
 
-my $device = $udb->resultset('Devices')->find($name);
-die "Device $name does not exist.\n" if not $device;
-die "Device $name is already enabled.\n" if ($device->status->equip_status_type ne "spare");
-
-my $comp = $device->computer;
-my $os_type;
-my @classes = ();
-if ($comp) {
-  if ($comp->os_type) {
-    $os_type = $comp->os_type->os_type;
-  }
-  @classes = $comp->comp_classes->get_column("name")->all;
-}
-
-my $iface = $device->net_interfaces->single;
-my $mac_addr;
-if ($iface) {
-  $mac_addr = $iface->ethernet;
-}
-
-print <<'EOF';
------------------------------------------------------------
-This script assumes that you are enabling a standard computer.
-If any of the following are true:
-
-  - The device is a switch
-  - The device has more than one network card
-  - The device will have more than one IP address
-  - The device will be a server
-  - The device will be a virtual host
-  - The device will not located inside the CIT
-  - The device's domain name is not 'cs.brown.edu' (e.g. ilab)
-
-then you need to use a different interface.
------------------------------------------------------------
-EOF
-
-my $managed_by = $uc->get_management_type($device->manager->management_type);
-my $equip_usage_type = $uc->get_equip_usage_type($device->usage->equip_usage_type);
-my $is_comp = $uc->confirm("\nIs this device a computer? (Y/n)", "y");
-my $classes;
-if ($is_comp) {
-  $os_type = $uc->get_os_type($os_type);
-  $classes = $uc->get_comp_classes(@classes);
-}
-my ($ipaddr, $vlan) = $uc->get_ip_and_vlan;
-$mac_addr = $uc->get_mac($mac_addr);
-my $port = $uc->get_port;
-my $room = $uc->get_room($device->place->room);
-my $contact = $uc->get_contact($device->contact);
-my $comments = $uc->get_comments($device->comments);
-
 my $rs;
 eval {
   $rs = $udb->txn_do(sub {
 
+      # are we creating or reusing?
+
+      my $device = $udb->resultset('Devices')->find_or_new({
+          device_name => $name,
+          place_id => undef,
+        });
+      if ($device->status and ($device->status->equip_status_type ne "spare")) {
+        die "Device $name is already active.\n";
+      }
+
+      print <<'EOF';
+-----------------------------------------------------------
+Note: If any of the following are true:
+
+  - The device is a switch
+  - The device has more than one network card
+  - The device will have more than one IP address
+  - The device will be a virtual host
+  - The device's domain name is not 'cs.brown.edu' (e.g. ilab)
+
+then you need to edit this device manually after running
+this script.
+-----------------------------------------------------------
+EOF
+
+      #
+      # fields that apply to all devices
+      #
+
+      $device->manager($uc->get_management_type($device->manager));
+      $device->usage($uc->get_equip_usage_type($device->usage));
+      $device->status('deployed');
+      $device->contact($uc->get_contact($device->contact));
+      $device->owner($uc->get_owner($device->owner or $device->contact));
+
+      $device->update_or_insert;
+
+      #
+      # location
+      #
+
+      my $is_in_cit = $uc->confirm("\nIs this device located in the CIT? (Y/n)", "y");
+      my ($city, $building, $room);
+      if ($is_in_cit) {
+        $city = "Providence";
+        $building = "CIT";
+        use Data::Dumper;
+        my $default_room = '';
+        if ($device->in_storage and $device->place) {
+          $default_room = $device->place->room;
+        }
+        $room = $uc->get_room($device->place ? $device->place->room : '');
+      } else {
+        ($city, $building, $room) = $uc->get_place($device->place);
+      }
+
       my $loc = $udb->resultset('Places')->find_or_create({
-          city => 'Providence',
-          building => 'CIT',
+          city => $city,
+          building => $building,
           room => $room,
         });
 
-      $device->update({
-          manager => $managed_by,
-          status => 'deployed',
-          usage => $equip_usage_type,
-          contact => $contact,
-          place => $loc,
-          comments => $comments,
-        });
+      $device->place($loc);
 
+      #
+      # computer-specific
+      #
+
+      my $is_comp = $uc->confirm("\nIs this device a computer? (Y/n)", "y");
       if ($is_comp) {
-        if (not $comp) {
-          $comp = $udb->resultset('Computers')->find_or_create({
-              device_name => $name,
-            });
-          $device->computer($comp);
+        $device->computer($udb->resultset('Computers')->find_or_new({device_name => $name}));
+        $device->comp_sysinfo($udb->resultset('CompSysinfo')->find_or_new({device_name => $name}));
 
-          my $sysinfo = $udb->resultset('CompSysinfo')->find_or_create({
-              device => $device,
-            });
-          $device->comp_sysinfo($sysinfo);
+        my $comp = $device->computer;
 
-        }
+        $comp->os_type($uc->get_os_type($comp->os_type));
 
-        $comp->os_type($os_type);
-        $comp->update();
-
-        if ($classes) {
-          foreach (@$classes) {
+        my @classes = $comp->comp_classes->get_column("name")->all;
+        my $classes_ref = $uc->get_comp_classes(@classes);
+        if ($classes_ref) {
+          foreach (@$classes_ref) {
             my $class = $udb->resultset('CompClasses')->find_or_create({
                 name => $_,
-                os_type => $os_type,
+                os_type => $comp->os_type,
               });
             $comp->add_to_comp_classes($class);
           }
         }
 
+        $comp->update_or_insert;
+        $device->comp_sysinfo->update_or_insert;
       }
+
+      #
+      # network-specific
+      #
+
+      my $iface = $device->net_interfaces->single;
+      my $mac_addr;
+      if ($iface) {
+        $mac_addr = $iface->ethernet;
+      }
+      my ($ipaddr, $vlan) = $uc->get_ip_and_vlan;
+      $mac_addr = $uc->get_mac($mac_addr);
+      my $port = $uc->get_port;
 
       my $addr = $udb->resultset('NetAddresses')->create({
           vlan => $vlan,
@@ -165,13 +174,19 @@ eval {
           primary_address => $addr,
         });
 
-#  foreach my $vlan_num (@vlans) {
-#    print "bind port $wall_plate to vlan $vlan_num\n";
-#    my $vlan = $udb->resultset('NetVlans')->find($vlan_num);
-#    $port->add_to_net_vlans($vlan);
-#  }
+      if ($port and (! grep { $_ = $vlan } $port->net_vlans)) {
+        printf("bind port %s to vlan %s\n", $port->wall_plate, $vlan->vlan_num);
+        $port->add_to_net_vlans($vlan);
+      }
 
-      #switchport
+      # switchport
+
+      #
+      # finally, comments
+      #
+
+      $device->comments($uc->get_comments($device->comments));
+      $device->update_or_insert;
 
     });
 };
@@ -205,7 +220,7 @@ __END__
 
 =head1 NAME
 
-udb-enable - Add a device to UDB
+udb-enable - Deploy a device in UDB
 
 =head1 SYNOPSIS
 
@@ -213,7 +228,7 @@ udb-enable <device>
 
 =head1 DESCRIPTION
 
-adds a device to the database
+deploys a device to the database
 
 =head1 OPTIONS
 
@@ -222,10 +237,6 @@ adds a device to the database
 =item B<-h>, B<--help>
 
 Print a help message and exit.
-
-=item B<-n>, B<--dryrun>
-
-Don't make any changes; just print what would be done.
 
 =item B<-v>, B<--verbose>
 

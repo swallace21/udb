@@ -291,6 +291,9 @@ sub print_record {
 sub get_management_type {
   my $self = shift;
   my ($default) = @_;
+  if (ref($default) eq 'BrownCS::udb::Schema::ManagementTypes') {
+    $default = $default->management_type;
+  }
   my @management_types = $self->udb->resultset('ManagementTypes')->get_column("management_type")->all;
   my $management_prompt = <<EOF;
 
@@ -308,6 +311,9 @@ EOF
 sub get_equip_usage_type {
   my $self = shift;
   my ($default) = @_;
+  if (ref($default) eq 'BrownCS::udb::Schema::EquipUsageTypes') {
+    $default = $default->equip_usage_type;
+  }
   my @equip_usage_types = $self->udb->resultset('EquipUsageTypes')->get_column("equip_usage_type")->all;
   my $equip_usage_prompt = <<EOF;
 
@@ -325,6 +331,9 @@ EOF
 sub get_os_type {
   my $self = shift;
   my ($default) = @_;
+  if (ref($default) eq 'BrownCS::udb::Schema::OsTypes') {
+    $default = $default->os_type;
+  }
   my @os_types = ('', $self->udb->resultset('OsTypes')->get_column("os_type")->all);
   my $os_prompt = <<EOF;
 
@@ -418,6 +427,18 @@ sub get_mac {
   return $self->get_updated_val("MAC address", $default, verify_mac($self->udb));
 }
 
+sub get_protected {
+  my $self = shift;
+  my ($default) = @_;
+  my $msg_tail;
+  if ($default) {
+    $msg_tail = "(Y/n)";
+  } else {
+    $msg_tail = "(y/N)";
+  }
+  return $self->confirm("Should this device entry be protected? ".$msg_tail, $default);
+}
+
 sub get_comments {
   my $self = shift;
   my ($default) = @_;
@@ -450,6 +471,24 @@ sub get_room {
   my $self = shift;
   my ($default) = @_;
   return $self->get_updated_val("Room number", $default);
+}
+
+sub get_place {
+  my $self = shift;
+  my ($default_place) = @_;
+
+  my ($default_city, $default_building, $default_room);
+  if ($default_place) {
+    $default_city = $default_place->city;
+    $default_building = $default_place->building;
+    $default_room = $default_place->room;
+  }
+
+  my $new_city = $self->get_updated_val("City", $default_city);
+  my $new_building = $self->get_updated_val("Building", $default_building);
+  my $new_room = $self->get_updated_val("Room number", $default_room);
+
+  return ($new_city, $new_building, $new_room);
 }
 
 no Moose;

@@ -30,6 +30,7 @@ sub format_device {
   $out->{"Purchase order"} = $device->po_num;
   $out->{"Contact"} = $device->contact;
   $out->{"Owner"} = $device->owner;
+  $out->{"Protected"} = bool2str($device->protected);
   $out->{"Comments"} = $device->comments;
   if ($device->computer) {
     $self->format_computer($out, $device->computer);
@@ -161,6 +162,7 @@ sub update_device {
       po_num => $in->{"Purchase order"},
       contact => $in->{"Contact"},
       owner => $in->{"Owner"},
+      protected => $in->{"Protected"},
       comments => $in->{"Comments"},
     });
 
@@ -278,7 +280,7 @@ sub update_dns_entry {
       dns_name => $dns_name,
       domain => $domain,
       dns_region => $in->{"DNS region"},
-      authoritative => str2bool($in->{"Authoritative"}),
+      authoritative => $in->{"Authoritative"},
     });
   $entry->update;
 }
