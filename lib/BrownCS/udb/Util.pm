@@ -222,10 +222,15 @@ sub verify_ip_or_vlan {
     my $vlan_num = $ip_or_vlan_str;
     my $ipaddr;
 
-    if ($ip_or_vlan_str =~ /^(\d+)d$/) {
+    if (($ip_or_vlan_str =~ /^d(\d+)$/) or
+      ($ip_or_vlan_str =~ /^(\d+)d$/)) {
       # we got a dynamic vlan
       $dynamic = 1;
       $vlan_num = $1;
+    } elsif ($ip_or_vlan_str =~ /^(\d+)$/) {
+      $vlan_num = $1;
+    } else {
+      return (0, undef);
     }
 
     my $vlan = $udb->resultset('NetVlans')->search({

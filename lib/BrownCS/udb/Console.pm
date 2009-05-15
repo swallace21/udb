@@ -382,8 +382,8 @@ sub get_ip_and_vlan {
 What is the computer's IP address?
 If you just want an arbitrary IP in a given VLAN (e.g. 31, 36),
 enter the VLAN number, and an IP will be picked for you.
-If you want a dynamic IP address, add a "d" to the end of the VLAN.
-For example, use '36d' instead of '36'.
+If you want a dynamic IP address, add a "d" to the start of the VLAN.
+For example, use 'd36' instead of '36'.
 EOF
   my $ip_or_vlan_prompt = "\n${ip_or_vlan_preamble}IP or VLAN:";
   my ($ipaddr, $vlan) = $self->demand($ip_or_vlan_prompt, verify_ip_or_vlan($self->udb));
