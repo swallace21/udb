@@ -88,16 +88,37 @@ sub format_interface {
   my $self = shift;
   my ($iface) = @_;
   my $out = {};
+  $out->{"ID"} = $iface->net_interface_id;
   $out->{"MAC address"} = $iface->ethernet;
   if ($iface->primary_address) {
-    $out->{"Primary IP"} = $iface->primary_address->ipaddr;
+    $out->{"Primary address"} = $self->format_address_short($iface->primary_address);
   }
+  my $addrs_rs = $iface->net_addresses;
+  my $addrs = [];
+  while (my $addr = $addrs_rs->next) {
+    if ($addr->net_address_id ne $iface->primary_address->net_address_id) {
+      push @$addrs, $self->format_address_short($addr);
+    }
+  }
+  $out->{"Other Addresses"} = $addrs;
   if ($iface->net_port) {
     my $port = $iface->net_port;
     $out->{"Switch"} = $port->net_switch->device_name;
     $out->{"Blade"} = $port->blade_num;
     $out->{"Port"} = $port->port_num;
     $out->{"Wall plate"} = $port->wall_plate;
+  }
+  return $out;
+}
+
+sub format_address_short {
+  my $self = shift;
+  my ($addr) = @_;
+  my $out = {};
+  if ($addr->ipaddr) {
+    $out->{"IP"} = $addr->ipaddr;
+  } else {
+    $out->{"Dynamic IP on VLAN"} = $addr->vlan_num;
   }
   return $out;
 }
@@ -174,12 +195,17 @@ sub update_device {
 
   $self->update_location($device, $in->{"Location"});
 
-  #my $ifaces = [];
-  #foreach my $iface ($in->{"Interfaces"}) {
-  #  $self->update_interface(
-  #  push @$ifaces, $self->update_interface($iface);
-  #}
-  #$in->{"Interfaces"} = $ifaces;
+  my $ifaces = {};
+  foreach my $iface_hash (@{$in->{"Interfaces"}}) {
+    my $iface = $device->related_resultset('net_interfaces')->find($iface_hash->{'ID'});
+    $ifaces->{$iface_hash->{"ID"}} = $self->update_interface($iface, $iface_hash);
+  }
+  foreach my $iface ($device->net_interfaces) {
+    if (not grep { $_->{"ID"} == $iface->net_interface_id } (@{$in->{"Interfaces"}})) {
+      $device->remove_from_net_interfaces($iface);
+    }
+  }
+  $in->{"Interfaces"} = $ifaces;
   $device->update;
 }
 
@@ -236,10 +262,17 @@ sub update_location {
 sub update_interface {
   my $self = shift;
   my ($iface, $in) = @_;
-  #$in->{"MAC address"} = $iface->ethernet;
-  #if ($iface->primary_address) {
-  #  $in->{"Primary IP"} = $iface->primary_address->ipaddr;
-  #}
+  $iface->ethernet($in->{"MAC address"});
+  if ($in->{"Primary IP"}) {
+    my $ver = verify_ip_or_vlan($self->udb);
+    my $new_ip = $in->{"Primary IP"};
+    my ($ignore_this, $ip_addr, $vlan) = $ver->($new_ip);
+    my $new_primary_addr = $self->udb->resultset('NetAddresses')->find_or_create({
+        ipaddr => $ip_addr,
+        vlan => $vlan,
+      });
+    $iface->primary_address($new_primary_addr);
+  }
   #if ($iface->net_port) {
   #  my $port = $iface->net_port;
   #  $in->{"Switch"} = $port->net_switch->device_name;

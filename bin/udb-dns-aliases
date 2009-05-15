@@ -1,0 +1,95 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+use Pod::Usage;
+
+use FindBin qw($RealBin);
+use lib "$RealBin/../lib";
+use BrownCS::udb::Schema;
+use BrownCS::udb::Util qw(:all);
+use BrownCS::udb::Console qw(:all);
+
+# Print a simple help message.
+sub usage {
+  my ($exit_status) = @_;
+  pod2usage({ -exitval => $exit_status, -verbose => 1});
+}
+
+my $help = 0;
+
+GetOptions (
+  'help|h|?' => \$help, 
+) or usage(1);
+usage(0) if $help;
+
+if (@ARGV != 1) {
+  usage(2);
+}
+
+my $udb = BrownCS::udb::Schema->connect;
+my $uc = new BrownCS::udb::Console(udb => $udb);
+
+my $name = shift @ARGV;
+my $region = shift @ARGV;
+
+if (not $region) {
+  $region = 'internal';
+}
+
+eval {
+  my $dns_entry = $udb->resultset('NetDnsEntries')->search({
+      dns_name => $name,
+    })->single;
+  my $addr = $dns_entry->net_address;
+  my $dns_entries = $addr->net_dns_entries->search({
+      dns_region => "$region",
+    });
+  my @aliases = ();
+  while (my $entry = $dns_entries->next) {
+    push @aliases, ($entry->dns_name);
+  }
+  print join(" ", sort(@aliases));
+  print "\n";
+};
+if ($@) {
+  die "No record for device $name.\n";
+}
+
+__END__
+
+=head1 NAME
+
+udb-classes - Print out the classes a computer belongs to
+
+=head1 SYNOPSIS
+
+udb-classes <hostname>
+
+=head1 DESCRIPTION
+
+udb-classes queries the UDB database for the list of classes that a
+computer belongs to, and prints it out to the console.
+
+=head1 OPTIONS
+
+=over
+
+=item B<-h>, B<--help>
+
+Print a help message and exit.
+
+=back
+
+=head1 AUTHORS
+
+Aleks Bromfield.
+
+=head1 SEE ALSO
+
+B<udb>
+
+=cut
+

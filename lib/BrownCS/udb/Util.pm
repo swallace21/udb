@@ -213,21 +213,34 @@ sub verify_ip_or_vlan {
 
     if ($ip_or_vlan_str =~ /\./) {
       # we got an IP address
-      my ($ipaddr, $vlan) = verify_ip($udb, $ip_or_vlan_str);
-      return (1, $ipaddr, $vlan);
+      return verify_ip($udb)->($ip_or_vlan_str);
     }
 
     # we got a VLAN
+
+    my $dynamic = 0;
+    my $vlan_num = $ip_or_vlan_str;
+    my $ipaddr;
+
+    if ($ip_or_vlan_str =~ /^(\d+)d$/) {
+      # we got a dynamic vlan
+      $dynamic = 1;
+      $vlan_num = $1;
+    }
+
     my $vlan = $udb->resultset('NetVlans')->search({
-        vlan_num => $ip_or_vlan_str,
+        vlan_num => $vlan_num,
       })->single;
 
     if (not $vlan) {
-      print "Invalid VLAN: $ip_or_vlan_str!\n";
+      print "Invalid VLAN: $vlan_num!\n";
       return (0, undef);
     }
 
-    my $ipaddr = find_unused_ip($udb, $vlan);
+    if (not $dynamic) {
+      $ipaddr = find_unused_ip($udb, $vlan);
+    }
+
     return (1, $ipaddr, $vlan);
   };
 }

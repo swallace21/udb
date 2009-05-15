@@ -403,6 +403,10 @@ sub build_wpkg_hosts {
         push @wpkg_profiles, "x61";
       }
 
+      if (/^acrobat9$/) {
+        push @wpkg_profiles, "acrobat9";
+      }
+
       # licensed software
 
       if (/^adobe-ae-pp$/) {

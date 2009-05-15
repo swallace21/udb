@@ -139,47 +139,52 @@ EOF
       # network-specific
       #
 
-      my $iface = $device->net_interfaces->single;
-      my $mac_addr;
-      if ($iface) {
-        $mac_addr = $iface->ethernet;
-      }
-      my ($ipaddr, $vlan) = $uc->get_ip_and_vlan;
-      $mac_addr = $uc->get_mac($mac_addr);
-      my $port = $uc->get_port;
+      my $is_networked = $uc->confirm("\nIs this a networked device? (Y/n)", "y");
+      if ($is_networked) {
 
-      my $addr = $udb->resultset('NetAddresses')->create({
-          vlan => $vlan,
-          ipaddr => $ipaddr,
-          monitored => 0,
-        });
+        my $iface = $device->net_interfaces->single;
+        my $mac_addr;
+        if ($iface) {
+          $mac_addr = $iface->ethernet;
+        }
+        my ($ipaddr, $vlan) = $uc->get_ip_and_vlan;
+        $mac_addr = $uc->get_mac($mac_addr);
+        my $port = $uc->get_port;
 
-      dns_insert_both($name, 'cs.brown.edu', $addr, 1);
-
-      if (not $iface) {
-        $iface = $device->add_to_net_interfaces({
-            device => $device,
-            ethernet => $mac_addr,
+        my $addr = $udb->resultset('NetAddresses')->create({
+            vlan => $vlan,
+            ipaddr => $ipaddr,
+            monitored => 0,
           });
+
+        dns_insert_both($name, 'cs.brown.edu', $addr, 1);
+
+        if (not $iface) {
+          $iface = $device->add_to_net_interfaces({
+              device => $device,
+              ethernet => $mac_addr,
+            });
+        }
+
+        if ($port) {
+          $iface->net_port($port);
+          $iface->update;
+        }
+
+        $addr->add_to_net_interfaces($iface);
+
+        $iface->update({
+            primary_address => $addr,
+          });
+
+        if ($port and (! grep { $_ = $vlan } $port->net_vlans)) {
+          printf("bind port %s to vlan %s\n", $port->wall_plate, $vlan->vlan_num);
+          $port->add_to_net_vlans($vlan);
+        }
+
+        # switchport
+
       }
-
-      if ($port) {
-        $iface->net_port($port);
-        $iface->update;
-      }
-
-      $addr->add_to_net_interfaces($iface);
-
-      $iface->update({
-          primary_address => $addr,
-        });
-
-      if ($port and (! grep { $_ = $vlan } $port->net_vlans)) {
-        printf("bind port %s to vlan %s\n", $port->wall_plate, $vlan->vlan_num);
-        $port->add_to_net_vlans($vlan);
-      }
-
-      # switchport
 
       #
       # finally, comments
