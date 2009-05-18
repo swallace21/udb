@@ -1,0 +1,142 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+use Pod::Usage;
+
+use FindBin qw($RealBin);
+use lib "$RealBin/../lib";
+use BrownCS::udb::Schema;
+use BrownCS::udb::Util qw(:all);
+use BrownCS::udb::Console qw(:all);
+use BrownCS::udb::DeviceHash;
+use BrownCS::udb::Switch;
+
+# Print a simple help message.
+sub usage {
+  my ($exit_status) = @_;
+  pod2usage({ -exitval => $exit_status, -verbose => 1});
+}
+
+my $help = 0;
+my $verbose = 0;
+my $dryrun = 0;
+
+GetOptions (
+  'help|h|?' => \$help, 
+  'v|verbose' => \$verbose,
+  'n|dryrun' => \$dryrun,
+) or usage(1);
+usage(0) if $help;
+
+my $udb = BrownCS::udb::Schema->connect;
+my $uc = new BrownCS::udb::Console(udb => $udb);
+my $udh = new BrownCS::udb::DeviceHash(udb => $udb);
+
+if (@ARGV != 1) {
+  usage(2);
+}
+
+my $name = shift @ARGV;
+
+my $ports = $udb->resultset('NetPorts')->search({
+    wall_plate => { '~', $name},
+  });
+die "No record for port $name.\n" if not $ports;
+
+my %switches = ();
+
+while (my $port = $ports->next) {
+
+  my $net_switch = $port->net_switch;
+  my $switch_name = $net_switch->device_name;
+
+  my $switch = $switches{$switch_name};
+  if (not $switch) {
+    $switches{$switch_name} = BrownCS::udb::Switch->new({
+        net_switch => $net_switch,
+        verbose => $verbose,
+      });
+    $switch = $switches{$switch_name}
+  }
+
+  my $port_record = $udh->format_port($port);
+  my ($native_vlan, @other_vlans) = $switch->get_port_vlans($port);
+  if (@other_vlans) {
+    $port_record->{"Trunking"} = "on";
+    $port_record->{"Native VLAN"} = $native_vlan;
+    $port_record->{"Other VLANs"} = \@other_vlans;
+  } else {
+    $port_record->{"Trunking"} = "off";
+    $port_record->{"VLAN"} = $native_vlan;
+  }
+  $uc->print_record('', $port_record);
+  print "\n";
+
+}
+
+if ($dryrun) {
+  exit(0);
+}
+
+if (!$uc->confirm("Are you sure you want to reset these ports? (y/N)", "no")) {
+  exit(0);
+}
+
+$ports->reset;
+
+foreach my $switch (values(%switches)) {
+  $switch->connect;
+}
+
+while (my $port = $ports->next) {
+  my $net_switch = $port->net_switch;
+  my $switch_name = $net_switch->device_name;
+  my $switch = $switches{$switch_name};
+  $switch->update_port($port);
+}
+
+__END__
+
+=head1 NAME
+
+udb-reset-port - Reset the switch configuration of a port
+
+=head1 SYNOPSIS
+
+udb-reset-port <device>
+
+=head1 DESCRIPTION
+
+Perform maintenance on an existing device record in UDB.
+
+=head1 OPTIONS
+
+=over
+
+=item B<-h>, B<--help>
+
+Print a help message and exit.
+
+=item B<-n>, B<--dryrun>
+
+Don't make any changes; just print what would be done.
+
+=item B<-v>, B<--verbose>
+
+Print lots of text about what is going on.
+
+=back
+
+=head1 AUTHORS
+
+Aleks Bromfield.
+
+=head1 SEE ALSO
+
+B<udb>
+
+=cut
+

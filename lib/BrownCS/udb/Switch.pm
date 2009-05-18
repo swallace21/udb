@@ -14,7 +14,7 @@ has 'net_switch' => (
 has 'con' => ( is => 'ro', isa => 'Expect' );
 has 'modified' => ( is => 'rw', isa => 'Bool' );
 
-sub BUILD {
+sub connect {
   my $self = shift;
 
   my $connection_type = $self->net_switch->connection_type;
@@ -22,7 +22,6 @@ sub BUILD {
   my $username = $self->net_switch->username;
   my $password = $self->net_switch->pass;
   my $fqdn = $self->net_switch->fqdn;
-
   if ($connection_type eq "ssh") {
     $self->{con} = Expect->spawn("ssh -l $username $fqdn");
   } else {
@@ -77,11 +76,9 @@ sub wait_for {
     or die ("$error, " .  $self->con->exp_error() .  "\n");
 }
 
-sub update_port {
+sub get_port_desc {
   my $self = shift;
   my ($port) = @_;
-
-  my $con = $self->con;
   my $ifaces = $port->net_interfaces;
 
   my $desc;
@@ -93,11 +90,13 @@ sub update_port {
     $desc = "netgear switch";
   }
 
-  my $name = $self->net_switch->device_name;
-  my $switch_type = $self->net_switch->switch_type;
+  return $desc;
+}
 
-  my $port_num = $port->port_num;
-  my $blade_num = $port->blade_num;
+sub get_port_vlans {
+  my $self = shift;
+  my ($port) = @_;
+  my $ifaces = $port->net_interfaces;
 
   my $vlans_rs = $ifaces->search({},
     {
@@ -113,29 +112,47 @@ sub update_port {
     $vlans{$vlan->get_column('Vlan')} = 1;
   }
 
-  my $primary_vlans_rs = $ifaces->search({},
+  my $native_vlans_rs = $ifaces->search({},
     {
       prefetch => 'primary_address',
       '+select' => [ 'primary_address.vlan_num' ],
       '+as'     => [ 'Vlan' ],
     });
 
-  my %primary_vlans = ();
-  while (my $vlan = $primary_vlans_rs->next) {
-    $primary_vlans{$vlan->get_column('Vlan')} = 1;
+  my %native_vlans = ();
+  while (my $vlan = $native_vlans_rs->next) {
+    $native_vlans{$vlan->get_column('Vlan')} = 1;
   }
 
-  print "vlans:";
-  foreach my $vlan (keys %vlans) {
-    print " $vlan";
+  # TODO check this in the database schema
+  if (scalar(keys(%native_vlans)) > 1) {
+    die "Error: primary addresses should never have different VLANs!\n";
   }
-  print "\n";
 
-  print "primary vlans:";
-  foreach my $vlan (keys %primary_vlans) {
-    print " $vlan";
+  my ($native_vlan, undef) = each(%native_vlans);
+
+  if (not $native_vlan) {
+    $native_vlan = '36';
   }
-  print "\n";
+
+  delete($vlans{$native_vlan});
+
+  return ($native_vlan, (keys %vlans));
+}
+
+sub update_port {
+  my $self = shift;
+  my ($port) = @_;
+
+  my $con = $self->con;
+  my $ifaces = $port->net_interfaces;
+  my $desc = $self->get_port_desc($port);
+  my $name = $self->net_switch->device_name;
+  my $switch_type = $self->net_switch->switch_type;
+  my $port_num = $port->port_num;
+  my $blade_num = $port->blade_num;
+
+  my ($native_vlan, @other_vlans) = $self->get_port_vlans($port);
 
   # Enter configuration mode
   $self->send("config term\r");
@@ -157,9 +174,13 @@ sub update_port {
 
   # Common configurations that all switch ports get
 
+  # temporarily disable the port
+  $self->send("shut\r");
+  $self->wait_for("$name\(config-if\)\#", "Wrong response shutting port");
+
   # make sure the port is enabled
   $self->send("no shut\r");
-  $self->wait_for("$name\(config-if\)\#", "Wrong response activating port");
+  $self->wait_for("$name\(config-if\)\#", "Wrong response unshutting port");
 
   # make sure it's a layer two port
   $self->send("switchport\r");
@@ -170,9 +191,8 @@ sub update_port {
   $self->wait_for("$name\(config-if\)\#", "Wrong response turning on flow control");
 
   # Determine if this is a trunk or not...
-  if (scalar(keys(%vlans)) > 1) {
-    my $native_vlan = (keys(%vlans))[0];
-    my $all_vlans = join(',',keys(%vlans));
+  if (@other_vlans) {
+    my $all_vlans = join(',', $native_vlan, @other_vlans);
 
     # Set encapsulation mode
     $self->send("switchport trunk encapsulation dot1q\r");
@@ -193,9 +213,8 @@ sub update_port {
     $self->wait_for("$name\(config-if\)\#", "Wrong response trying to set trunk mode");
 
   } else {
-    my $vlan = (keys(%vlans))[0];
     # Enter vlan
-    $self->send("switchport access vlan $vlan\r");
+    $self->send("switchport access vlan $native_vlan\r");
     $self->wait_for("$name\(config-if\)\#", "Never got third config interface prompt");
 
     # Set mode access
@@ -241,3 +260,4 @@ no Moose;
 __PACKAGE__->meta->make_immutable;
 
 1;
+

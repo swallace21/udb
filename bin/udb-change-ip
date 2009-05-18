@@ -107,6 +107,7 @@ if ($port) {
       net_switch => $net_switch,
       verbose => $verbose,
     });
+  $switch->connect;
   $switch->update_port($port);
 }
 
@@ -118,7 +119,7 @@ udb-change-ip - Change the IP or VLAN of a device
 
 =head1 SYNOPSIS
 
-udb-change-subnet <device>
+udb-change-ip <device>
 
 =head1 DESCRIPTION
 

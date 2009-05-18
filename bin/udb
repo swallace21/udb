@@ -93,6 +93,10 @@ my %udb_commands = (
     'desc' => "change a computer's software configuration",
     'common' => 1,
   },
+  'reset-port' => {
+    'desc' => "reset a port on a switch",
+    'common' => 1,
+  },
   'change-ip' => {
     'desc' => "change a networked device's IP or VLAN",
     'common' => 1,

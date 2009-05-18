@@ -102,12 +102,20 @@ sub format_interface {
   }
   $out->{"Other Addresses"} = $addrs;
   if ($iface->net_port) {
-    my $port = $iface->net_port;
-    $out->{"Switch"} = $port->net_switch->device_name;
-    $out->{"Blade"} = $port->blade_num;
-    $out->{"Port"} = $port->port_num;
-    $out->{"Wall plate"} = $port->wall_plate;
+    my $port_out = $self->format_port($iface->net_port);
+    $out->{$_} = $port_out->{$_} for keys %{$port_out};
   }
+  return $out;
+}
+
+sub format_port {
+  my $self = shift;
+  my ($port) = @_;
+  my $out = {};
+  $out->{"Switch"} = $port->net_switch->device_name;
+  $out->{"Blade"} = $port->blade_num;
+  $out->{"Port"} = $port->port_num;
+  $out->{"Wall plate"} = $port->wall_plate;
   return $out;
 }
 
