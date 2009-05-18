@@ -107,12 +107,16 @@ sub build_tftpboot {
   my $host_classes = get_host_class_map($udb);
 
   while (my $addr = $addrs->next) {
-    my $comp = $addr->primary_interface->device->computer;
+    my $iface = $addr->primary_interface;
+    next if not defined $iface;
 
-    my $bootimage;
+    my $comp = $iface->device->computer;
+    next if not defined $comp;
 
     my $os = ($comp->os_type);
     next if not defined $os;
+
+    my $bootimage;
 
     if (defined $comp->pxelink) {
       $bootimage = $comp->pxelink;

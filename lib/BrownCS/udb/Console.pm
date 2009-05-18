@@ -157,6 +157,16 @@ sub demand {
   return $self->query($query_args);
 }
 
+# Checks that the answer is neither empty nor a question mark (?).
+sub verify_nonempty_nonq {
+  my ($answer) = @_;
+  if ((defined $answer) and ($answer ne '') and ($answer ne '?')) {
+    return (1, $answer);
+  } else {
+    return (0, undef);
+  }
+}
+
 # choose :: string * [string] -> string
 # Gets an answer from the user. The answer must belong to a specified
 # list.
@@ -288,6 +298,26 @@ sub print_record {
   print ($self->sprint_record (@_));
 }
 
+# ask_with_help_option :: string -> string
+# Gets a line from the user. If the user enters '?', give a help screen.
+sub ask_with_help_option {
+  my $self = shift;
+  my($prompt, $default, $help) = @_;
+  return $self->query({
+      prompt => $prompt,
+      default => $default ? $default : '',
+      error_str => $help,
+      verify_sub => sub {
+        my ($answer) = @_;
+        if ($answer eq '?') {
+          return (0, undef);
+        } else {
+          return (1, $answer);
+        }
+      },
+    });
+}
+
 sub get_management_type {
   my $self = shift;
   my ($default) = @_;
@@ -370,7 +400,7 @@ EOF
   } else {
     $classes_prompt .= "Classes [comma-separated list]:";
   }
-  my $classes_str = $self->ask($classes_prompt,'');
+  my $classes_str = $self->ask_with_help_option($classes_prompt,'','');
   $classes_str =~ s/\s//g;
   my @classes = split(/,/, $classes_str);
   return \@classes;
@@ -456,7 +486,7 @@ sub get_device_name {
 sub get_contact {
   my $self = shift;
   my ($default) = @_;
-  return $self->get_updated_val("Primary user", $default, \&verify_nonempty);
+  return $self->get_updated_val("Primary user", $default, \&verify_nonempty_nonq);
 }
 
 sub get_owner {
@@ -465,7 +495,7 @@ sub get_owner {
   return $self->get_updated_val(
     "Who paid for this computer?\nOwner",
     $default,
-    \&verify_nonempty,
+    \&verify_nonempty_nonq,
   );
 }
 
