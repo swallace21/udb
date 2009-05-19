@@ -42,7 +42,7 @@ if (@ARGV != 1) {
 my $name = shift @ARGV;
 
 my $ports = $udb->resultset('NetPorts')->search({
-    wall_plate => { '~', $name},
+    wall_plate => { '~*', $name},
   });
 die "No record for port $name.\n" if not $ports;
 
