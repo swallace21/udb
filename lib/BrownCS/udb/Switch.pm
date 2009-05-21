@@ -124,14 +124,13 @@ sub get_port_vlans {
     $native_vlans{$vlan->get_column('Vlan')} = 1;
   }
 
-  # TODO check this in the database schema
-  if (scalar(keys(%native_vlans)) > 1) {
-    die "Error: primary addresses should never have different VLANs!\n";
-  }
-
   my ($native_vlan, undef) = each(%native_vlans);
 
-  if (not $native_vlan) {
+  # TODO check this in the database schema
+  if (scalar(keys(%native_vlans)) > 1) {
+    warn "Error: primary addresses should never have different VLANs!\n";
+    $native_vlan = '36';
+  } elsif (not $native_vlan) {
     $native_vlan = '36';
   }
 
