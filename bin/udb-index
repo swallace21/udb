@@ -36,51 +36,96 @@ if ((@ARGV < 0) or (@ARGV > 1)) {
   usage(2);
 }
 
-my $name = shift @ARGV;
+my $arg_name = shift @ARGV;
 
-my $devices = get_devices($name);
-if ($devices->count == 0) {
-  die "Couldn't find anything matching $name.\n";
+if ($arg_name) {
+  search_screen($arg_name);
+} else {
+  &menu_screen;
 }
 
-my $device_pager = $devices->pager;
-while (my $device = $devices->page($device_pager->current_page)->single) {
-  system("clear");
-  my ($wchar, $hchar, $wpixels, $hpixels) = GetTerminalSize();
-
-  my $out = $uc->sprint_record('', $udh->format_device($device));
-  my @newlines = ($out =~ m/\n/g);
-  my $newlines = $hchar - $#newlines - 7;
-  print $out;
-  while ($newlines > 0) {
-    print "\n";
-    $newlines--;
+sub search_screen {
+  my ($name) = @_;
+  my $devices = get_devices($name);
+  if ($devices->count == 0) {
+    die "Couldn't find anything matching $name.\n";
   }
-  print <<EOF;
+  
+  my $device_pager = $devices->pager;
+  while (my $device = $devices->page($device_pager->current_page)->single) {
+    system("clear");
+    my ($wchar, $hchar, $wpixels, $hpixels) = GetTerminalSize();
+  
+    my $out = $uc->sprint_record('', $udh->format_device($device));
+    my @newlines = ($out =~ m/\n/g);
+    my $newlines = $hchar - $#newlines - 7;
+    print $out;
+    while ($newlines > 0) {
+      print "\n";
+      $newlines--;
+    }
+    print <<EOF;
+  
+            <RET> = next entry                   "d" = delete this entry
+            "-" = previous entry                 "e" = edit this entry
+            "q" = quit/back
+  
+EOF
+  
+    print "Command: ";
+    my $cmd = $uc->get_key;
+    my $name = $device->device_name;
+    for ($cmd) {
+      if (/^\n$/) {
+        $device_pager->current_page($device_pager->next_page or $device_pager->last_page);
+      } elsif (/^-$/) {
+        $device_pager->current_page($device_pager->previous_page);
+      } elsif (/^q$/) {
+        return;
+      } elsif (/^d$/) {
+        my $answer = $uc->confirm("Are you sure? ",0);
+        if ($answer) {
+          system("udb delete $name");
+        }
+      } elsif (/^e$/) {
+        system("udb edit $name");
+      }
+    }
+  }
+}
 
-          <RET> = next entry                   "d" = delete this entry
-          "-" = previous entry                 "e" = edit this entry
-          "q" = quit
+sub menu_screen {
+  my $count = $udb->resultset('Devices')->count;
+  for (;;) {
+    system("clear");
+    print <<"EOF";
+Database: udb  ($count entries)
+
+
+        a - Add new entry to database
+        f - Find entry in database
+        r - Read database entry by entry
+        q - Save and exit
 
 EOF
-
-  print "Command: ";
-  my $cmd = $uc->get_key;
-  my $name = $device->device_name;
-  for ($cmd) {
-    if (/^\n$/) {
-      $device_pager->current_page($device_pager->next_page or $device_pager->last_page);
-    } elsif (/^-$/) {
-      $device_pager->current_page($device_pager->previous_page);
-    } elsif (/^q$/) {
-      exit(0);
-    } elsif (/^d$/) {
-      my $answer = $uc->confirm("Are you sure? ",0);
-      if ($answer) {
-        system("udb delete $name");
+    print "Command: ";
+    my $cmd = $uc->get_key;
+    for ($cmd) {
+      if (/^a$/) {
+        my $new_name = $uc->ask("Name:",'');
+        if ($new_name) {
+          system("udb add $new_name");
+        }
+      } elsif (/^f$/) {
+        my $search_pattern = $uc->ask("Name to search for:",'');
+        if ($search_pattern) {
+          search_screen($search_pattern);
+        }
+      } elsif (/^r$/) {
+        search_screen('');
+      } elsif (/^q$/) {
+        return;
       }
-    } elsif (/^e$/) {
-      system("udb edit $name");
     }
   }
 }
@@ -117,9 +162,8 @@ udb-index <device>
 
 =head1 DESCRIPTION
 
-udb-index queries the UDB database for information about a piece of
-equipment, and prints it out to the console. It is designed to resemble
-the old I<cdb profile> or I<index pc> commands.
+udb-index is designed to resemble the old I<index pc> command. Like the old
+command, it supports searches, edits, additions, and deletions.
 
 =head1 OPTIONS
 
