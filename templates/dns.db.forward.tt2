@@ -97,6 +97,9 @@ kits                                IN          CNAME           debian.cs.brown.
 pkgs                                IN          CNAME           debian.cs.brown.edu.
 debian                              IN          MX              10 mx.cs.brown.edu.
 
+; windows entries
+windfs                              IN          CNAME           win.cs.brown.edu.
+
 ; CIS entries
 netmon                              IN          A               128.148.10.8
 
