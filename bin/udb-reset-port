@@ -35,26 +35,30 @@ my $udb = BrownCS::udb::Schema->connect;
 my $uc = new BrownCS::udb::Console(udb => $udb);
 my $udh = new BrownCS::udb::DeviceHash(udb => $udb);
 
-if (not $dryrun) {
-  use BrownCS::udb::Build;
-  my $ub = new BrownCS::udb::Build(udb => $udb, verbose => $verbose, dryrun => $dryrun);
-  $ub->okay_to_build;
-}
-
 if (@ARGV != 1) {
   usage(2);
 }
 
 my $name = shift @ARGV;
 
-my $ports = $udb->resultset('NetPorts')->search({
+# first try a wall plate number
+my @ports = $udb->resultset('NetPorts')->search({
     wall_plate => { '~*', $name},
   });
-die "No record for port $name.\n" if not $ports;
+
+# if no result, search on hostname
+unless(@ports) {
+	my $ifaces = $udb->resultset('Devices')->find($name)->net_interfaces;
+	while (my $iface = $ifaces->next) {
+		push @ports, $iface->net_port;
+	}
+}
+
+die "No record for wall plate or hostname \"$name\".\n" unless(@ports);
 
 my %switches = ();
 
-while (my $port = $ports->next) {
+foreach my $port (@ports) {
 
   my $net_switch = $port->net_switch;
   my $switch_name = $net_switch->device_name;
@@ -78,10 +82,10 @@ while (my $port = $ports->next) {
     $port_record->{"Trunking"} = "off";
     $port_record->{"VLAN"} = $native_vlan;
   }
-  $uc->print_record('', $port_record);
   print "\n";
-
+  $uc->print_record('', $port_record);
 }
+print "\n";
 
 if ($dryrun) {
   exit(0);
@@ -91,13 +95,11 @@ if (!$uc->confirm("Are you sure you want to reset these ports? (y/N)", "no")) {
   exit(0);
 }
 
-$ports->reset;
-
 foreach my $switch (values(%switches)) {
   $switch->connect;
 }
 
-while (my $port = $ports->next) {
+foreach my $port (@ports) {
   my $net_switch = $port->net_switch;
   my $switch_name = $net_switch->device_name;
   my $switch = $switches{$switch_name};
@@ -112,7 +114,7 @@ udb-reset-port - Reset the switch configuration of a port
 
 =head1 SYNOPSIS
 
-udb-reset-port <device>
+udb-reset-port <wall plate|hostname>
 
 =head1 DESCRIPTION
 
@@ -138,7 +140,7 @@ Print lots of text about what is going on.
 
 =head1 AUTHORS
 
-Aleks Bromfield.
+Aleks Bromfield, Mark Dieterich.
 
 =head1 SEE ALSO
 
