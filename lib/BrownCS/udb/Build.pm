@@ -5,6 +5,8 @@ use Template;
 use Template::Stash;
 use FindBin qw($RealBin);
 use BrownCS::udb::Util qw(:all);
+use NetAddr::IP qw(Coalesce);
+use List::MoreUtils qw(uniq);
 
 has 'udb' => ( is => 'ro', isa => 'BrownCS::udb::Schema', required => 1 );
 has 'verbose' => ( is => 'ro', isa => 'Bool', required => 1 );
@@ -182,7 +184,7 @@ sub build_netgroup {
     next if not defined $os;
 
     if (($manager eq 'tstaff') and ($os->trusted_nfs)) {
-      add_to_group($netgroups, "trusted", $fqdn);
+      $self->add_to_group($netgroups, "trusted", $fqdn);
     }
 
     my $classes_ref = $host_classes->{$hostname};
@@ -192,31 +194,31 @@ sub build_netgroup {
     for (@classes) {
 
       if (/^camera$/) {
-        add_to_group($netgroups, "camera", $fqdn);
+        $self->add_to_group($netgroups, "camera", $fqdn);
       } elsif (/^cgc$/) {
-        add_to_group($netgroups, "cgc", $fqdn);
+        $self->add_to_group($netgroups, "cgc", $fqdn);
       } elsif (/^graphics$/) {
-        add_to_group($netgroups, "graphics", $fqdn);
+        $self->add_to_group($netgroups, "graphics", $fqdn);
       } elsif (/^fun$/) {
-        add_to_group($netgroups, "ugrad", $fqdn);
+        $self->add_to_group($netgroups, "ugrad", $fqdn);
       } elsif (/^ssh\.forward$/) {
-        add_to_group($netgroups, "sunlab", $fqdn);
+        $self->add_to_group($netgroups, "sunlab", $fqdn);
       } elsif (/^tstaff-netgroup$/) {
-        add_to_group($netgroups, "tstaff", $fqdn);
+        $self->add_to_group($netgroups, "tstaff", $fqdn);
       } elsif (/^thermo$/) {
-        add_to_group($netgroups, "thermo", $fqdn);
+        $self->add_to_group($netgroups, "thermo", $fqdn);
       } elsif (/^liebert$/) {
-        add_to_group($netgroups, "liebert", $fqdn);
+        $self->add_to_group($netgroups, "liebert", $fqdn);
       } elsif (/^server$/) {
-        add_to_group($netgroups, "server", $fqdn);
+        $self->add_to_group($netgroups, "server", $fqdn);
       } elsif (/^sge\.dedicated$/) {
-        add_to_group($netgroups, "sge", $fqdn);
+        $self->add_to_group($netgroups, "sge", $fqdn);
       }
     }
   }
 
   while (my ($grp, $val) = each(%{$netgroups})) {
-    maybe_system("/tstaff/bin/ldap-netgroup -e '$val' set $grp 2>/dev/null >/dev/null");
+    $self->maybe_system("/tstaff/bin/ldap-netgroup -e '$val' set $grp 2>/dev/null >/dev/null");
   }
 
   print "done.\n";
@@ -235,15 +237,15 @@ sub build_dhcp {
   $self->tt->process('dhcpd.conf.tt2', $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
 
   # send new config file to each server
-  maybe_rename($PATH_TMPFILE, $file);
+  $self->maybe_rename($PATH_TMPFILE, $file);
   my @CDB_DHCP_SERVERS = qw(payday snickers);
   foreach my $host (@CDB_DHCP_SERVERS) {
-    maybe_system('scp', '-pq', $file, "$host:/etc");
+    $self->maybe_system('scp', '-pq', $file, "$host:/etc");
     if ( $? != 0 ) {
       warn "$0: ERROR: Failed to copy DNS files to $host\n";
     }
   }
-  maybe_system('ssh', '-x', 'dhcp', '/etc/init.d/dhcp restart');
+  $self->maybe_system('ssh', '-x', 'dhcp', '/etc/init.d/dhcp restart');
 
   print "done.\n";
 
@@ -253,9 +255,9 @@ sub build_nagios {
   my $self = shift;
   my $udb = $self->udb;
   print "Building nagios files... ";
-  &build_nagios_hosts;
-  &build_nagios_services;
-  maybe_system('ssh', '-x', 'storm', '/etc/init.d/nagios3 restart');
+  $self->build_nagios_hosts;
+  $self->build_nagios_services;
+  $self->maybe_system('ssh', '-x', 'storm', '/etc/init.d/nagios3 restart');
   print "done.\n";
 }
 
@@ -269,8 +271,8 @@ sub build_nagios_hosts {
   $self->tt->process('hosts.cfg.tt2', $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
 
   # send new config file to each server
-  maybe_rename($PATH_TMPFILE, $file);
-  maybe_system('scp', '-pq', $file, "storm:/etc/nagios3/conf.d/");
+  $self->maybe_rename($PATH_TMPFILE, $file);
+  $self->maybe_system('scp', '-pq', $file, "storm:/etc/nagios3/conf.d/");
   if ( $? != 0 ) {
     warn "$0: ERROR: Failed to copy nagios files to storm\n";
   }
@@ -286,8 +288,8 @@ sub build_nagios_services {
   $self->tt->process('services.cfg.tt2', $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
 
   # send new config file to each server
-  maybe_rename($PATH_TMPFILE, $file);
-  maybe_system('scp', '-pq', $file, "storm:/etc/nagios3/conf.d/");
+  $self->maybe_rename($PATH_TMPFILE, $file);
+  $self->maybe_system('scp', '-pq', $file, "storm:/etc/nagios3/conf.d/");
   if ( $? != 0 ) {
     warn "$0: ERROR: Failed to copy nagios files to storm\n";
   }
@@ -431,7 +433,7 @@ sub build_wpkg_hosts {
   }
 
   $self->tt->process('wpkg-hosts.xml.tt2', $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
-  maybe_rename($PATH_TMPFILE, $file);
+  $self->maybe_rename($PATH_TMPFILE, $file);
 
   print "done.\n";
 
@@ -522,19 +524,19 @@ sub build_dns {
   my @files = ();
 
   foreach my $subnet (@subnets) {
-    my $file = build_dns_map_reverse($serial_num, $subnet);
+    my $file = $self->build_dns_map_reverse($serial_num, $subnet);
     push @files, $file;
   }
 
   my @domains = qw(cs.brown.edu ilab.cs.brown.edu);
   foreach my $domain (@domains) {
-    my $file = build_dns_map_forward($serial_num, $domain);
+    my $file = $self->build_dns_map_forward($serial_num, $domain);
     push @files, $file;
   }
 
   # fix permissions
   foreach my $file (@files) {
-    maybe_rename("$file.tmp", $file);
+    $self->maybe_rename("$file.tmp", $file);
     if ($self->verbose) {
       print "DEBUG: fix permissions\n";
     }
@@ -548,12 +550,12 @@ sub build_dns {
   # send new config file to each server
   my @dns_servers = qw(payday snickers);
   foreach my $host (@dns_servers) {
-    maybe_system('scp', '-pq', @files, "$host:/var/cache/bind");
+    $self->maybe_system('scp', '-pq', @files, "$host:/var/cache/bind");
     if ( $? != 0 ) {
       warn "$0: ERROR: Failed to copy DNS files to $host\n";
     }
 
-    maybe_system('ssh', '-x', $host, '/usr/sbin/rndc reload');
+    $self->maybe_system('ssh', '-x', $host, '/usr/sbin/rndc reload');
     if ( $? != 0 ) {
         warn "$0: ERROR: Failed to send DNS reload command to on $host\n";
     }
@@ -561,6 +563,18 @@ sub build_dns {
 
   print "done.\n";
 
+}
+
+sub build_finger_data {
+  my $self = shift;
+  my $udb = $self->udb;
+  print "Building finger data... ";
+  my $file = $self->dryrun ? '/tmp/finger_data' : '/u/system/sysadmin/data';
+  my $PATH_TMPFILE = $file . '.tmp';
+  my $vars = {filename => $file, date => get_date(), dbh => $udb->storage->dbh};
+  $self->tt->process('finger_data.tt2', $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
+  $self->maybe_rename($PATH_TMPFILE, $file);
+  print "done.\n";
 }
 
 no Moose;

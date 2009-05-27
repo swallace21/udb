@@ -6,8 +6,6 @@ use warnings;
 use Getopt::Long;
 use Pod::Usage;
 use Data::Dumper;
-use NetAddr::IP qw(Coalesce);
-use List::MoreUtils qw(uniq);
 
 use FindBin qw($RealBin);
 use lib "$RealBin/../lib";
