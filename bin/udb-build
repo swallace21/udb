@@ -45,13 +45,13 @@ if (not $dryrun) {
   $ub->okay_to_build;
 }
 
-&build_tftpboot;
-&build_netgroup;
-&build_dhcp;
-&build_nagios;
-&build_wpkg_hosts;
-&build_dns;
-&build_finger_data;
+$ub->build_tftpboot;
+$ub->build_netgroup;
+$ub->build_dhcp;
+$ub->build_nagios;
+$ub->build_wpkg_hosts;
+$ub->build_dns;
+$ub->build_finger_data;
 
 __END__
 
