@@ -13,6 +13,7 @@ use BrownCS::udb::Util qw(:all);
 use BrownCS::udb::Console qw(:all);
 use BrownCS::udb::DeviceHash;
 use BrownCS::udb::Switch;
+use BrownCS::udb::Build;
 
 # Print a simple help message.
 sub usage {
@@ -31,9 +32,16 @@ GetOptions (
 ) or usage(1);
 usage(0) if $help;
 
+my $build = (not $dryrun);
+
 my $udb = BrownCS::udb::Schema->connect;
 my $uc = new BrownCS::udb::Console(udb => $udb);
 my $udh = new BrownCS::udb::DeviceHash(udb => $udb);
+  my $ub = new BrownCS::udb::Build(udb => $udb, verbose => $verbose, dryrun => $dryrun);
+
+if (not $dryrun) {
+  $build = $ub->okay_to_build;
+}
 
 if (@ARGV != 1) {
   usage(2);
@@ -87,7 +95,7 @@ foreach my $port (@ports) {
 }
 print "\n";
 
-if ($dryrun) {
+if ($dryrun or (not $build)) {
   exit(0);
 }
 

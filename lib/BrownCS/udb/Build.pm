@@ -24,19 +24,38 @@ sub okay_to_build {
   my $hostname;
   chomp($hostname = `hostname`);
 
+  my $warned = 0;
+
   if ($hostname ne 'adminhost') {
-    die "Error: you may only make changes from adminhost.\n";
+    if (not $warned) {
+      print "Warning: \n";
+      $warned++;
+    }
+    warn "  - you may only make changes from adminhost\n";
   }
 
   if ($> != 0) {
-    die "Error: you must be root to make changes.\n";
+    if (not $warned) {
+      print "Warning: \n";
+      $warned++;
+    }
+    warn "  - you must be root to make changes\n";
   }
 
   if (system("klist -5 2> /dev/null | grep '/admin' -q")) {
-    die "Error: you need Kerberos admin credentials to make changes.\n";
+    if (not $warned) {
+      print "Warning: \n";
+      $warned++;
+    }
+    warn "  - you need Kerberos admin credentials to make changes\n";
   }
 
-  return 1;
+  if ($warned) {
+    print "\n";
+    return 0;
+  } else {
+    return 1;
+  }
 }
 
 sub maybe_system {

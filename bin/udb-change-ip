@@ -22,6 +22,7 @@ sub usage {
 my $help = 0;
 my $verbose = 0;
 my $dryrun = 0;
+my $build = (not $dryrun);
 
 GetOptions (
   'help|h|?' => \$help, 
@@ -35,7 +36,7 @@ my $uc = new BrownCS::udb::Console(udb => $udb);
 if (not $dryrun) {
   use BrownCS::udb::Build;
   my $ub = new BrownCS::udb::Build(udb => $udb, verbose => $verbose, dryrun => $dryrun);
-  $ub->okay_to_build;
+  $build = $ub->okay_to_build;
 }
 
 if (@ARGV != 1) {
@@ -104,16 +105,18 @@ $chosen_addr->update({
     ipaddr => $ipaddr,
   });
 
-my $port = $chosen_iface->net_port;
-if ($port) {
-  my $net_switch = $port->net_switch;
-  
-  my $switch = BrownCS::udb::Switch->new({
-      net_switch => $net_switch,
-      verbose => $verbose,
-    });
-  $switch->connect;
-  $switch->update_port($port);
+if ($build) {
+  my $port = $chosen_iface->net_port;
+  if ($port) {
+    my $net_switch = $port->net_switch;
+
+    my $switch = BrownCS::udb::Switch->new({
+        net_switch => $net_switch,
+        verbose => $verbose,
+      });
+    $switch->connect;
+    $switch->update_port($port);
+  }
 }
 
 __END__
