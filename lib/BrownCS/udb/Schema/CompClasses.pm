@@ -48,10 +48,4 @@ __PACKAGE__->has_many(
 );
 __PACKAGE__->many_to_many(computers => 'comp_classes_computers', 'computer');
 
-
-# Created by DBIx::Class::Schema::Loader v0.04005 @ 2009-04-28 16:23:19
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:IRAZE5F4aHjYklEUmOhPBA
-
-
-# You can replace this text with custom content, and it will be preserved on regeneration
 1;

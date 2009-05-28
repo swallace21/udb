@@ -33,10 +33,4 @@ __PACKAGE__->add_columns(
 __PACKAGE__->set_primary_key("db_export_log_entry_id");
 __PACKAGE__->add_unique_constraint("db_export_log_entries_pkey", ["db_export_log_entry_id"]);
 
-
-# Created by DBIx::Class::Schema::Loader v0.04005 @ 2009-04-28 16:23:19
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:hO0WpJedRcG5uTmviuVV/w
-
-
-# You can replace this text with custom content, and it will be preserved on regeneration
 1;

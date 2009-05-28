@@ -42,6 +42,7 @@ __PACKAGE__->add_columns(
   },
   "blade_num",
   { data_type => "integer", default_value => undef, is_nullable => 1, size => 4 },
+  "last_updated" => { data_type => "timestamp without time zone", default_value => "now()", is_nullable => 0, size => 8, },
 );
 __PACKAGE__->set_primary_key("net_port_id");
 __PACKAGE__->add_unique_constraint(
@@ -77,10 +78,4 @@ __PACKAGE__->has_many(
 );
 __PACKAGE__->many_to_many(net_vlans => 'net_ports_net_vlans', 'net_vlan');
 
-
-# Created by DBIx::Class::Schema::Loader v0.04005 @ 2009-04-28 16:23:19
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:5RxCgi3jwnkgg0CdCQzHRg
-
-
-# You can replace this text with custom content, and it will be preserved on regeneration
 1;

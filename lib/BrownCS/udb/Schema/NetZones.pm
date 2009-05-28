@@ -43,6 +43,7 @@ __PACKAGE__->add_columns(
     is_nullable => 0,
     size => 1,
   },
+  "last_updated" => { data_type => "timestamp without time zone", default_value => "now()", is_nullable => 0, size => 8, },
 );
 __PACKAGE__->set_primary_key("zone_name");
 __PACKAGE__->add_unique_constraint("net_zones_pkey", ["zone_name"]);
@@ -78,10 +79,4 @@ __PACKAGE__->belongs_to(
   { management_type => "zone_manager" },
 );
 
-
-# Created by DBIx::Class::Schema::Loader v0.04005 @ 2009-04-28 16:23:19
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:wUtS84i58+KESw7iQKGhCg
-
-
-# You can replace this text with custom content, and it will be preserved on regeneration
 1;

@@ -43,14 +43,9 @@ __PACKAGE__->add_columns(
     is_nullable => 1,
     size => undef,
   },
+  "last_updated" => { data_type => "timestamp without time zone", default_value => "now()", is_nullable => 0, size => 8, },
 );
 __PACKAGE__->set_primary_key("fs_automount_id");
 __PACKAGE__->add_unique_constraint("fs_automounts_pkey", ["fs_automount_id"]);
 
-
-# Created by DBIx::Class::Schema::Loader v0.04005 @ 2009-04-28 16:23:19
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:b9UCOQ2mst8p4efAAkGyhA
-
-
-# You can replace this text with custom content, and it will be preserved on regeneration
 1;

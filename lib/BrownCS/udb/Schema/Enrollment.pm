@@ -66,6 +66,7 @@ __PACKAGE__->add_columns(
   { data_type => "boolean", default_value => undef, is_nullable => 1, size => 1 },
   "scm_research",
   { data_type => "boolean", default_value => undef, is_nullable => 1, size => 1 },
+  "last_updated" => { data_type => "timestamp without time zone", default_value => "now()", is_nullable => 0, size => 8, },
 );
 __PACKAGE__->set_primary_key("enrollment_id");
 __PACKAGE__->add_unique_constraint("enrollment_pkey", ["enrollment_id"]);
@@ -80,10 +81,4 @@ __PACKAGE__->belongs_to(
   { person_id => "person_id" },
 );
 
-
-# Created by DBIx::Class::Schema::Loader v0.04005 @ 2009-04-28 16:23:19
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:VdxsLaqzayHzkUHpKtVDiA
-
-
-# You can replace this text with custom content, and it will be preserved on regeneration
 1;
