@@ -82,6 +82,9 @@ EOF
       $device->status('deployed');
       $device->contact($uc->get_contact($device->contact));
       $device->owner($uc->get_owner($device->owner or $device->contact));
+      $device->serial_num($uc->get_serial_num($device->serial_num));
+      $device->brown_inv_num($uc->get_brown_inv_num($device->brown_inv_num));
+      $device->po_num($uc->get_po_num($device->po_num));
 
       $device->update_or_insert;
 
