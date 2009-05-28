@@ -127,6 +127,7 @@ EOF
         my $comp = $device->computer;
 
         $comp->os_type($uc->get_os_type($comp->os_type));
+        $comp->update_or_insert;
 
         my @classes = $comp->comp_classes->get_column("name")->all;
         my $classes_ref = $uc->get_comp_classes(@classes);
