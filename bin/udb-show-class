@@ -27,17 +27,30 @@ usage(0) if $help;
 my $udb = BrownCS::udb::Schema->connect;
 my $uc = new BrownCS::udb::Console(udb => $udb);
 
-if (@ARGV != 2) {
+if ((@ARGV < 1) or (@ARGV > 2)) {
   usage(2);
 }
 
 my $name = shift @ARGV;
 my $os = shift @ARGV;
 
-my $class = $udb->resultset('CompClasses')->search({name => $name, os_type => $os})->first;
-die "No such class $name for OS $os.\n" if not $class;
+my $class_search = {
+  name => $name,
+};
 
-my @comps = $class->computers->get_column("me.device_name")->all;
+if ($os) {
+  $class_search->{os_type} = $os;
+}
+
+my $class_rs = $udb->resultset('CompClasses')->search($class_search);
+die "No such class $name.\n" if not $class_rs->count;
+
+my @comps = ();
+
+while (my $class = $class_rs->next) {
+  @comps = (@comps, $class->computers->get_column("me.device_name")->all);
+}
+
 print join(" ", @comps) . "\n";
 
 __END__
