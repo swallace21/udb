@@ -333,7 +333,6 @@ sub build_wpkg_hosts {
 
   my $hosts = $udb->resultset('Computers')->search(
     {
-      'device.manager' => 'tstaff',
     },
     {
       prefetch => [
