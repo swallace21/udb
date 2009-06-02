@@ -61,10 +61,4 @@ __PACKAGE__->belongs_to(
   { dns_region => "dns_region" },
 );
 
-
-# Created by DBIx::Class::Schema::Loader v0.04005 @ 2009-04-28 16:23:19
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:OODECSI3DkHbLpXt8mF8kg
-
-
-# You can replace this text with custom content, and it will be preserved on regeneration
 1;

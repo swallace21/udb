@@ -34,10 +34,4 @@ __PACKAGE__->belongs_to(
   { device_name => "device_name" },
 );
 
-
-# Created by DBIx::Class::Schema::Loader v0.04005 @ 2009-04-28 16:23:19
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:RURQBlG2b9j38jRyiPmTHA
-
-
-# You can replace this text with custom content, and it will be preserved on regeneration
 1;

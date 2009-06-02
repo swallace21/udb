@@ -95,9 +95,4 @@ __PACKAGE__->has_one(
 __PACKAGE__->many_to_many(net_interfaces => 'net_addresses_net_interfaces', 'net_interface');
 __PACKAGE__->many_to_many(net_services => 'net_addresses_net_services', 'net_service');
 
-# Created by DBIx::Class::Schema::Loader v0.04005 @ 2009-04-28 16:23:19
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:kd/GnTPhy83ozW63db+evA
-
-
-# You can replace this text with custom content, and it will be preserved on regeneration
 1;

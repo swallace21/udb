@@ -1,0 +1,104 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+use Pod::Usage;
+
+use FindBin qw($RealBin);
+use lib "$RealBin/../lib";
+use BrownCS::udb::Schema;
+use BrownCS::udb::Console qw(:all);
+
+# Print a simple help message.
+sub usage {
+  my ($exit_status) = @_;
+  pod2usage({ -exitval => $exit_status, -verbose => 1});
+}
+
+my $help = 0;
+
+GetOptions (
+  'help|h|?' => \$help, 
+) or usage(1);
+usage(0) if $help;
+
+my $udb = BrownCS::udb::Schema->connect;
+my $uc = new BrownCS::udb::Console(udb => $udb);
+
+if (@ARGV < 1) {
+  usage(2);
+}
+
+my $search_attrs = {};
+
+my $tables = [];
+
+foreach my $arg (@ARGV) {
+  # extract the table name if there is one
+  if ($arg =~ /^([a-zA-Z0-9_]+)[.](.*)$/) {
+    my $table = $1;
+    push @$tables, $table;
+    $arg = $2;
+  }
+
+  # syntax 1: operator and ''
+  if ($arg =~ /^([a-zA-Z0-9_]+)([^'a-zA-Z0-9_]+)'(.*)'$/) {
+    my $field = $1;
+    my $value = { $2 => $3};
+    $search_attrs->{$field} = $value;
+  } elsif ($arg =~ /^([a-zA-Z0-9_]+)=(.*)$/) {
+    my $field = $1;
+    my $value = $2;
+    $search_attrs->{$field} = $value;
+  } else {
+    die "Invalid search term $arg.\n";
+  }
+}
+
+my $search_args = {
+  join => $tables,
+};
+
+my $device_rs = $udb->resultset('Devices')->search($search_attrs, $search_args);
+die "No results.\n" if not $device_rs->count;
+
+my @comps = $device_rs->get_column("me.device_name")->all;
+
+print join("\n", sort(@comps)) . "\n";
+
+__END__
+
+=head1 NAME
+
+udb-query - Query for hosts in udb
+
+=head1 SYNOPSIS
+
+udb-query [<field>=<value> ...]
+
+=head1 DESCRIPTION
+
+udb-query queries the UDB database for all computers that match certain fields.
+
+=head1 OPTIONS
+
+=over
+
+=item B<-h>, B<--help>
+
+Print a help message and exit.
+
+=back
+
+=head1 AUTHORS
+
+Aleks Bromfield.
+
+=head1 SEE ALSO
+
+B<udb>
+
+=cut
+

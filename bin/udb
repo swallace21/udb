@@ -41,6 +41,10 @@ my %udb_commands = (
     'desc' => "list the classes to which the computers belongs",
     'common' => 0,
   },
+  'query' => {
+    'desc' => "search for devices",
+    'common' => 0,
+  },
   'show-class' => {
     'desc' => "list the members of a class",
     'common' => 0,

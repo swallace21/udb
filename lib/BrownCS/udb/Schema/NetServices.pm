@@ -28,10 +28,4 @@ __PACKAGE__->has_many(
 );
 __PACKAGE__->many_to_many(net_addresses => 'net_addresses_net_services', 'net_address');
 
-
-# Created by DBIx::Class::Schema::Loader v0.04005 @ 2009-04-28 16:23:19
-# DO NOT MODIFY THIS OR ANYTHING ABOVE! md5sum:SSI76WvH5VC7MtsGhcfmZA
-
-
-# You can replace this text with custom content, and it will be preserved on regeneration
 1;

@@ -44,11 +44,19 @@ if ($arg_name) {
   &menu_screen;
 }
 
+sub press_any_key {
+  print "Press any key to continue... ";
+  my $cmd = $uc->get_key;
+  return;
+}
+
 sub search_screen {
   my ($name) = @_;
   my $devices = get_devices($name);
   if ($devices->count == 0) {
-    die "Couldn't find anything matching $name.\n";
+    warn "Couldn't find anything matching $name.\n";
+    &press_any_key;
+    return 1;
   }
   
   my $device_pager = $devices->pager;
@@ -86,9 +94,11 @@ EOF
         my $answer = $uc->confirm("Are you sure? ",0);
         if ($answer) {
           system("udb delete $name");
+          &press_any_key;
         }
       } elsif (/^e$/) {
         system("udb edit $name");
+        &press_any_key;
       }
     }
   }
@@ -115,6 +125,7 @@ EOF
         my $new_name = $uc->ask("Name:",'');
         if ($new_name) {
           system("udb add $new_name");
+          &press_any_key;
         }
       } elsif (/^f$/) {
         my $search_pattern = $uc->ask("Name to search for:",'');

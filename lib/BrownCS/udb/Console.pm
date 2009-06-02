@@ -499,6 +499,24 @@ sub get_owner {
   );
 }
 
+sub get_serial_num {
+  my $self = shift;
+  my ($default) = @_;
+  return $self->get_updated_val("Serial number [optional]",$default);
+}
+
+sub get_brown_inv_num {
+  my $self = shift;
+  my ($default) = @_;
+  return $self->get_updated_val("Brown inventory number [optional]",$default);
+}
+
+sub get_po_num {
+  my $self = shift;
+  my ($default) = @_;
+  return $self->get_updated_val("Purchase order [optional]",$default);
+}
+
 sub get_room {
   my $self = shift;
   my ($default) = @_;
