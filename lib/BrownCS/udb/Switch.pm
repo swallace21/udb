@@ -81,13 +81,17 @@ sub get_port_desc {
   my ($port) = @_;
   my $ifaces = $port->net_interfaces;
 
+	# TODO, this should really reference places instead, but the information
+	# doesn't seem to be in the database!
+	my ($room) = split(/-/, $port->wall_plate);
+
   my $desc;
   if ($ifaces->count == 0) {
     $desc = "";
   } elsif ($ifaces->count == 1) {
-    $desc = $ifaces->single->device_name;
+    $desc = $ifaces->single->device_name . " - " . $room;
   } else {
-    $desc = "netgear switch";
+    $desc = "unmanaged switch " . $room;
   }
 
   return $desc;
@@ -137,6 +141,23 @@ sub get_port_vlans {
   delete($vlans{$native_vlan});
 
   return ($native_vlan, (keys %vlans));
+}
+
+sub get_port_devices {
+  my $self = shift;
+  my ($port) = @_;
+  my $ifaces = $port->net_interfaces;
+
+	my @net_ifaces = $ifaces->search({
+			net_port_id => $port->net_port_id,
+		});
+
+	my @devices;
+	for my $iface (@net_ifaces) {
+		push @devices, $iface->device_name;	
+	} 
+
+	return @devices;
 }
 
 sub update_port {
