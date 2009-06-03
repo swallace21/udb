@@ -56,9 +56,12 @@ my @ports = $udb->resultset('NetPorts')->search({
 
 # if no result, search on hostname
 unless(@ports) {
-	my $ifaces = $udb->resultset('Devices')->find($name)->net_interfaces;
-	while (my $iface = $ifaces->next) {
-		push @ports, $iface->net_port;
+	my $device = $udb->resultset('Devices')->find($name);
+	if ($device) {
+		my $ifaces = $device->net_interfaces;
+		while (my $iface = $ifaces->next) {
+			push @ports, $iface->net_port;
+		}
 	}
 }
 

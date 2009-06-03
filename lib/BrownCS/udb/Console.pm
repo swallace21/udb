@@ -5,6 +5,7 @@ use Term::ReadKey;
 use Term::ReadLine;
 use File::Temp qw(tempfile);
 use BrownCS::udb::Util qw(:all);
+use BrownCS::udb::Switch;
 
 has 'udb' => ( is => 'ro', isa => 'BrownCS::udb::Schema', required => 1 );
 has 'term' => ( is => 'ro', isa => 'Term::ReadLine' );
@@ -422,11 +423,116 @@ EOF
 
 sub get_port {
   my $self = shift;
+	my ($iface, $vlan) = @_;
+	my $room = $iface->device->place->room;
+	my $port;
+
+	# FIX ME - this check needs to be checked against a db entry, but I need this working now!
+	if ($room && ($room == '531' || $room == '310')) {
+    $port = $self->get_switchport($iface, $vlan);
+	} else {
+	  $port = $self->get_walljack($iface);
+	}
+
+  return $port;
+}
+
+sub get_switchport {
+	my $self = shift;
+	my ($iface, $vlan) = @_;
+
+	my $room = $iface->device->place->room;
+
+	my ($switch_name, $blade_num, $port_num, $wall_plate) = "";
+
+	# if this is an existing port, then retrieve current port information
+	if ($iface->net_port_id) {
+		$switch_name = $iface->net_port->net_switch->switch_name;
+		$blade_num = $iface->net_port->net_switch->blade_num;
+		$port_num = $iface->net_port->net_switch->port_num;
+		$wall_plate = $iface->net_port->net_switch->wall_plate;
+	}
+
+	my $port;
+
+	# prompt user for updated port information
+	$switch_name = $self->get_updated_val("Switch",$switch_name, verify_switch($self->udb));
+	$blade_num = $self->get_updated_val("Blade Number",$blade_num,verify_blade($self->udb,$switch_name));
+	$port_num = $self->get_updated_val("Port Number",$port_num,verify_port_num($self->udb,$switch_name));
+	
+	# FIX ME - this needs to be checked against a db entry
+	if ($room  && ($room == '531' || $room == '310')) {
+		$wall_plate = "MR";
+	} else {
+		$wall_plate = $self->get_updated_val("Wall Plate", $wall_plate);
+	}
+
+	my $net_switch = $self->udb->resultset('NetSwitches')->find($switch_name);
+
+	# get the associated port number
+	$port = $self->udb->resultset('NetPorts')->search({
+			switch_name => $switch_name,
+			blade_num => $blade_num,
+			port_num => $port_num,
+		})->single;
+	
+	# if the port doesn't exist, then insert an entry
+	if (!$port) {
+		$port = $self->udb->resultset('NetPorts')->find_or_create({
+			net_switch => $net_switch,
+			port_num => $port_num,
+			blade_num => $blade_num,
+			wall_plate => $wall_plate,
+		});
+
+		return $port;
+	}
+
+	# if the port already exists, do some sanity checks to make sure this change wouldn't knowingly 
+	# break anything else
+	my $switch = BrownCS::udb::Switch->new({
+			net_switch => $net_switch,
+			verbose => 0,
+		});
+
+	# make sure wall plate given by users matches wall plate associated with switch port
+	if ("$wall_plate" ne $port->wall_plate) {
+		print "ERROR: the wall plate your provided ($wall_plate) doesn't match the wall plate\n";
+		print "associated with this switch port (" . $port->wall_plate . ")\n";
+		return undef;
+	}
+
+	# make sure that vlan matches the native vlan for non-dynamic subnets
+	my ($native_vlan, @other_vlans) = $switch->get_port_vlans($port);
+
+	my $dynamic_vlans_rs = $self->udb->resultset('NetVlans')->search({
+			dynamic_dhcp_start => { '!=', undef }
+		});
+
+	my @dynamic_vlans;
+	while (my $dynamic_vlan = $dynamic_vlans_rs->next) {
+		push @dynamic_vlans, $dynamic_vlan->vlan_num;
+	}
+
+	if($vlan && $vlan != $native_vlan && ! grep(/$native_vlan/, @dynamic_vlans)) {
+		print "ERROR: primary VLAN of port is set to $native_vlan, which doesn't match the\n";
+		print "VLAN entered of $vlan\n";
+		return undef;
+	}
+
+	return $port;
+}
+
+sub get_walljack {
+	my $self = shift;
+	my ($iface) = @_;
+
   my $walljack_preamble = <<EOF;
 What wall jack will the computer be plugged into?
 If this computer will not be tied to any particular wall jack (e.g.
 laptops), or if you aren't sure which wall jack the computer will be
 attached to, you can safely leave this blank and fill it in later.
+
 EOF
   my $walljack_prompt = "\n${walljack_preamble}Wall jack:";
   my $port = $self->demand($walljack_prompt, sub {

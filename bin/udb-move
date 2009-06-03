@@ -55,7 +55,7 @@ if ($device->protected) {
 }
 
 my $room = $uc->get_room;
-my $port = $uc->get_port;
+my $port = $uc->get_port($name);
 
 my $rs;
 eval {
