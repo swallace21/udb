@@ -54,7 +54,7 @@ my @ports = $udb->resultset('NetPorts')->search({
     wall_plate => { '~*', $name},
   });
 
-# if no result, search on hostname
+# if no result, search on device name
 unless(@ports) {
 	my $device = $udb->resultset('Devices')->find($name);
 	if ($device) {
@@ -65,7 +65,7 @@ unless(@ports) {
 	}
 }
 
-die "No record for wall plate or hostname \"$name\".\n" unless(@ports);
+die "No record for wall plate or device name \"$name\".\n" unless(@ports);
 
 my %switches = ();
 
@@ -125,7 +125,7 @@ udb-reset-port - Reset the switch configuration of a port
 
 =head1 SYNOPSIS
 
-udb-reset-port <wall plate|hostname>
+udb-reset-port <wall plate|device name>
 
 =head1 DESCRIPTION
 

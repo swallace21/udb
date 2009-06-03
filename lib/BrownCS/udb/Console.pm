@@ -586,7 +586,7 @@ sub get_comments {
 sub get_device_name {
   my $self = shift;
   my ($default) = @_;
-  return $self->get_updated_val("Device name", $default, verify_hostname($self->udb));
+  return $self->get_updated_val("Device name", $default, verify_device_name($self->udb));
 }
 
 sub get_contact {

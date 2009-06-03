@@ -124,7 +124,11 @@ EOF
       if (/^a$/) {
         my $new_name = $uc->ask("Name:",'');
         if ($new_name) {
-          system("udb add $new_name");
+					if (! verify_device_name($udb, $new_name)) { 
+						print "\nERROR: device name contained illegal characters\n\n";
+					} else {
+          	system("udb add $new_name");
+					}
           &press_any_key;
         }
       } elsif (/^f$/) {

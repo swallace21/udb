@@ -57,7 +57,7 @@ if ($device->protected) {
 
 if (not $new_name) {
   $new_name = $uc->get_device_name;
-} elsif (not verify_hostname($new_name)) {
+} elsif (not verify_device_name($new_name)) {
   exit(1);
 }
 

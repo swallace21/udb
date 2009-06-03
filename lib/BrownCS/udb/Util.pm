@@ -18,7 +18,7 @@ our @EXPORT_OK = qw(
   get_host_class_map
   ipv4_n2x
 	verify_blade
-  verify_hostname
+  verify_device_name
   verify_ip_or_vlan
   verify_mac
   verify_nonempty
@@ -149,19 +149,16 @@ sub verify_nonempty {
   }
 }
 
-sub verify_hostname {
+sub verify_device_name {
   my $udb = shift;
-  # TODO: check that value is not in use
-  return sub {
-    my($hostname) = @_;
-    $hostname = lc($hostname);
+  my($device) = @_;
 
-    if($hostname !~ /^[a-z0-9]([a-z0-9\-\_]{0,253}[a-z0-9])?$/) {
-      return (0, undef);
-    }
+  $device = lc($device);
+  if($device !~ /^[a-z0-9]([a-z0-9\-\_]{0,253}[a-z0-9])?$/) {
+    return 0;
+  }
 
-    return (1, $hostname);
-  };
+  return 1;
 }
 
 sub verify_mac {

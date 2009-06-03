@@ -43,6 +43,7 @@ if (@ARGV != 1) {
 }
 
 my $name = shift @ARGV;
+unless (verify_device_name($name)) { die "ERROR: device name contains illegal characters\n" };
 
 my $rs;
 eval {
