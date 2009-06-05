@@ -18,40 +18,57 @@ sub BUILD {
   $self->{tt} = Template->new({INCLUDE_PATH => "$RealBin/../templates"}) || die "$Template::ERROR\n";
 }
 
-sub okay_to_build {
+sub okay_kerberos {
   my $self = shift;
 
-  my $hostname;
-  chomp($hostname = `hostname`);
-
-  my $warned = 0;
-
-  if ($hostname ne 'adminhost') {
-    if (not $warned) {
-      print "Warning: \n";
-      $warned++;
-    }
-    warn "  - you may only make changes from adminhost\n";
+  if(system("klist -5 2> /dev/null | grep '/admin' -q")) {
+       print "Warning: You do not have Kerberos admin credentials.\n";
+       return 0;
   }
+  return 1;
+}
+
+sub okay_adminhost {
+  my $self = shift;
+
+  my $hostname = `hostname`;
+  chomp($hostname);
+  if($hostname ne 'adminhost') {
+    print "Warning: You are not on adminhost.\n";
+    return 0;
+  }
+  return 1;
+}
+
+sub okay_root {
+  my $self = shift;
 
   if ($> != 0) {
-    if (not $warned) {
-      print "Warning: \n";
-      $warned++;
-    }
-    warn "  - you must be root to make changes\n";
+    print "Warning: You are not root.\n";
+    return 0;
   }
+  return 1;
+}
 
-  if (system("klist -5 2> /dev/null | grep '/admin' -q")) {
-    if (not $warned) {
-      print "Warning: \n";
-      $warned++;
-    }
-    warn "  - you need Kerberos admin credentials to make changes\n";
+sub okay_sudo {
+  my $self = shift;
+
+  unless (okay_root && $ENV{'SUID_USER'}){
+    print "WARNING: Please run with sudo.\n";
+    return 0;
   }
+  return 1;
+}
+
+sub okay_to_build {
+  my $warned = 0;
+
+  $warned += okay_kerberos();
+  $warned += okay_root();
+  $warned += okay_adminhost();
 
   if ($warned) {
-    print "\n";
+    print "Sorry, can't build. Check the warnings.\n";
     return 0;
   } else {
     return 1;
