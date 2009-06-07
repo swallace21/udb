@@ -385,6 +385,21 @@ sub okay_tstaff {
   return 0;
 }
 
+sub okay_to_build {
+  my $privs = 0;
+
+  $privs += okay_kerberos();
+  $privs += okay_root();
+  $privs += okay_adminhost();
+
+  if ($privs != 3) {
+    print "Sorry, can't build. Check the warnings.\n";
+    return 0;
+  } else {
+    return 1;
+  }
+}
+
 1;
 __END__
 

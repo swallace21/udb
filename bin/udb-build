@@ -37,10 +37,17 @@ if (@ARGV > 0) {
   usage(2);
 }
 
-my $ub = new BrownCS::udb::Build(udb => $udb, verbose => $verbose, dryrun => $dryrun);
 
 if (not $dryrun) {
-  $ub->okay_to_build;
+  my $privs;
+  $privs += BrownCS::udb::Util::okay_adminhost;
+  $privs += BrownCS::udb::Util::okay_kerberos;
+  $privs += BrownCS::udb::Util::okay_sudo;
+  if ($privs != 3) {
+    print "Insufficient privileges. Check your warnings. \n"
+    exit;
+  }
+
 }
 
 $ub->build_tftpboot;
