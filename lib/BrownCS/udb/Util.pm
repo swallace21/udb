@@ -301,6 +301,79 @@ sub verify_walljack {
   };
 }
 
+sub okay_adminhost {
+  my $self = shift;
+  
+  my $hostname = `hostname`;
+  chomp($hostname);
+  if($hostname ne 'adminhost') {
+    print "Warning: You are not on adminhost.\n";
+    return 0;
+  }
+  return 1;
+}
+
+sub okay_kerberos {
+  my $self = shift;
+
+  if(system("klist -5 2> /dev/null | grep '/admin' -q")) {
+       print "Warning: You do not have Kerberos admin credentials.\n";
+       return 0;
+  }
+  return 1;
+}
+
+sub okay_root {
+  my $self = shift;
+
+  if ($> != 0) {
+    print "Warning: You are not root.\n";
+    return 0;
+  }
+  return 1;
+}
+
+sub okay_sudo {
+  my $self = shift;
+
+  unless (okay_root && $ENV{'SUID_USER'}){
+    #this should be fixed to just run sudo - but if they're root, that's no good.
+    print "WARNING: Please logout and run with sudo.\n";
+    return 0;
+  }
+  return 1;
+}
+
+sub okay_tstaff_user {
+  my $self = shift;
+
+  my $groups = `/local/bin/groups`;
+  if($groups !~ /tstaff/){
+    print "Sorry, you're not in tstaff.\n";
+    return 0;
+  }
+  return 1;
+}
+
+sub okay_tstaff_machine {
+  my $self = shift;
+
+  my $hostname = `/bin/hostname`;
+  chomp ($hostname);
+  $hostname = $hostname . ".cs.brown.edu";
+
+  my @machines = `netgroup tstaff`;
+  my $host;
+  foreach $host (@machines) {
+    chomp($host);
+    if ($host eq $hostname) {
+      return 1;
+    }
+  }
+  print "Sorry, this is not a tstaff machine.\n";
+  return 0;
+}
+
 1;
 __END__
 
