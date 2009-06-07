@@ -40,7 +40,10 @@ my $udh = new BrownCS::udb::DeviceHash(udb => $udb);
   my $ub = new BrownCS::udb::Build(udb => $udb, verbose => $verbose, dryrun => $dryrun);
 
 if (not $dryrun) {
-  $build = $ub->okay_to_build;
+  if (not BrownCS::udb::Util::okay_tstaff) {
+    print "Insufficient privileges - check your warnings.\n";
+    exit;
+  }
 }
 
 if (@ARGV != 1) {

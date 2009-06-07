@@ -373,6 +373,18 @@ sub okay_tstaff_machine {
   return 0;
 }
 
+sub okay_tstaff {
+  my $self = shift;
+
+  my $privs;
+  $privs += okay_tstaff_machine;
+  $privs += okay_tstaff_user;
+  if($privs == 2){
+    return 1;
+  }
+  return 0;
+}
+
 1;
 __END__
 
