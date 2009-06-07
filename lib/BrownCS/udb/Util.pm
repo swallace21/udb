@@ -150,7 +150,6 @@ sub verify_nonempty {
 }
 
 sub verify_device_name {
-  my $udb = shift;
   my($device) = @_;
 
   $device = lc($device);
