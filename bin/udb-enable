@@ -36,8 +36,8 @@ my $uc = new BrownCS::udb::Console(udb => $udb);
 if (not $dryrun) {
   use BrownCS::udb::Build;
   my $ub = new BrownCS::udb::Build(udb => $udb, verbose => $verbose, dryrun => $dryrun);
-  $ub->okay_adminhost;
-  $ub->okay_root;
+  $ub->okay_tstaff_user;
+  $ub->okay_tstaff_machine;
 }
 
 if (@ARGV != 1) {
