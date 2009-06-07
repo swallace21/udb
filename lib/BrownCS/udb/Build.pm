@@ -18,16 +18,14 @@ sub BUILD {
   $self->{tt} = Template->new({INCLUDE_PATH => "$RealBin/../templates"}) || die "$Template::ERROR\n";
 }
 
-
-
 sub okay_to_build {
-  my $warned = 0;
+  my $privs = 0;
 
-  $warned += okay_kerberos();
-  $warned += okay_root();
-  $warned += okay_adminhost();
+  $privs += okay_kerberos();
+  $privs += okay_root();
+  $privs += okay_adminhost();
 
-  if ($warned) {
+  if ($privs != 3) {
     print "Sorry, can't build. Check the warnings.\n";
     return 0;
   } else {
