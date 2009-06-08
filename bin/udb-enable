@@ -45,7 +45,12 @@ if (@ARGV != 1) {
 }
 
 my $name = shift @ARGV;
-unless (verify_device_name($name)) { die "ERROR: device name contains illegal characters: $name\n" };
+<<<<<<< HEAD:bin/udb-enable
+=======
+my $verified = 0;
+($verified, $name) = verify_device_name($udb)->($name, $verbose);
+unless ($verified) { die "ERROR: device name contains illegal characters\n" };
+>>>>>>> 1824a6d8989586fbbf3555403135e16a4592049e:bin/udb-enable
 
 my $rs;
 eval {
@@ -102,9 +107,11 @@ EOF
         $building = "CIT";
         use Data::Dumper;
         my $default_room = '';
+
         if ($device->in_storage and $device->place) {
           $default_room = $device->place->room;
         }
+
         $room = $uc->get_room($device->place ? $device->place->room : '');
       } else {
         ($city, $building, $room) = $uc->get_place($device->place);
