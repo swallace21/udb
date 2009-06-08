@@ -150,14 +150,20 @@ sub verify_nonempty {
 }
 
 sub verify_device_name {
-  my($device) = @_;
+	my $udb = shift;
+	return sub {
+  	my($device, $verbose) = @_;
 
-  $device = lc($device);
-  if($device !~ /^[a-z0-9]([a-z0-9\-\_]{0,253}[a-z0-9])?$/) {
-    return 0;
-  }
+		if ($verbose) {
+			print "Ensuring all device names are lowercase\n";
+		}
+  	$device = lc($device);
+  	if($device !~ /^[a-z0-9]([a-z0-9\-\_]{0,253}[a-z0-9])?$/) {
+    	return (0, $device);
+  	}
 
-  return 1;
+  	return (1, $device);
+	};
 }
 
 sub verify_mac {
