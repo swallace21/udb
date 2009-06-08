@@ -40,7 +40,7 @@ if (@ARGV > 0) {
 
 if (not $dryrun) {
   if(not BrownCS::udb::Util::okay_root){
-    system("sudo udb-build");
+    system("sudo \"$RealBin/udb-build\"");
     exit;
   }
 
