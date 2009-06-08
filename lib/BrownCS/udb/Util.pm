@@ -309,7 +309,8 @@ sub verify_walljack {
 sub okay_adminhost {
   my $self = shift;
   
-  my $hostname = `hostname`;
+  use Sys::Hostname;
+  my $hostname = hostname();
   chomp($hostname);
   if($hostname ne 'adminhost') {
     print "Warning: You are not on adminhost.\n";
@@ -352,8 +353,9 @@ sub okay_sudo {
 sub okay_tstaff_user {
   my $self = shift;
 
-  my $groups = `/local/bin/groups`;
-  if($groups !~ /tstaff/){
+  my @groupinf = getgrnam("tstaff");
+  my $user = getlogin;
+  if($groupinf[3] !~ /\b$user\b/){
     print "Sorry, you're not in tstaff.\n";
     return 0;
   }
@@ -363,8 +365,8 @@ sub okay_tstaff_user {
 sub okay_tstaff_machine {
   my $self = shift;
 
-  my $hostname = `/bin/hostname`;
-  chomp ($hostname);
+  use Sys::Hostname;
+  my $hostname = hostname();
   $hostname = $hostname . ".cs.brown.edu";
 
   my @machines = `netgroup tstaff`;

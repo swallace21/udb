@@ -39,15 +39,23 @@ if (@ARGV > 0) {
 
 
 if (not $dryrun) {
+  if(not BrownCS::udb::Util::okay_root){
+    system("sudo udb-build");
+    exit;
+  }
+
+  if(BrownCS::udb::Util::okay_root && not BrownCS::udb::Util::okay_sudo){
+    exit;
+  }
+
   my $privs;
   $privs += BrownCS::udb::Util::okay_adminhost;
   $privs += BrownCS::udb::Util::okay_kerberos;
-  $privs += BrownCS::udb::Util::okay_sudo;
+  $privs += BrownCS::udb::Util::okay_root;
   if ($privs != 3) {
     print "Insufficient privileges. Check your warnings. \n"
     exit;
   }
-
 }
 
 $ub->build_tftpboot;
