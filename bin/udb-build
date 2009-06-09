@@ -53,7 +53,7 @@ if (not $dryrun) {
   $privs += BrownCS::udb::Util::okay_kerberos;
   $privs += BrownCS::udb::Util::okay_root;
   if ($privs != 3) {
-    print "Insufficient privileges. Check your warnings. \n"
+    print "Insufficient privileges. Check your warnings. \n";
     exit;
   }
 }
