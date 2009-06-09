@@ -58,6 +58,8 @@ if (not $dryrun) {
   }
 }
 
+my $ub = new BrownCS::udb::Build(udb => $udb, verbose => $verbose, dryrun => $dryrun);
+
 $ub->build_tftpboot;
 $ub->build_netgroup;
 $ub->build_dhcp;
