@@ -343,7 +343,6 @@ sub okay_sudo {
   my $self = shift;
 
   unless (okay_root && $ENV{'SUID_USER'}){
-    #this should be fixed to just run sudo - but if they're root, that's no good.
     print "WARNING: Please logout and run with sudo.\n";
     return 0;
   }
