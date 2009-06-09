@@ -424,14 +424,17 @@ EOF
 sub get_port {
   my $self = shift;
 	my ($iface, $vlan) = @_;
-	my $room = $iface->device->place->room;
+	my $place = $iface->device->place;
 	my $port;
 
-	# FIX ME - this check needs to be checked against a db entry, but I need this working now!
-	if ($room && ($room == '531' || $room == '310')) {
-    $port = $self->get_switchport($iface, $vlan);
-	} else {
-	  $port = $self->get_walljack($iface);
+	if ($place && $place->room) {
+		my $room = $place->room;
+		# FIX ME - this check needs to be checked against a db entry, but I need this working now!
+		if ($room == '531' || $room == '310') {
+    	$port = $self->get_switchport($iface, $vlan);
+		} else {
+	  	$port = $self->get_walljack($iface);
+		}
 	}
 
   return $port;

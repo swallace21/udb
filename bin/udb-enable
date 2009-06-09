@@ -82,14 +82,29 @@ EOF
       # fields that apply to all devices
       #
 
-      $device->manager($uc->get_management_type($device->manager));
       $device->usage($uc->get_equip_usage_type($device->usage));
+
+			if ($device->usage->tracked) {
+      	$device->manager($uc->get_management_type($device->manager));
+			} else {
+				$device->manager('user');
+			}
+
       $device->status('deployed');
       $device->contact($uc->get_contact($device->contact));
-      $device->owner($uc->get_owner($device->owner or $device->contact));
-			$device->serial_num($uc->get_serial_num($device->serial_num));
-      $device->brown_inv_num($uc->get_brown_inv_num($device->brown_inv_num));
-      $device->po_num($uc->get_po_num($device->po_num));
+
+			if ($device->usage->tracked) {
+      	$device->owner($uc->get_owner($device->owner or $device->contact));
+			} else {
+				$device->owner($device->contact);
+			}
+
+			# if this a device tstaff tracks, then gather pertinent information
+			if ($device->usage->tracked) {
+				$device->serial_num($uc->get_serial_num($device->serial_num));
+      	$device->brown_inv_num($uc->get_brown_inv_num($device->brown_inv_num));
+      	$device->po_num($uc->get_po_num($device->po_num));
+			}
 
       $device->update_or_insert;
 
@@ -97,61 +112,65 @@ EOF
       # location
       #
 
-      my $is_in_cit = $uc->confirm("\nIs this device located in the CIT? (Y/n)", "y");
-      my ($city, $building, $room);
-      if ($is_in_cit) {
-        $city = "Providence";
-        $building = "CIT";
-        use Data::Dumper;
-        my $default_room = '';
+			if ($device->usage->tracked) {
+      	my $is_in_cit = $uc->confirm("\nIs this device located in the CIT? (Y/n)", "y");
+      	my ($city, $building, $room);
+      	if ($is_in_cit) {
+        	$city = "Providence";
+        	$building = "CIT";
+        	use Data::Dumper;
+        	my $default_room = '';
+	
+        	if ($device->in_storage and $device->place) {
+          	$default_room = $device->place->room;
+        	}
+	
+        	$room = $uc->get_room($device->place ? $device->place->room : '');
+      	} else {
+        	($city, $building, $room) = $uc->get_place($device->place);
+      	}
 
-        if ($device->in_storage and $device->place) {
-          $default_room = $device->place->room;
-        }
+      	my $loc = $udb->resultset('Places')->find_or_create({
+          	city => $city,
+          	building => $building,
+          	room => $room,
+        	});
 
-        $room = $uc->get_room($device->place ? $device->place->room : '');
-      } else {
-        ($city, $building, $room) = $uc->get_place($device->place);
-      }
-
-      my $loc = $udb->resultset('Places')->find_or_create({
-          city => $city,
-          building => $building,
-          room => $room,
-        });
-
-      $device->place($loc);
+      	$device->place($loc);
+			}
 
       #
       # computer-specific
       #
 
-      my $is_comp = $uc->confirm("\nIs this device a computer? (Y/n)", "y");
-      if ($is_comp) {
-        $device->computer($udb->resultset('Computers')->find_or_new({device_name => $name}));
-        $device->comp_sysinfo($udb->resultset('CompSysinfo')->find_or_new({device_name => $name}));
-
-        my $comp = $device->computer;
-
-        $comp->os_type($uc->get_os_type($comp->os_type));
-        $comp->update_or_insert;
-
-        my @classes = $comp->comp_classes->get_column("name")->all;
-        my $classes_ref = $uc->get_comp_classes(@classes);
-        if ($classes_ref) {
-          foreach (@$classes_ref) {
-            my $class = $udb->resultset('CompClasses')->find_or_create({
-                name => $_,
-                os_type => $comp->os_type,
-              });
-            $comp->add_to_comp_classes($class);
-          }
-        }
-
-        $comp->update_or_insert;
-        $device->comp_sysinfo->update_or_insert;
-      }
-
+			if ($device->usage->tracked) {
+      	my $is_comp = $uc->confirm("\nIs this device a computer? (Y/n)", "y");
+      	if ($is_comp) {
+        	$device->computer($udb->resultset('Computers')->find_or_new({device_name => $name}));
+        	$device->comp_sysinfo($udb->resultset('CompSysinfo')->find_or_new({device_name => $name}));
+	
+        	my $comp = $device->computer;
+	
+        	$comp->os_type($uc->get_os_type($comp->os_type));
+        	$comp->update_or_insert;
+	
+        	my @classes = $comp->comp_classes->get_column("name")->all;
+        	my $classes_ref = $uc->get_comp_classes(@classes);
+        	if ($classes_ref) {
+          	foreach (@$classes_ref) {
+            	my $class = $udb->resultset('CompClasses')->find_or_create({
+                	name => $_,
+                	os_type => $comp->os_type,
+              	});
+            	$comp->add_to_comp_classes($class);
+          	}
+        	}
+	
+        	$comp->update_or_insert;
+        	$device->comp_sysinfo->update_or_insert;
+      	}
+			}
+	
       #
       # network-specific
       #
@@ -178,36 +197,33 @@ EOF
 				});
 
 				# get port information from the user
-        my $port = $uc->get_port($iface,$vlan->vlan_num);
+       	my $port = $uc->get_port($iface,$vlan->vlan_num);
 
 				# associate port information with interface
-        if ($port) {
-          $iface->net_port($port);
-          $iface->update;
-        } else {
-					print "Error: can't configure port information, exiting...\n";
-					exit 1;
-				}
+       	if ($port) {
+         	$iface->net_port($port);
+         	$iface->update;
+       	} 
 
 				# associate the ip address and vlan with the interface
-        my $addr = $udb->resultset('NetAddresses')->create({
-            vlan => $vlan,
-            ipaddr => $ipaddr,
-            monitored => 0,
-          });
+       	my $addr = $udb->resultset('NetAddresses')->create({
+           	vlan => $vlan,
+           	ipaddr => $ipaddr,
+           	monitored => 0,
+         	});
 
-        dns_insert_both($name, 'cs.brown.edu', $addr, 1);
+       	dns_insert_both($name, 'cs.brown.edu', $addr, 1);
 
-        $addr->add_to_net_interfaces($iface);
+       	$addr->add_to_net_interfaces($iface);
 
-        $iface->update({
-            primary_address => $addr,
-        });
+       	$iface->update({
+           	primary_address => $addr,
+       	});
 
-        if ($port and (! grep { $_ = $vlan } $port->net_vlans)) {
-          printf("bind port %s to vlan %s\n", $port->wall_plate, $vlan->vlan_num);
-          $port->add_to_net_vlans($vlan);
-        }
+       	if ($port and (! grep { $_ = $vlan } $port->net_vlans)) {
+         	printf("bind port %s to vlan %s\n", $port->wall_plate, $vlan->vlan_num);
+         	$port->add_to_net_vlans($vlan);
+       	}
       }
 
       #
