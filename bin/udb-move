@@ -74,6 +74,8 @@ eval {
         $iface->net_port($port);
         $iface->update;
       }
+
+      system("$RealBin/udb-reset-port $port");
     });
 };
 if ($@) {
