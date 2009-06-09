@@ -55,12 +55,11 @@ if ($device->protected) {
   }
 }
 
-my $room = $uc->get_room;
-my $port = $uc->get_port($name);
-
 my $rs;
 eval {
   $rs = $udb->txn_do(sub {
+			my $room = $uc->get_room($device->place ? $device->place->room : '');
+
       my $new_place = $udb->resultset('Places')->find_or_create({
           city => 'Providence',
           building => 'CIT',
@@ -68,6 +67,9 @@ eval {
         });
       $device->place($new_place);
       $device->update;
+
+			my $iface = $device->net_interfaces->single;
+			my $port = $uc->get_port($iface);
 
       my $ifaces_rs = $device->net_interfaces;
       while (my $iface = $ifaces_rs->next) {
