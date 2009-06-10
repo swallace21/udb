@@ -148,7 +148,12 @@ EOF
       #
 
 			if ($device->usage->tracked) {
-      	my $is_comp = $uc->confirm("\nIs this device a computer? (Y/n)", "y");
+				my $is_comp = 0;
+				if ($device->computer) {
+					$is_comp = 1;
+				} else {
+      		$is_comp = $uc->confirm("\nIs this device a computer? (Y/n)", "y");
+				}
       	if ($is_comp) {
         	$device->computer($udb->resultset('Computers')->find_or_new({device_name => $name}));
         	$device->comp_sysinfo($udb->resultset('CompSysinfo')->find_or_new({device_name => $name}));

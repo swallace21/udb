@@ -69,6 +69,21 @@ while (my $iface = $iface_rs->next) {
   $iface->update;
 }
 
+# clear out any defaults, which may not be accurate when this machine is
+# redeployed
+$device->usage('spare');
+$device->manager('tstaff');
+
+my $comp_classes_rs = $udb->resultset('Computers')->find($name)->comp_classes_computers;
+while (my $class = $comp_classes_rs->next) {
+	$class->delete;
+}
+
+$device->computer->os_type(undef);
+$device->computer->pxelink(undef);
+$device->contact(undef);
+$device->comments(undef);
+
 my $spare_status = $udb->resultset('EquipStatusTypes')->find('spare');
 $device->status($spare_status);
 $device->update;
