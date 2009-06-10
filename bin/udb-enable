@@ -88,7 +88,6 @@ EOF
 				$device->manager('user');
 			}
 
-      $device->status('deployed');
       $device->contact($uc->get_contact($device->contact));
 
 			if ($device->usage->tracked) {
@@ -102,6 +101,13 @@ EOF
 				$device->serial_num($uc->get_serial_num($device->serial_num));
       	$device->brown_inv_num($uc->get_brown_inv_num($device->brown_inv_num));
       	$device->po_num($uc->get_po_num($device->po_num));
+			}
+
+			# if this is a new machine, it won't have a status, but needs one to 
+			# satisfy db constraints.  Don't touch the status yet, if it's an existing
+			# machine
+			if (! $device->status) {
+				$device->status('deployed');
 			}
 
       $device->update_or_insert;
@@ -178,7 +184,7 @@ EOF
 
 				# make sure there isn't a device out there already
         my $iface = $device->net_interfaces->single;
-        if ($iface) {
+        if ($iface && $device->status->equip_status_type ne "spare") {
 					print "Error: device interface already exists and shouldn't, contact someone from\n"; 
 					print "software\n";
 					exit 1;
@@ -186,13 +192,20 @@ EOF
 
 				# get ip address and mac address information from the user
         my ($ipaddr, $vlan) = $uc->get_ip_and_vlan;
-        my $mac_addr = $uc->get_mac;
+				
+				my $mac_addr;
+				if ($iface) {
+					$mac_addr = $iface->ethernet;
+				}
+        $mac_addr = $uc->get_mac($mac_addr);
 
-				# create an interface associated with this mac address
-        $iface = $device->add_to_net_interfaces({
-					device => $device,
-					ethernet => $mac_addr,
-				});
+				# if necessary, create an interface associated with this mac address
+				if (! $iface) {
+        	$iface = $device->add_to_net_interfaces({
+						device => $device,
+						ethernet => $mac_addr,
+					});
+				}
 
 				# get port information from the user
        	my $port = $uc->get_port($iface,$vlan->vlan_num);
@@ -225,10 +238,15 @@ EOF
       }
 
       #
-      # finally, comments
+      # any additional comments
       #
 
       $device->comments($uc->get_comments($device->comments));
+
+			#
+			# we have all the information, flag it as deployed
+			#
+      $device->status('deployed');
       $device->update_or_insert;
 
     });
