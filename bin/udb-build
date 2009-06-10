@@ -39,21 +39,27 @@ if (@ARGV > 0) {
 
 
 if (not $dryrun) {
-  if(not BrownCS::udb::Util::okay_root){
-    system("sudo \"$RealBin/udb-build\"");
-    exit;
-  }
-
-  if(BrownCS::udb::Util::okay_root && not BrownCS::udb::Util::okay_sudo){
-    exit;
-  }
+  my $cake = `klist`;
+  print $cake;
 
   my $privs;
   $privs += BrownCS::udb::Util::okay_adminhost;
   $privs += BrownCS::udb::Util::okay_kerberos;
-  $privs += BrownCS::udb::Util::okay_root;
-  if ($privs != 3) {
+  if ($privs != 2) {
     print "Insufficient privileges. Check your warnings. \n";
+    exit;
+  }
+
+  print "primary past\n";
+  
+  if(BrownCS::udb::Util::okay_root_silent && not BrownCS::udb::Util::okay_sudo){
+    exit;
+  }
+
+  print "not root - good. Prepare to sudo\n";
+
+  if(not BrownCS::udb::Util::okay_root_silent){
+    system("sudo \"$RealBin/udb-build\"");
     exit;
   }
 }

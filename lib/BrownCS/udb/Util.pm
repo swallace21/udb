@@ -339,6 +339,15 @@ sub okay_root {
   return 1;
 }
 
+sub okay_root_silent {
+  my $self = shift;
+
+  if ($> != 0) {
+    return 0;
+  }
+  return 1;
+}
+
 sub okay_sudo {
   my $self = shift;
 
