@@ -73,6 +73,8 @@ my $spare_status = $udb->resultset('EquipStatusTypes')->find('spare');
 $device->status($spare_status);
 $device->update;
 
+system("$RealBin/udb-move $name");
+
 __END__
 
 =head1 NAME

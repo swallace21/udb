@@ -67,14 +67,16 @@ eval {
       $device->place($new_place);
       $device->update;
 
-			my $iface = $device->net_interfaces->single;
-			my $port = $uc->get_port($iface);
+			if ($device->status->equip_status_type ne 'spare') {
+				my $iface = $device->net_interfaces->single;
+				my $port = $uc->get_port($iface);
 
-      my $ifaces_rs = $device->net_interfaces;
-      while (my $iface = $ifaces_rs->next) {
-        $iface->net_port($port);
-        $iface->update;
-      }
+      	my $ifaces_rs = $device->net_interfaces;
+      	while (my $iface = $ifaces_rs->next) {
+        	$iface->net_port($port);
+        	$iface->update;
+      	}
+			}
     });
 };
 if ($@) {
