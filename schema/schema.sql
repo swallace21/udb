@@ -157,7 +157,8 @@ create table places (
   place_id                  serial primary key,
   city                      text,
   building                  text,
-  room                      text
+  room                      text,
+  description               text
 ) ;
 
 drop table if exists management_types cascade;
@@ -167,7 +168,8 @@ create table management_types (
 
 drop table if exists equip_status_types cascade;
 create table equip_status_types (
-  equip_status_type         text primary key
+  equip_status_type         text primary key,
+  tracked                   boolean not null default true
 ) ;
 
 drop table if exists equip_usage_types cascade;

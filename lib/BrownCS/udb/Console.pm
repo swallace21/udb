@@ -423,112 +423,112 @@ EOF
 
 sub get_port {
   my $self = shift;
-	my ($iface, $vlan) = @_;
-	my $place = $iface->device->place;
-	my $port;
+  my ($iface, $vlan) = @_;
+  my $place = $iface->device->place;
+  my $port;
 
-	if ($place && $place->room) {
-		my $room = $place->room;
-		# FIX ME - this check needs to be checked against a db entry, but I need this working now!
-		if ($room eq '531' || $room eq '310') {
-    	$port = $self->get_switchport($iface, $vlan);
-		} else {
-	  	$port = $self->get_walljack($iface);
-		}
-	}
+  if ($place && $place->room) {
+    my $room = $place->room;
+    # FIX ME - this check needs to be checked against a db entry, but I need this working now!
+    if ($room eq '531' || $room eq '310') {
+      $port = $self->get_switchport($iface, $vlan);
+    } else {
+      $port = $self->get_walljack($iface);
+    }
+  }
 
   return $port;
 }
 
 sub get_switchport {
-	my $self = shift;
-	my ($iface, $vlan) = @_;
+  my $self = shift;
+  my ($iface, $vlan) = @_;
 
-	my $room = $iface->device->place->room;
+  my $room = $iface->device->place->room;
 
-	my ($switch_name, $blade_num, $port_num, $wall_plate) = "";
+  my ($switch_name, $blade_num, $port_num, $wall_plate) = "";
 
-	# if this is an existing port, then retrieve current port information
-	if ($iface->net_port_id) {
-		$switch_name = $iface->net_port->net_switch->switch_name;
-		$blade_num = $iface->net_port->net_switch->blade_num;
-		$port_num = $iface->net_port->net_switch->port_num;
-		$wall_plate = $iface->net_port->net_switch->wall_plate;
-	}
+  # if this is an existing port, then retrieve current port information
+  if ($iface->net_port_id) {
+    $switch_name = $iface->net_port->net_switch->switch_name;
+    $blade_num = $iface->net_port->net_switch->blade_num;
+    $port_num = $iface->net_port->net_switch->port_num;
+    $wall_plate = $iface->net_port->net_switch->wall_plate;
+  }
 
-	my $port;
+  my $port;
 
-	# prompt user for updated port information
-	$switch_name = $self->get_updated_val("Switch",$switch_name, verify_switch($self->udb));
-	$blade_num = $self->get_updated_val("Blade Number",$blade_num,verify_blade($self->udb,$switch_name));
-	$port_num = $self->get_updated_val("Port Number",$port_num,verify_port_num($self->udb,$switch_name));
-	
-	# FIX ME - this needs to be checked against a db entry
-	if ($room  && ($room == '531' || $room == '310')) {
-		$wall_plate = "MR";
-	} else {
-		$wall_plate = $self->get_updated_val("Wall Plate", $wall_plate);
-	}
+  # prompt user for updated port information
+  $switch_name = $self->get_updated_val("Switch",$switch_name, verify_switch($self->udb));
+  $blade_num = $self->get_updated_val("Blade Number",$blade_num,verify_blade($self->udb,$switch_name));
+  $port_num = $self->get_updated_val("Port Number",$port_num,verify_port_num($self->udb,$switch_name));
+  
+  # FIX ME - this needs to be checked against a db entry
+  if ($room  && ($room == '531' || $room == '310')) {
+    $wall_plate = "MR";
+  } else {
+    $wall_plate = $self->get_updated_val("Wall Plate", $wall_plate);
+  }
 
-	my $net_switch = $self->udb->resultset('NetSwitches')->find($switch_name);
+  my $net_switch = $self->udb->resultset('NetSwitches')->find($switch_name);
 
-	# get the associated port number
-	$port = $self->udb->resultset('NetPorts')->search({
-			switch_name => $switch_name,
-			blade_num => $blade_num,
-			port_num => $port_num,
-		})->single;
-	
-	# if the port doesn't exist, then insert an entry
-	if (!$port) {
-		$port = $self->udb->resultset('NetPorts')->find_or_create({
-			net_switch => $net_switch,
-			port_num => $port_num,
-			blade_num => $blade_num,
-			wall_plate => $wall_plate,
-		});
+  # get the associated port number
+  $port = $self->udb->resultset('NetPorts')->search({
+      switch_name => $switch_name,
+      blade_num => $blade_num,
+      port_num => $port_num,
+    })->single;
+  
+  # if the port doesn't exist, then insert an entry
+  if (!$port) {
+    $port = $self->udb->resultset('NetPorts')->find_or_create({
+      net_switch => $net_switch,
+      port_num => $port_num,
+      blade_num => $blade_num,
+      wall_plate => $wall_plate,
+    });
 
-		return $port;
-	}
+    return $port;
+  }
 
-	# if the port already exists, do some sanity checks to make sure this change wouldn't knowingly 
-	# break anything else
-	my $switch = BrownCS::udb::Switch->new({
-			net_switch => $net_switch,
-			verbose => 0,
-		});
+  # if the port already exists, do some sanity checks to make sure this change wouldn't knowingly 
+  # break anything else
+  my $switch = BrownCS::udb::Switch->new({
+      net_switch => $net_switch,
+      verbose => 0,
+    });
 
-	# make sure wall plate given by users matches wall plate associated with switch port
-	if ("$wall_plate" ne $port->wall_plate) {
-		print "ERROR: the wall plate your provided ($wall_plate) doesn't match the wall plate\n";
-		print "associated with this switch port (" . $port->wall_plate . ")\n";
-		return undef;
-	}
+  # make sure wall plate given by users matches wall plate associated with switch port
+  if ("$wall_plate" ne $port->wall_plate) {
+    print "ERROR: the wall plate your provided ($wall_plate) doesn't match the wall plate\n";
+    print "associated with this switch port (" . $port->wall_plate . ")\n";
+    return undef;
+  }
 
-	# make sure that vlan matches the native vlan for non-dynamic subnets
-	my ($native_vlan, @other_vlans) = $switch->get_port_vlans($port);
+  # make sure that vlan matches the native vlan for non-dynamic subnets
+  my ($native_vlan, @other_vlans) = $switch->get_port_vlans($port);
 
-	my $dynamic_vlans_rs = $self->udb->resultset('NetVlans')->search({
-			dynamic_dhcp_start => { '!=', undef }
-		});
+  my $dynamic_vlans_rs = $self->udb->resultset('NetVlans')->search({
+      dynamic_dhcp_start => { '!=', undef }
+    });
 
-	my @dynamic_vlans;
-	while (my $dynamic_vlan = $dynamic_vlans_rs->next) {
-		push @dynamic_vlans, $dynamic_vlan->vlan_num;
-	}
+  my @dynamic_vlans;
+  while (my $dynamic_vlan = $dynamic_vlans_rs->next) {
+    push @dynamic_vlans, $dynamic_vlan->vlan_num;
+  }
 
-	if($vlan && $vlan != $native_vlan && ! grep(/$native_vlan/, @dynamic_vlans)) {
-		print "ERROR: primary VLAN of port is set to $native_vlan, which doesn't match the\n";
-		print "VLAN entered of $vlan\n";
-		return undef;
-	}
+  if($vlan && $vlan != $native_vlan && ! grep(/$native_vlan/, @dynamic_vlans)) {
+    print "ERROR: primary VLAN of port is set to $native_vlan, which doesn't match the\n";
+    print "VLAN entered of $vlan\n";
+    return undef;
+  }
 
-	return $port;
+  return $port;
 }
 
 sub get_walljack {
-	my $self = shift;
-	my ($iface) = @_;
+  my $self = shift;
+  my ($iface) = @_;
 
   my $walljack_preamble = <<EOF;
 What wall jack will the computer be plugged into?
@@ -626,28 +626,39 @@ sub get_po_num {
   return $self->get_updated_val("Purchase order [optional]",$default);
 }
 
-sub get_room {
-  my $self = shift;
-  my ($default) = @_;
-  return $self->get_updated_val("Room number", $default);
-}
-
 sub get_place {
   my $self = shift;
   my ($default_place) = @_;
 
-  my ($default_city, $default_building, $default_room);
+  my ($default_city, $default_building, $default_room, $default_description);
+  my ($new_city, $new_building, $new_room, $new_description);
+
   if ($default_place) {
     $default_city = $default_place->city;
     $default_building = $default_place->building;
     $default_room = $default_place->room;
+    $default_description = $default_place->room;
   }
 
-  my $new_city = $self->get_updated_val("City", $default_city);
-  my $new_building = $self->get_updated_val("Building", $default_building);
-  my $new_room = $self->get_updated_val("Room number", $default_room);
+  my $is_in_cit = $self->confirm("\nIs this device located in the CIT? (Y/n)", "y");
 
-  return ($new_city, $new_building, $new_room);
+  if ($is_in_cit) {
+    $new_city = 'Providence';
+    $new_building = 'CIT';
+    $new_room = $self->get_updated_val("Room number", $default_room);
+  } else {
+    my $is_on_campus = $self->confirm("\nIs this device located on campus? (Y/n)", "y");
+    if ($is_on_campus) {
+      $new_city = 'Providence';
+      $new_building = $self->get_updated_val("Building", $default_building);
+      $new_room = $self->get_updated_val("Room number", $default_room);
+    } else {
+      $new_city = $self->get_updated_val("City", $default_city);
+      $new_description = $self->get_updated_val("Description", $default_description);
+    }
+  }
+
+  return ($new_city, $new_building, $new_room, $new_description);
 }
 
 no Moose;

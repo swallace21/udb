@@ -80,6 +80,7 @@ sub format_location {
     $out->{"City"} = $place->city;
     $out->{"Building"} = $place->building;
     $out->{"Room"} = $place->room;
+    $out->{"Description"} = $place->description;
   }
   return $out;
 }
