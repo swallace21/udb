@@ -37,10 +37,9 @@ if (@ARGV > 0) {
   usage(2);
 }
 
+my $ub = new BrownCS::udb::Build(udb => $udb, verbose => $verbose, dryrun => $dryrun);
 
 if (not $dryrun) {
-  my $cake = `klist`;
-  print $cake;
 
   my $privs;
   $privs += BrownCS::udb::Util::okay_adminhost;
@@ -50,29 +49,26 @@ if (not $dryrun) {
     exit;
   }
 
-  print "primary past\n";
-  
+
+$ub->build_netgroup;
+
   if(BrownCS::udb::Util::okay_root_silent && not BrownCS::udb::Util::okay_sudo){
     exit;
   }
-
-  print "not root - good. Prepare to sudo\n";
 
   if(not BrownCS::udb::Util::okay_root_silent){
     system("sudo \"$RealBin/udb-build\"");
     exit;
   }
-}
-
-my $ub = new BrownCS::udb::Build(udb => $udb, verbose => $verbose, dryrun => $dryrun);
 
 $ub->build_tftpboot;
-$ub->build_netgroup;
 $ub->build_dhcp;
 $ub->build_nagios;
 $ub->build_wpkg_hosts;
 $ub->build_dns;
 $ub->build_finger_data;
+}
+
 
 __END__
 
