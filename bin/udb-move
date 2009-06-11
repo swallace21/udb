@@ -57,27 +57,43 @@ if ($device->protected) {
 my $rs;
 eval {
   $rs = $udb->txn_do(sub {
-			my $room = $uc->get_room($device->place ? $device->place->room : '');
+    my ($city, $building, $room,$description) = $uc->get_place($device->place);
 
-      my $new_place = $udb->resultset('Places')->find_or_create({
-          city => 'Providence',
-          building => 'CIT',
-          room => $room,
-        });
-      $device->place($new_place);
-      $device->update;
-
-			if ($device->status->equip_status_type ne 'spare') {
-				my $iface = $device->net_interfaces->single;
-				my $port = $uc->get_port($iface);
-
-      	my $ifaces_rs = $device->net_interfaces;
-      	while (my $iface = $ifaces_rs->next) {
-        	$iface->net_port($port);
-        	$iface->update;
-      	}
-			}
+    my $new_place = $udb->resultset('Places')->find_or_create({
+      city => $city,
+      building => $building,
+      room => $room,
+      description => $description,
     });
+
+    $device->place($new_place);
+    $device->update;
+
+    if ($device->status->equip_status_type ne 'spare') {
+      if ($device->place->building eq 'CIT') {
+        my $iface = $device->net_interfaces->single;
+        my $port = $uc->get_port($iface);
+
+        my $ifaces_rs = $device->net_interfaces;
+        while (my $iface = $ifaces_rs->next) {
+          $iface->net_port($port);
+          $iface->update;
+        }
+      } else {
+        if ($device->net_interfaces) {
+          my $iface_rs = $device->net_interfaces;
+          while (my $iface = $iface_rs->next) {
+            my $ip_rs = $iface->net_addresses;
+            while (my $ip = $ip_rs->next) {
+              $ip->delete;
+            }
+            $iface->net_port(undef);
+            $iface->update;
+          }
+        }
+      }
+    }
+  });
 };
 if ($@) {
   die <<EOF;
