@@ -102,6 +102,7 @@ foreach my $port (@ports) {
 print "\n";
 
 if ($dryrun or (not $build)) {
+  print "Dry run finished...\n";
   exit(0);
 }
 

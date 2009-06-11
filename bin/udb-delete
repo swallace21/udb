@@ -25,6 +25,7 @@ my $dryrun = 0;
 GetOptions (
   'help|h|?' => \$help, 
   'v|verbose' => \$verbose,
+  'n|dryrun' => \$dryrun,
 ) or usage(1);
 usage(0) if $help;
 
@@ -55,6 +56,12 @@ if ($device->protected) {
   }
 } else {
   my $rs;
+
+if ($dryrun) {
+  print "Dry run finished...\n";
+  exit;
+}
+
   eval {
     $rs = $udb->txn_do(sub {
         $device->delete;

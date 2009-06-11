@@ -56,6 +56,11 @@ if ($device->protected) {
   }
 }
 
+if ($dryrun) {
+  print "Dry run finished...\n";
+  exit;
+}
+
 my $rs;
 eval {
   $rs = $udb->txn_do(sub {
