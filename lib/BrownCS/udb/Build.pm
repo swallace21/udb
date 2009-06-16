@@ -43,6 +43,35 @@ sub maybe_rename {
   }
 }
 
+sub commit_local {
+  my $self = shift;
+  my $udb = $self->udb;
+  my ($src, $dst) = @_;
+  if ($self->verbose) {
+    print "Committing $dst on local\n";
+  }
+  if (not $self->dryrun) {
+    if (not system("cp $src $dst")){
+      die "$0: ERROR: Failed moving $dst: $!\n" ;
+    }
+  }
+}
+
+sub commit_scp {
+  #TODO: trick - must be able to copy many files
+  my $self = shift;
+  my $udb = $self->udb;
+  my ($src, $dst) = @_;
+  if ($self->verbose) {
+    print "Committing $dst via scp\n";
+  }
+  if (not $self->dryrun) {
+    if (not system("sudo scp -pq $src $dst")){
+      die "$0: ERROR: Failed copying $dst: $!\n" ;
+    }
+  }
+}
+
 sub build_tftpboot {
   my $self = shift;
   my $udb = $self->udb;
@@ -219,17 +248,15 @@ sub build_dhcp {
   print "Building dhcp... ";
 
   my $file = $self->dryrun ? '/tmp/dhcpd.conf' : '/maytag/sys0/dhcp/dhcpd.conf';
-  my $PATH_TMPFILE = TMPDIR . $file;
+  my $PATH_TMPFILE = $TMPDIR . basename($file);
   my $vars = {filename => $file, date => get_date(), dbh => $udb->storage->dbh};
   $self->tt->process('dhcpd.conf.tt2', $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
 
   # send new config file to each server
-  #COMMIT
-  $self->maybe_rename($PATH_TMPFILE, $file);
+  $self->commit_local($PATH_TMPFILE, $file);
   my @CDB_DHCP_SERVERS = qw(payday snickers);
   foreach my $host (@CDB_DHCP_SERVERS) {
-    #COMMIT
-    $self->maybe_system('sudo', 'scp', '-pq', $file, "$host:/etc");
+    $self->commit_scp($file, "$host:/etc");
     if ( $? != 0 ) {
       warn "$0: ERROR: Failed to copy DNS files to $host\n";
     }
@@ -261,10 +288,8 @@ sub build_nagios_hosts {
   $self->tt->process('hosts.cfg.tt2', $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
 
   # send new config file to each server
-  #COMMIT
-  $self->maybe_rename($PATH_TMPFILE, $file);
-  #COMMIT
-  $self->maybe_system('sudo', 'scp', '-pq', $file, "storm:/etc/nagios3/conf.d/");
+  $self->commit_local($PATH_TMPFILE, $file);
+  $self->commit_scp($file, "storm:/etc/nagios3/conf.d/");
   if ( $? != 0 ) {
     warn "$0: ERROR: Failed to copy nagios files to storm\n";
   }
@@ -280,10 +305,8 @@ sub build_nagios_services {
   $self->tt->process('services.cfg.tt2', $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
 
   # send new config file to each server
-  #COMMIT
-  $self->maybe_rename($PATH_TMPFILE, $file);
-  #COMMIT
-  $self->maybe_system('sudo', 'scp', '-pq', $file, "storm:/etc/nagios3/conf.d/");
+  $self->commit_local($PATH_TMPFILE, $file);
+  $self->commit_scp($file, "storm:/etc/nagios3/conf.d/");
   if ( $? != 0 ) {
     warn "$0: ERROR: Failed to copy nagios files to storm\n";
   }
@@ -428,8 +451,7 @@ sub build_wpkg_hosts {
   }
 
   $self->tt->process('wpkg-hosts.xml.tt2', $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
-  #COMMIT
-  $self->maybe_rename($PATH_TMPFILE, $file);
+  $self->commit_local($PATH_TMPFILE, $file);
 
   print "done.\n";
 
@@ -522,6 +544,7 @@ sub build_dns {
   my @files = ();
 
   foreach my $subnet (@subnets) {
+    #TODO What is the working directory here?
     my $file = $self->build_dns_map_reverse($serial_num, $subnet);
     push @files, $file;
   }
@@ -534,8 +557,8 @@ sub build_dns {
 
   # fix permissions
   foreach my $file (@files) {
-    #COMMIT
-    $self->maybe_rename("$file.tmp", $file);
+    #TODO What are these files?
+    $self->commit_local("$file.tmp", $file);
     if ($self->verbose) {
       print "DEBUG: fix permissions\n";
     }
@@ -550,6 +573,7 @@ sub build_dns {
   my @dns_servers = qw(payday snickers);
   foreach my $host (@dns_servers) {
     #COMMIT
+    #Oh hell. Be careful, note @files != $file
     $self->maybe_system('sudo', 'scp', '-pq', @files, "$host:/var/cache/bind");
     if ( $? != 0 ) {
       warn "$0: ERROR: Failed to copy DNS files to $host\n";
