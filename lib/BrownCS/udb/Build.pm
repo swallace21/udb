@@ -224,9 +224,11 @@ sub build_dhcp {
   $self->tt->process('dhcpd.conf.tt2', $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
 
   # send new config file to each server
+  #COMMIT
   $self->maybe_rename($PATH_TMPFILE, $file);
   my @CDB_DHCP_SERVERS = qw(payday snickers);
   foreach my $host (@CDB_DHCP_SERVERS) {
+    #COMMIT
     $self->maybe_system('sudo', 'scp', '-pq', $file, "$host:/etc");
     if ( $? != 0 ) {
       warn "$0: ERROR: Failed to copy DNS files to $host\n";
@@ -254,12 +256,14 @@ sub build_nagios_hosts {
   my $udb = $self->udb;
 
   my $file = $self->dryrun ? '/tmp/hosts.cfg' : '/maytag/sys0/Linux/files/add/group.debian.server.nagios3/etc/nagios3/conf.d/hosts.cfg';
-  my $PATH_TMPFILE = $TMPDIR . $file;
+  my $PATH_TMPFILE = $TMPDIR . basename($file);
   my $vars = {filename => $file, date => get_date(), dbh => $udb->storage->dbh};
   $self->tt->process('hosts.cfg.tt2', $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
 
   # send new config file to each server
+  #COMMIT
   $self->maybe_rename($PATH_TMPFILE, $file);
+  #COMMIT
   $self->maybe_system('sudo', 'scp', '-pq', $file, "storm:/etc/nagios3/conf.d/");
   if ( $? != 0 ) {
     warn "$0: ERROR: Failed to copy nagios files to storm\n";
@@ -271,12 +275,14 @@ sub build_nagios_services {
   my $udb = $self->udb;
 
   my $file = $self->dryrun ? '/tmp/services.cfg' : '/maytag/sys0/Linux/files/add/group.debian.server.nagios3/etc/nagios3/conf.d/services.cfg';
-  my $PATH_TMPFILE = $TMPDIR . $file;
+  my $PATH_TMPFILE = $TMPDIR . basename($file);
   my $vars = {filename => $file, date => get_date(), dbh => $udb->storage->dbh};
   $self->tt->process('services.cfg.tt2', $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
 
   # send new config file to each server
+  #COMMIT
   $self->maybe_rename($PATH_TMPFILE, $file);
+  #COMMIT
   $self->maybe_system('sudo', 'scp', '-pq', $file, "storm:/etc/nagios3/conf.d/");
   if ( $? != 0 ) {
     warn "$0: ERROR: Failed to copy nagios files to storm\n";
@@ -292,7 +298,7 @@ sub build_wpkg_hosts {
   print "Building wpkg hosts file... ";
 
   my $file = $self->dryrun ? '/tmp/wpkg-hosts.xml' : '/u/system/win32/WPKG/hosts/cdb.xml';
-  my $PATH_TMPFILE = $TMPDIR . $file;
+  my $PATH_TMPFILE = $TMPDIR . basename($file);
 
   my $vars = {
     filename => $file,
@@ -422,6 +428,7 @@ sub build_wpkg_hosts {
   }
 
   $self->tt->process('wpkg-hosts.xml.tt2', $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
+  #COMMIT
   $self->maybe_rename($PATH_TMPFILE, $file);
 
   print "done.\n";
@@ -437,7 +444,7 @@ sub build_dns_map_forward {
   my $zone = $domain_parts[0];
 
   my $file = $self->dryrun ? "/tmp/db.$zone" : "/maytag/sys0/DNS/db.$zone";
-  my $PATH_TMPFILE = $TMPDIR . $file;
+  my $PATH_TMPFILE = $TMPDIR . basename($file);
   my $vars = {
     filename => $file,
     date => get_date(),
@@ -460,7 +467,7 @@ sub build_dns_map_reverse {
   my $file = $self->dryrun ? "/tmp/db.$zone" : "/maytag/sys0/DNS/db.$zone";
   chop($file);
 
-  my $PATH_TMPFILE = $TMPDIR . $file;
+  my $PATH_TMPFILE = $TMPDIR . basename($file);
   my $vars = {
     filename => $file,
     date => get_date(),
@@ -527,6 +534,7 @@ sub build_dns {
 
   # fix permissions
   foreach my $file (@files) {
+    #COMMIT
     $self->maybe_rename("$file.tmp", $file);
     if ($self->verbose) {
       print "DEBUG: fix permissions\n";
@@ -541,6 +549,7 @@ sub build_dns {
   # send new config file to each server
   my @dns_servers = qw(payday snickers);
   foreach my $host (@dns_servers) {
+    #COMMIT
     $self->maybe_system('sudo', 'scp', '-pq', @files, "$host:/var/cache/bind");
     if ( $? != 0 ) {
       warn "$0: ERROR: Failed to copy DNS files to $host\n";
@@ -564,7 +573,7 @@ sub build_finger_data {
 
   print "Building finger data... ";
   my $file = $self->dryrun ? '/tmp/finger_data' : '/u/system/sysadmin/data';
-  my $PATH_TMPFILE = $TMPDIR . $file;
+  my $PATH_TMPFILE = $TMPDIR . basename($file);
   my $vars = {filename => $file, date => get_date(), dbh => $udb->storage->dbh};
   $self->tt->process('finger_data.tt2', $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
   $self->maybe_rename($PATH_TMPFILE, $file);
