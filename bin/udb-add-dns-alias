@@ -1,0 +1,118 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+use Pod::Usage;
+
+use FindBin qw($RealBin);
+use lib "$RealBin/../lib";
+use BrownCS::udb::Schema;
+use BrownCS::udb::Util qw(:all);
+use BrownCS::udb::Console qw(:all);
+use BrownCS::udb::Net qw(:all);
+
+# Print a simple help message.
+sub usage {
+  my ($exit_status) = @_;
+  pod2usage({ -exitval => $exit_status, -verbose => 1});
+}
+
+my $help = 0;
+
+GetOptions (
+  'help|h|?' => \$help, 
+) or usage(1);
+usage(0) if $help;
+
+if (@ARGV < 0 || @ARGV > 1) {
+  usage(2);
+}
+
+my $udb = BrownCS::udb::Schema->connect;
+my $uc = new BrownCS::udb::Console(udb => $udb);
+
+my $name;
+if (@ARGV == 1) {
+  $name = shift @ARGV;
+
+  if (! dns_name_exists($udb, $name)) {
+    die "No record for DNS name $name.\n";
+  }
+}
+
+my $rs;
+eval {
+  $rs = $udb->txn_do(sub {
+    my ($alias, $domain, $region) = $uc->get_dns_alias($udb);
+
+    my $addr;
+    my $authoritative = 0;
+    # associate the DNS alias with an network address
+    if ($name) {
+      $addr = $udb->resultset('NetDnsEntries')->search({
+        dns_name => {'=', $name},
+      })->single;
+    } else { 
+      my ($ip, $vlan) = $uc->get_ip_and_vlan;
+      $addr = $udb->resultset('NetAddresses')->find_or_create({
+        vlan => $vlan,
+        ipaddr => $ip,
+        monitored => 0,
+      });
+      $authoritative = 1;
+    }
+
+    # create a DNS entry
+    $udb->resultset('NetDnsEntries')->find_or_create({
+      dns_name => $alias,
+      domain => $domain,
+      net_address_id => $addr->net_address_id,
+      authoritative => $authoritative,
+      dns_region => $region,
+     });
+  });
+};
+if ($@) {
+  die <<EOF;
+Operation failed. Details:
+  $@
+EOF
+}
+
+__END__
+
+=head1 NAME
+
+udb-add-dns-alias - Adds a new DNS alias (CNAME)
+
+=head1 SYNOPSIS
+
+udb-add-dns-alias [dns alias]
+
+=head1 DESCRIPTION
+
+udb-add-dns-alias allows a user to create a new DNS alias (CNAME)
+and, optionally, associate it with an existing dns alias.
+
+=head1 OPTIONS
+
+=over
+
+=item B<-h>, B<--help>
+
+Print a help message and exit.
+
+=back
+
+=head1 AUTHORS
+
+Mark Dieterich.
+
+=head1 SEE ALSO
+
+B<udb>
+
+=cut
+

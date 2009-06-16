@@ -7,16 +7,20 @@ use warnings;
 use Exporter qw(import);
 use Net::MAC;
 use NetAddr::IP;
+#use BrownCS::udb::Net qw(:all);
 
 our @EXPORT_OK = qw(
   bool2str
   str2bool
   def_msg
+  device_exists
+  dns_name_exists
   find_unused_ip
   fmt_time
   get_date
   get_host_class_map
   ipv4_n2x
+  verify_unprotected
 	verify_blade
   verify_device_name
   verify_ip_or_vlan
@@ -75,6 +79,44 @@ sub str2bool {
 sub def_msg {
   my ($str) = @_;
   return $str ? $str : "<blank>";
+}
+
+sub device_exists {
+  my ($udb, $name) = @_;
+
+  my $uc = new BrownCS::udb::Console(udb => $udb);
+
+  my $device = $udb->resultset('Devices')->find($name);
+  if (! $device) {
+    return 0;
+  }
+
+  if ($device->protected) {
+    printf("The device %s is protected!\n", $device->device_name);
+    print "Do not modify or delete this entry unless you know what you're doing.\n";
+    if (! $uc->confirm("Are you sure (y/n)?")) {
+      return 0;
+    }
+  }
+ 
+  return 1;
+
+}
+
+sub dns_name_exists {
+  my ($udb, $name) = @_;
+
+  my $net_dns_entry = $udb->resultset('NetDnsEntries')->search({
+    dns_name => {'=', $name},
+  });
+
+  my $records = $net_dns_entry->count;
+
+  if ($records) {
+    return $records;
+  } else {
+    return 0;
+  }
 }
 
 sub ipv4_n2x {
@@ -138,6 +180,24 @@ sub find_unused_ip {
   }
 
   die "No addresses are available for the $subnet subnet.\n";
+}
+
+sub verify_unprotected {
+  my $udb = shift;
+  
+	return sub {
+    my $uc = new BrownCS::udb::Console(udb => $udb);
+    my $device = $udb->device;
+
+    if ($device->protected) {
+      printf("The device %s is protected!\n", $device->device_name);
+      print "Do not modify or delete this entry unless you know what you're doing.\n";
+      if (! $uc->confirm("Are you sure (y/n)?")) {
+        return 0;
+      }
+    }
+    return 1;
+  }  
 }
 
 sub verify_nonempty {
@@ -223,30 +283,30 @@ sub verify_port_num {
 	}
 }
 
-sub verify_ip {
-  my $udb = shift;
-  # TODO: check that value is not in use
-  return sub {
-    my ($ipaddr) = @_;
-
-    my $netaddr_ip = new NetAddr::IP ($ipaddr);
-    if (not $netaddr_ip) {
-      print "Invalid IP address: $netaddr_ip!\n";
-      return (0, undef);
-    }
-
-    my $vlan = $udb->resultset('NetVlans')->search({
-        network => {'>>', $ipaddr},
-      })->single;
-
-    if (not $vlan) {
-      print "Invalid IP address: $netaddr_ip is not on a recognized subnet.\n";
-      return (0, undef);
-    }
-
-    return (1, $ipaddr, $vlan);
-  };
-}
+#sub verify_ip {
+#  my $udb = shift;
+#  # TODO: check that value is not in use
+#  return sub {
+#    my ($ipaddr) = @_;
+#
+#    my $netaddr_ip = new NetAddr::IP ($ipaddr);
+#    if (not $netaddr_ip) {
+#      print "Invalid IP address: $netaddr_ip!\n";
+#      return (0, undef);
+#    }
+#
+#    my $vlan = $udb->resultset('NetVlans')->search({
+#        network => {'>>', $ipaddr},
+#      })->single;
+#
+#    if (not $vlan) {
+#      print "Invalid IP address: $netaddr_ip is not on a recognized subnet.\n";
+#      return (0, undef);
+#    }
+#
+#    return (1, $ipaddr, $vlan);
+#  };
+#}
 
 sub verify_ip_or_vlan {
   my $udb = shift;

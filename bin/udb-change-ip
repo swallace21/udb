@@ -100,7 +100,7 @@ if ($addrs_rs->count == 0) {
   $chosen_addr = $uc->choose_from_menu("Select an address", \@choices);
 }
 
-my ($ipaddr, $vlan) = $uc->get_ip_and_vlan;
+my ($ipaddr, $vlan) = $uc->get_ip_and_vlan(1);
 
 if ($dryrun) {
   print "Dry run finished...\n";
