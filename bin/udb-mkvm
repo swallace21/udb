@@ -75,7 +75,7 @@ my ($ipaddr, $vlan);
 if ($vm_type eq 'tstaff') {
   $managed_by = 'tstaff';
   $equip_usage_type = 'tstaff';
-  ($ipaddr, $vlan) = $uc->get_ip_and_vlan;
+  ($ipaddr, $vlan) = $uc->get_ip_and_vlan(1);
 } elsif ($vm_type eq 'unsup') {
   $managed_by = 'user';
   $equip_usage_type = 'userserver';

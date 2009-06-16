@@ -163,11 +163,14 @@ sub build_netgroup {
 
   print "Building netgroups... ";
 
-  my $hosts = $udb->resultset('Computers')->search(
-    {
+  my $hosts = $udb->resultset('Computers')->search({
+    -and => [
       'net_dns_entries.authoritative' => 1,
-      'net_dns_entries.dns_region' => 'internal',
-    },
+      -or => [
+        'net_dns_entries.dns_region' => 'internal',
+        'net_dns_entries.dns_region' => 'all',
+      ],
+    ]},
     {
       prefetch => [
       'os_type',
@@ -475,6 +478,7 @@ sub build_dns_map_forward {
     serial_num => $serial_num,
     domain => $domain,
   };
+
   $self->tt->process('dns.db.forward.tt2', $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
 
   return $file;
@@ -498,6 +502,7 @@ sub build_dns_map_reverse {
     serial_num => $serial_num,
     cidr => $subnet->cidr,
   };
+
   $self->tt->process('dns.db.reverse.tt2', $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
 
   return $file;
