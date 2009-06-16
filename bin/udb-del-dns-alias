@@ -1,0 +1,116 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+use Pod::Usage;
+
+use FindBin qw($RealBin);
+use lib "$RealBin/../lib";
+use BrownCS::udb::Schema;
+use BrownCS::udb::Util qw(:all);
+use BrownCS::udb::Console qw(:all);
+use BrownCS::udb::Net qw(:all);
+
+# Print a simple help message.
+sub usage {
+  my ($exit_status) = @_;
+  pod2usage({ -exitval => $exit_status, -verbose => 1});
+}
+
+my $help = 0;
+
+GetOptions (
+  'help|h|?' => \$help, 
+) or usage(1);
+usage(0) if $help;
+
+if (@ARGV != 1) {
+  usage(2);
+}
+
+my $udb = BrownCS::udb::Schema->connect;
+my $uc = new BrownCS::udb::Console(udb => $udb);
+
+my $name;
+if (@ARGV == 1) {
+  $name = shift @ARGV;
+
+  if (! dns_name_exists($udb, $name)) {
+    die "No record for DNS name \"$name\".\n";
+  }
+}
+
+my $rs;
+eval {
+  $rs = $udb->txn_do(sub {
+    my $dns_entry_rs = $udb->resultset('NetDnsEntries')->search({
+      dns_name => {'=', $name},
+    });
+
+    my @net_address_ids = ();
+    while (my $dns_entry = $dns_entry_rs->next) {
+      my $net_address_id = $dns_entry->net_address_id;
+      if (! grep($net_address_id, @net_address_ids)) {
+        push @net_address_ids, $net_address_id;
+      }
+      $dns_entry->delete;
+    }
+
+    # check to see whether we have left any dangling net addresses
+    foreach my $net_address_id (@net_address_ids) {
+      $dns_entry_rs = $udb->resultset('NetDnsEntries')->search({
+        net_address_id => {'=', $net_address_id},
+      });
+
+      # if so, delete those entries
+      if ($dns_entry_rs->count == 0) {
+        my $addr = $udb->resultset('NetAddresses')->find($net_address_id);
+        $addr->delete;
+      }
+    }
+  });
+};
+if ($@) {
+  die <<EOF;
+Operation failed. Details:
+  $@
+EOF
+}
+
+__END__
+
+=head1 NAME
+
+udb-del-dns-alias - Delete an existing DNS alias (CNAME)
+
+=head1 SYNOPSIS
+
+udb-add-dns-alias <dns alias>
+
+=head1 DESCRIPTION
+
+udb-del-dns-alias allows a user to delete an existing DNS 
+alias (CNAME)
+
+=head1 OPTIONS
+
+=over
+
+=item B<-h>, B<--help>
+
+Print a help message and exit.
+
+=back
+
+=head1 AUTHORS
+
+Mark Dieterich.
+
+=head1 SEE ALSO
+
+B<udb>
+
+=cut
+

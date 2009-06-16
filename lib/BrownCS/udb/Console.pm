@@ -5,6 +5,7 @@ use Term::ReadKey;
 use Term::ReadLine;
 use File::Temp qw(tempfile);
 use BrownCS::udb::Util qw(:all);
+use BrownCS::udb::Net qw(:all);
 use BrownCS::udb::Switch;
 
 has 'udb' => ( is => 'ro', isa => 'BrownCS::udb::Schema', required => 1 );
@@ -319,6 +320,55 @@ sub ask_with_help_option {
     });
 }
 
+sub get_dns_alias {
+  my $self = shift;
+
+  my @regions = $self->udb->resultset('DnsRegions')->get_column('dns_region')->all;
+
+  my ($alias, $domain) = $self->get_updated_val('DNS alias','', verify_dns_alias($self->udb));
+  my $region = $self->choose('DNS region [all]:', \@regions,'all');
+
+  return ($alias, $domain, $region);
+}
+
+sub get_dns_alias_ip {
+  my $self = shift;
+  my $ip;
+
+  print "$ip\n";
+}
+
+sub choose_interface {
+  my $self = shift;
+  my ($name) = @_;
+  my $iface;
+
+  my $device = $self->udb->resultset('Devices')->find($name);
+  my $ifaces_rs = $device->net_interfaces;
+  if ($ifaces_rs->count == 0) {
+    print "The device $device->device_name does not have any network interfaces.\n";
+    exit(0);
+  } elsif ($ifaces_rs->count == 1) {
+    $iface = $ifaces_rs->single;
+  } else {
+    my $iface_ix = 1;
+    my @choices = ();
+    while (my $iface = $ifaces_rs->next) {
+      my $ip = $iface->net_addresses->single->ipaddr;
+      push @choices, {
+        key => $iface_ix++,
+        name => $iface,
+        desc => $iface->ethernet,
+        ip => $ip,
+      };
+    }
+
+    $iface = choose_from_menu("Select an interface", \@choices);
+  }
+
+  return $iface;
+}
+ 
 sub get_management_type {
   my $self = shift;
   my ($default) = @_;
@@ -409,13 +459,29 @@ EOF
 
 sub get_ip_and_vlan {
   my $self = shift;
+  my ($dynamic) = @_;
+
+#print "dynamic: $dynamic\n";
+#
+#  if ($dynamic) { 
+#    $dynamic = 1; 
+#  } else {
+#    $dynamic = 0;
+#  }
+#
+#print "dynamic: $dynamic\n";
+
   my $ip_or_vlan_preamble = <<EOF;
-What is the computer's IP address?
-If you just want an arbitrary IP in a given VLAN (e.g. 31, 36),
+What is IP address do you want assigned?
+If you just want an arbitrary IP on a given VLAN (e.g. 31, 36),
 enter the VLAN number, and an IP will be picked for you.
-If you want a dynamic IP address, add a "d" to the start of the VLAN.
-For example, use 'd36' instead of '36'.
 EOF
+
+if ($dynamic) {
+  $ip_or_vlan_preamble .= "If you want a dynamic IP address, add a \"d\" to the start of the VLAN.\n";
+  $ip_or_vlan_preamble .= "For example, use 'd36' instead of '36'.\n";
+}
+
   my $ip_or_vlan_prompt = "\n${ip_or_vlan_preamble}IP or VLAN:";
   my ($ipaddr, $vlan) = $self->demand($ip_or_vlan_prompt, verify_ip_or_vlan($self->udb));
   return ($ipaddr, $vlan);
@@ -659,6 +725,10 @@ sub get_place {
   }
 
   return ($new_city, $new_building, $new_room, $new_description);
+}
+
+sub get_dns_region {
+  print "region\n";
 }
 
 no Moose;

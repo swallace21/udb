@@ -33,12 +33,20 @@ my %udb_commands = (
     'desc' => "add one or more computers to a class",
     'common' => 0,
   },
-  'del-from-class' => {
-    'desc' => "remove one or more computers from a class",
+  'add-dns-alias' => {
+    'desc' => "add a new DNS alias or associated a DNS alias with an existing entry",
     'common' => 0,
   },
   'classes' => {
     'desc' => "list the classes to which the computers belongs",
+    'common' => 0,
+  },
+  'del-dns-alias' => {
+    'desc' => "delete a DNS alias",
+    'common' => 0,
+   },
+  'del-from-class' => {
+    'desc' => "remove one or more computers from a class",
     'common' => 0,
   },
   'query' => {

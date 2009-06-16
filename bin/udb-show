@@ -58,8 +58,13 @@ if ($device_rs) {
 }
 
 my $dns_rs = $udb->resultset('NetDnsEntries')->search({
-    dns_name => { '~*' => $name },
-    dns_region => 'internal',
+    -and => [
+      dns_name => { '~*' => $name },
+      -or => [
+        dns_region => 'internal',
+        dns_region => 'all',
+      ],
+    ],
   });
 if ($dns_rs) {
   while (my $dns = $dns_rs->next) {
