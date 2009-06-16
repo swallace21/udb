@@ -16,6 +16,7 @@ has 'tt' => ( is => 'ro', isa => 'Template', required => 0 );
 sub BUILD {
   my $self = shift;
   $self->{tt} = Template->new({INCLUDE_PATH => "$RealBin/../templates"}) || die "$Template::ERROR\n";
+  my $TMPDIR = tempdir("/tmp/udb-build.XXXX");
 }
 
 
@@ -218,7 +219,7 @@ sub build_dhcp {
   print "Building dhcp... ";
 
   my $file = $self->dryrun ? '/tmp/dhcpd.conf' : '/maytag/sys0/dhcp/dhcpd.conf';
-  my $PATH_TMPFILE = $file . '.tmp';
+  my $PATH_TMPFILE = TMPDIR . $file;
   my $vars = {filename => $file, date => get_date(), dbh => $udb->storage->dbh};
   $self->tt->process('dhcpd.conf.tt2', $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
 
@@ -253,7 +254,7 @@ sub build_nagios_hosts {
   my $udb = $self->udb;
 
   my $file = $self->dryrun ? '/tmp/hosts.cfg' : '/maytag/sys0/Linux/files/add/group.debian.server.nagios3/etc/nagios3/conf.d/hosts.cfg';
-  my $PATH_TMPFILE = $file . '.tmp';
+  my $PATH_TMPFILE = $TMPDIR . $file;
   my $vars = {filename => $file, date => get_date(), dbh => $udb->storage->dbh};
   $self->tt->process('hosts.cfg.tt2', $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
 
@@ -270,7 +271,7 @@ sub build_nagios_services {
   my $udb = $self->udb;
 
   my $file = $self->dryrun ? '/tmp/services.cfg' : '/maytag/sys0/Linux/files/add/group.debian.server.nagios3/etc/nagios3/conf.d/services.cfg';
-  my $PATH_TMPFILE = $file . '.tmp';
+  my $PATH_TMPFILE = $TMPDIR . $file;
   my $vars = {filename => $file, date => get_date(), dbh => $udb->storage->dbh};
   $self->tt->process('services.cfg.tt2', $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
 
@@ -291,7 +292,7 @@ sub build_wpkg_hosts {
   print "Building wpkg hosts file... ";
 
   my $file = $self->dryrun ? '/tmp/wpkg-hosts.xml' : '/u/system/win32/WPKG/hosts/cdb.xml';
-  my $PATH_TMPFILE = $file . '.tmp';
+  my $PATH_TMPFILE = $TMPDIR . $file;
 
   my $vars = {
     filename => $file,
@@ -436,7 +437,7 @@ sub build_dns_map_forward {
   my $zone = $domain_parts[0];
 
   my $file = $self->dryrun ? "/tmp/db.$zone" : "/maytag/sys0/DNS/db.$zone";
-  my $PATH_TMPFILE = $file . '.tmp';
+  my $PATH_TMPFILE = $TMPDIR . $file;
   my $vars = {
     filename => $file,
     date => get_date(),
@@ -459,7 +460,7 @@ sub build_dns_map_reverse {
   my $file = $self->dryrun ? "/tmp/db.$zone" : "/maytag/sys0/DNS/db.$zone";
   chop($file);
 
-  my $PATH_TMPFILE = $file . '.tmp';
+  my $PATH_TMPFILE = $TMPDIR . $file;
   my $vars = {
     filename => $file,
     date => get_date(),
@@ -563,7 +564,7 @@ sub build_finger_data {
 
   print "Building finger data... ";
   my $file = $self->dryrun ? '/tmp/finger_data' : '/u/system/sysadmin/data';
-  my $PATH_TMPFILE = $file . '.tmp';
+  my $PATH_TMPFILE = $TMPDIR . $file;
   my $vars = {filename => $file, date => get_date(), dbh => $udb->storage->dbh};
   $self->tt->process('finger_data.tt2', $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
   $self->maybe_rename($PATH_TMPFILE, $file);
