@@ -23,6 +23,15 @@ my $help = 0;
 my $udb = BrownCS::udb::Schema->connect;
 my $dryrun = 0;
 my $verbose = 0;
+my $tftp = 0;
+my $netgroup = 0;
+my $dhcp = 0;
+my $nagios = 0;
+my $wpkg = 0;
+my $dns = 0;
+my $finger = 0;
+my $setall = 0;
+my $skipchecks = 0;
 
 BEGIN { $| = 1 }
 
@@ -30,6 +39,15 @@ GetOptions (
   'help|h|?' => \$help, 
   'n|dryrun' => \$dryrun,
   'v|verbose' => \$verbose,
+  'tftp' => \$tftp,
+  'netgroup' => \$netgroup,
+  'dhcp' => \$dhcp,
+  'nagios' => \$nagios,
+  'wpkg' => \$wpkg,
+  'dns' => \$dns,
+  'finger' => \$finger,
+  'a|all' => \$setall,
+  's' => \$skipchecks,
 ) or usage(2);
 usage(1) if $help;
 
@@ -39,35 +57,75 @@ if (@ARGV > 0) {
 
 my $ub = new BrownCS::udb::Build(udb => $udb, verbose => $verbose, dryrun => $dryrun);
 
-if (not $dryrun) {
+my $all = $tftp + $netgroup + $dhcp + $nagios + $wpkg + $dns + $finger;
 
-  my $privs;
-  $privs += BrownCS::udb::Util::okay_adminhost;
-  $privs += BrownCS::udb::Util::okay_kerberos;
-  if ($privs != 2) {
-    print "Insufficient privileges. Check your warnings. \n";
+if(not $all) {
+  $all = 1;
+} else {
+  $all = 0;
+}
+
+if($setall){
+  $all = 1;
+}
+
+#Do I need Kerberos?
+my $kerb = $netgroup + $all;
+#Do I need root?
+my $root = $tftp + $dhcp + $nagios + $wpkg + $dns + $finger + $all;
+
+if (not $dryrun || not $skipchecks) {
+
+  if (not BrownCS::udb::Util::okay_adminhost){
     exit;
   }
 
+  if ($root && BrownCS::udb::Util::okay_root_silent && not BrownCS::udb::Util::okay_sudo){
+    exit;
+  }
 
-$ub->build_netgroup;
-
-  if(BrownCS::udb::Util::okay_root_silent && not BrownCS::udb::Util::okay_sudo){
+  if ($kerb && not BrownCS::udb::Util::okay_kerberos){
     exit;
   }
 
   if(not BrownCS::udb::Util::okay_root_silent){
-    system("sudo \"$RealBin/udb-build\"");
+    #Renew sudo timestamp, getting password if necessary
+    system("sudo -v :");
     exit;
   }
-
-$ub->build_tftpboot;
-$ub->build_dhcp;
-$ub->build_nagios;
-$ub->build_wpkg_hosts;
-$ub->build_dns;
-$ub->build_finger_data;
 }
+
+if ($dryrun){
+  print "Dryrun - exiting...\n";
+  exit;
+}
+
+  #build_netgroup requires Kerberos credentials. 
+  #Everything else requires root. 
+  #
+  #By this point, you should be a regular user with Kerberos credentials
+  #and an active sudo timestamp. 
+  if ($netgroup){
+    $ub->build_netgroup;
+  }
+  if ($tftp){
+    $ub->build_tftpboot;
+  }
+  if ($dhcp){
+    $ub->build_dhcp;
+  }
+  if ($nagios){
+    $ub->build_nagios;
+  }
+  if ($wpkg){
+    $ub->build_wpkg_hosts;
+  }
+  if ($dns){
+    $ub->build_dns;
+  }
+  if ($finger){
+    $ub->build_finger_data;
+  }
 
 
 __END__
