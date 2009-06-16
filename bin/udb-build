@@ -23,6 +23,7 @@ my $help = 0;
 my $udb = BrownCS::udb::Schema->connect;
 my $dryrun = 0;
 my $verbose = 0;
+my $root = 0;
 
 BEGIN { $| = 1 }
 
@@ -41,32 +42,34 @@ my $ub = new BrownCS::udb::Build(udb => $udb, verbose => $verbose, dryrun => $dr
 
 if (not $dryrun) {
 
-  my $privs;
-  $privs += BrownCS::udb::Util::okay_adminhost;
-  $privs += BrownCS::udb::Util::okay_kerberos;
-  if ($privs != 2) {
-    print "Insufficient privileges. Check your warnings. \n";
+  if(not BrownCS::udb::Util::okay_adminhost){
     exit;
   }
-
-
-$ub->build_netgroup;
-
-  if(BrownCS::udb::Util::okay_root_silent && not BrownCS::udb::Util::okay_sudo){
-    exit;
-  }
-
-  if(not BrownCS::udb::Util::okay_root_silent){
+  
+  if(not BrownCS::udb::Util::okay_root_silent && BrownCS::udb::Util::okay_kerberos){
+    $ub->build_netgroup;
+    system("sudo -v");
     system("sudo \"$RealBin/udb-build\"");
     exit;
   }
 
-$ub->build_tftpboot;
-$ub->build_dhcp;
-$ub->build_nagios;
-$ub->build_wpkg_hosts;
-$ub->build_dns;
-$ub->build_finger_data;
+  if(BrownCS::udb::Util::okay_sudo){
+    $ub->build_tftpboot;
+    $ub->build_dhcp;
+    $ub->build_nagios;
+    $ub->build_wpkg_hosts;
+    $ub->build_dns;
+    $ub->build_finger_data;
+    exit;
+  }
+
+  if(BrownCS::udb::Util::okay_root_silent){
+    print "Please do not run as root.\n";
+  }
+
+  print "ERROR: There is something wrong with your privileges.\n";
+  print "Check your warnings.\n";
+  exit;
 }
 
 
