@@ -46,28 +46,29 @@ sub maybe_rename {
 sub commit_local {
   my $self = shift;
   my $udb = $self->udb;
-  my ($src, $dst) = @_;
+  my $dst = $_[-1];
   if ($self->verbose) {
     print "Committing $dst on local\n";
   }
   if (not $self->dryrun) {
-    if (not system("cp $src $dst")){
-      die "$0: ERROR: Failed moving $dst: $!\n" ;
+    # The following line works. Think about it. 
+    if (!system("cp @_") == 0){
+      die "$0: ERROR: Failed committing $dst: $!\n" ;
     }
   }
 }
 
 sub commit_scp {
-  #TODO: trick - must be able to copy many files
   my $self = shift;
   my $udb = $self->udb;
-  my ($src, $dst) = @_;
+  my $dst = $_[-1];
   if ($self->verbose) {
     print "Committing $dst via scp\n";
   }
   if (not $self->dryrun) {
-    if (not system("sudo scp -pq $src $dst")){
-      die "$0: ERROR: Failed copying $dst: $!\n" ;
+    # The following line works. Think about it. 
+    if (!system("sudo scp -pq @_") == 0){
+      die "$0: ERROR: Failed committing $dst: $!\n" ;
     }
   }
 }
@@ -572,9 +573,8 @@ sub build_dns {
   # send new config file to each server
   my @dns_servers = qw(payday snickers);
   foreach my $host (@dns_servers) {
-    #COMMIT
-    #Oh hell. Be careful, note @files != $file
-    $self->maybe_system('sudo', 'scp', '-pq', @files, "$host:/var/cache/bind");
+    #Be careful, note @files != $file
+    $self->commit_scp(@files, "$host:/var/cache/bind");
     if ( $? != 0 ) {
       warn "$0: ERROR: Failed to copy DNS files to $host\n";
     }
