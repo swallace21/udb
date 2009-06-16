@@ -45,30 +45,26 @@ if (not $dryrun) {
   if(not BrownCS::udb::Util::okay_adminhost){
     exit;
   }
+
+  if(not BrownCS::udb::Util::okay_kerberos){
+    exit;
+  }
   
-  if(not BrownCS::udb::Util::okay_root_silent && BrownCS::udb::Util::okay_kerberos){
-    $ub->build_netgroup;
-    system("sudo -v");
-    system("sudo \"$RealBin/udb-build\"");
-    exit;
-  }
-
-  if(BrownCS::udb::Util::okay_sudo){
-    $ub->build_tftpboot;
-    $ub->build_dhcp;
-    $ub->build_nagios;
-    $ub->build_wpkg_hosts;
-    $ub->build_dns;
-    $ub->build_finger_data;
-    exit;
-  }
-
   if(BrownCS::udb::Util::okay_root_silent){
-    print "Please do not run as root.\n";
+    print "ERROR: Do not run as root.\n";
+    exit;
   }
 
-  print "ERROR: There is something wrong with your privileges.\n";
-  print "Check your warnings.\n";
+  system("sudo -v");
+
+  $ub->build_tftpboot;
+  $ub->build_netgroup;
+  $ub->build_dhcp;
+  $ub->build_nagios;
+  $ub->build_wpkg_hosts;
+  $ub->build_dns;
+  $ub->build_finger_data;
+
   exit;
 }
 

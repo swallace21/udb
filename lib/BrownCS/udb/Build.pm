@@ -46,6 +46,8 @@ sub build_tftpboot {
   my $self = shift;
   my $udb = $self->udb;
 
+  system("sudo -v");
+
   print "Building tftpboot... ";
 
   my $tftpboot_path = "/maytag/sys0/tftpboot/pxelinux.cfg";
@@ -121,6 +123,8 @@ sub add_to_group {
 sub build_netgroup {
   my $self = shift;
   my $udb = $self->udb;
+
+  BrownCS::udb::Util::okay_kerberos;
 
   print "Building netgroups... ";
 
@@ -209,6 +213,8 @@ sub build_dhcp {
   my $self = shift;
   my $udb = $self->udb;
 
+  system("sudo -v");
+
   print "Building dhcp... ";
 
   my $file = $self->dryrun ? '/tmp/dhcpd.conf' : '/maytag/sys0/dhcp/dhcpd.conf';
@@ -220,12 +226,12 @@ sub build_dhcp {
   $self->maybe_rename($PATH_TMPFILE, $file);
   my @CDB_DHCP_SERVERS = qw(payday snickers);
   foreach my $host (@CDB_DHCP_SERVERS) {
-    $self->maybe_system('scp', '-pq', $file, "$host:/etc");
+    $self->maybe_system('sudo', 'scp', '-pq', $file, "$host:/etc");
     if ( $? != 0 ) {
       warn "$0: ERROR: Failed to copy DNS files to $host\n";
     }
   }
-  $self->maybe_system('ssh', '-x', 'dhcp', '/etc/init.d/dhcp restart');
+  $self->maybe_system('sudo', 'ssh', '-x', 'dhcp', '/etc/init.d/dhcp restart');
 
   print "done.\n";
 
@@ -234,10 +240,11 @@ sub build_dhcp {
 sub build_nagios {
   my $self = shift;
   my $udb = $self->udb;
+  system("sudo -v");
   print "Building nagios files... ";
   $self->build_nagios_hosts;
   $self->build_nagios_services;
-  $self->maybe_system('ssh', '-x', 'storm', '/etc/init.d/nagios3 restart');
+  $self->maybe_system('sudo', 'ssh', '-x', 'storm', '/etc/init.d/nagios3 restart');
   print "done.\n";
 }
 
@@ -252,7 +259,7 @@ sub build_nagios_hosts {
 
   # send new config file to each server
   $self->maybe_rename($PATH_TMPFILE, $file);
-  $self->maybe_system('scp', '-pq', $file, "storm:/etc/nagios3/conf.d/");
+  $self->maybe_system('sudo', 'scp', '-pq', $file, "storm:/etc/nagios3/conf.d/");
   if ( $? != 0 ) {
     warn "$0: ERROR: Failed to copy nagios files to storm\n";
   }
@@ -269,7 +276,7 @@ sub build_nagios_services {
 
   # send new config file to each server
   $self->maybe_rename($PATH_TMPFILE, $file);
-  $self->maybe_system('scp', '-pq', $file, "storm:/etc/nagios3/conf.d/");
+  $self->maybe_system('sudo', 'scp', '-pq', $file, "storm:/etc/nagios3/conf.d/");
   if ( $? != 0 ) {
     warn "$0: ERROR: Failed to copy nagios files to storm\n";
   }
@@ -278,6 +285,8 @@ sub build_nagios_services {
 sub build_wpkg_hosts {
   my $self = shift;
   my $udb = $self->udb;
+
+  system("sudo -v");
 
   print "Building wpkg hosts file... ";
 
@@ -468,6 +477,8 @@ sub build_dns {
   my $self = shift;
   my $udb = $self->udb;
 
+  system("sudo -v");
+
   print "Building dns... ";
 
   $Template::Stash::SCALAR_OPS->{fix_width} = \&fix_width;
@@ -529,12 +540,12 @@ sub build_dns {
   # send new config file to each server
   my @dns_servers = qw(payday snickers);
   foreach my $host (@dns_servers) {
-    $self->maybe_system('scp', '-pq', @files, "$host:/var/cache/bind");
+    $self->maybe_system('sudo', 'scp', '-pq', @files, "$host:/var/cache/bind");
     if ( $? != 0 ) {
       warn "$0: ERROR: Failed to copy DNS files to $host\n";
     }
 
-    $self->maybe_system('ssh', '-x', $host, '/usr/sbin/rndc reload');
+    $self->maybe_system('sudo', 'ssh', '-x', $host, '/usr/sbin/rndc reload');
     if ( $? != 0 ) {
         warn "$0: ERROR: Failed to send DNS reload command to on $host\n";
     }
@@ -547,6 +558,9 @@ sub build_dns {
 sub build_finger_data {
   my $self = shift;
   my $udb = $self->udb;
+
+  system("sudo -v");
+
   print "Building finger data... ";
   my $file = $self->dryrun ? '/tmp/finger_data' : '/u/system/sysadmin/data';
   my $PATH_TMPFILE = $file . '.tmp';
