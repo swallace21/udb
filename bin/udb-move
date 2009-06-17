@@ -89,6 +89,8 @@ eval {
           }
           system("$RealBin/udb-reset-port $port");
         }
+
+        system("$RealBin/udb-reset-port $name");
       } else {
         if ($device->net_interfaces) {
           my $iface_rs = $device->net_interfaces;
