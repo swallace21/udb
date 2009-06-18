@@ -45,7 +45,6 @@ sub maybe_rename {
 }
 
 sub commit_local {
-  if($dryrun) return;
   my $self = shift;
   my $udb = $self->udb;
   my $dst = $_[-1];
@@ -61,7 +60,6 @@ sub commit_local {
 }
 
 sub commit_scp {
-  if($dryrun) return;
   my $self = shift;
   my $udb = $self->udb;
   my $dst = $_[-1];
@@ -133,6 +131,7 @@ sub build_tftpboot {
       printf "link %s (%s) -> %s\n", $comp->device_name, $hex_ip, $bootimage;
     }
     if (not $self->dryrun) {
+      #TODO Sudo?
       unlink("$tftpboot_path/$hex_ip");
       symlink("$bootimage", "$tftpboot_path/$hex_ip");
     }
@@ -251,7 +250,7 @@ sub build_dhcp {
 
   print "Building dhcp... ";
 
-  my $file = $self->dryrun ? '/tmp/dhcpd.conf' : '/maytag/sys0/dhcp/dhcpd.conf';
+  my $file = '/maytag/sys0/dhcp/dhcpd.conf';
   my $PATH_TMPFILE = $TMPDIR . basename($file);
   my $vars = {filename => $file, date => get_date(), dbh => $udb->storage->dbh};
   $self->tt->process('dhcpd.conf.tt2', $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
@@ -286,7 +285,7 @@ sub build_nagios_hosts {
   my $self = shift;
   my $udb = $self->udb;
 
-  my $file = $self->dryrun ? '/tmp/hosts.cfg' : '/maytag/sys0/Linux/files/add/group.debian.server.nagios3/etc/nagios3/conf.d/hosts.cfg';
+  my $file = '/maytag/sys0/Linux/files/add/group.debian.server.nagios3/etc/nagios3/conf.d/hosts.cfg';
   my $PATH_TMPFILE = $TMPDIR . basename($file);
   my $vars = {filename => $file, date => get_date(), dbh => $udb->storage->dbh};
   $self->tt->process('hosts.cfg.tt2', $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
@@ -303,7 +302,7 @@ sub build_nagios_services {
   my $self = shift;
   my $udb = $self->udb;
 
-  my $file = $self->dryrun ? '/tmp/services.cfg' : '/maytag/sys0/Linux/files/add/group.debian.server.nagios3/etc/nagios3/conf.d/services.cfg';
+  my $file = '/maytag/sys0/Linux/files/add/group.debian.server.nagios3/etc/nagios3/conf.d/services.cfg';
   my $PATH_TMPFILE = $TMPDIR . basename($file);
   my $vars = {filename => $file, date => get_date(), dbh => $udb->storage->dbh};
   $self->tt->process('services.cfg.tt2', $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
@@ -324,7 +323,7 @@ sub build_wpkg_hosts {
 
   print "Building wpkg hosts file... ";
 
-  my $file = $self->dryrun ? '/tmp/wpkg-hosts.xml' : '/u/system/win32/WPKG/hosts/cdb.xml';
+  my $file = '/u/system/win32/WPKG/hosts/cdb.xml';
   my $PATH_TMPFILE = $TMPDIR . basename($file);
 
   my $vars = {
@@ -469,7 +468,7 @@ sub build_dns_map_forward {
   my @domain_parts = split(/\./, $domain);
   my $zone = $domain_parts[0];
 
-  my $file = $self->dryrun ? "/tmp/db.$zone" : "/maytag/sys0/DNS/db.$zone";
+  my $file = "/maytag/sys0/DNS/db.$zone";
   my $PATH_TMPFILE = $TMPDIR . basename($file);
   my $vars = {
     filename => $file,
@@ -490,7 +489,7 @@ sub build_dns_map_reverse {
   my ($serial_num, $subnet) = @_;
   my $zone = $subnet->prefix;
 
-  my $file = $self->dryrun ? "/tmp/db.$zone" : "/maytag/sys0/DNS/db.$zone";
+  my $file = "/maytag/sys0/DNS/db.$zone";
   chop($file);
 
   my $PATH_TMPFILE = $TMPDIR . basename($file);
@@ -568,6 +567,7 @@ sub build_dns {
     }
     if (not $self->dryrun) {
       # fix permissions the file
+      # TODO Make use of SUDO
       chown(0, (getgrnam('sys'))[2], $file) || warn "$0: WARNING: Failed to chown $file: $!\n";
       chmod(0444, $file) || warn "$0: WARNING: Failed to chmod $file: $!\n";
     }
@@ -599,6 +599,7 @@ sub build_finger_data {
   system("sudo -v");
 
   print "Building finger data... ";
+  #TODO Naming here is tricky, because "data" is a possible collision.
   my $file = $self->dryrun ? '/tmp/finger_data' : '/u/system/sysadmin/data';
   my $PATH_TMPFILE = $TMPDIR . basename($file);
   my $vars = {filename => $file, date => get_date(), dbh => $udb->storage->dbh};
