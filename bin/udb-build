@@ -54,9 +54,9 @@ if (not $dryrun) {
     print "ERROR: Do not run as root.\n";
     exit;
   }
+  system("sudo -v");
 }
 
-  system("sudo -v");
 
   $ub->build_tftpboot;
   $ub->build_netgroup;
