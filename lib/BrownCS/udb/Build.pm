@@ -22,6 +22,13 @@ sub BUILD {
   $self->{TMPDIR} = File::Temp::tempdir("/tmp/udb-build.XXXX") . "/";
 }
 
+sub renew_sudo {
+  my $self = shift;
+  my $udb = $self->udb;
+  if (not $self->dryrun){
+    system("sudo -v");
+  }
+}
 
 sub maybe_system {
   my $self = shift;
@@ -80,7 +87,7 @@ sub build_tftpboot {
   my $self = shift;
   my $udb = $self->udb;
 
-  system("sudo -v");
+  renew_sudo($self);
 
   print "Building tftpboot... ";
 
@@ -247,7 +254,7 @@ sub build_dhcp {
   my $self = shift;
   my $udb = $self->udb;
 
-  system("sudo -v");
+  renew_sudo($self);
 
   print "Building dhcp... ";
 
@@ -275,7 +282,7 @@ sub build_dhcp {
 sub build_nagios {
   my $self = shift;
   my $udb = $self->udb;
-  system("sudo -v");
+  renew_sudo($self);
   print "Building nagios files... ";
   $self->build_nagios_hosts;
   $self->build_nagios_services;
@@ -321,7 +328,7 @@ sub build_wpkg_hosts {
   my $self = shift;
   my $udb = $self->udb;
 
-  system("sudo -v");
+  renew_sudo($self);
 
   print "Building wpkg hosts file... ";
 
@@ -512,7 +519,7 @@ sub build_dns {
   my $self = shift;
   my $udb = $self->udb;
 
-  system("sudo -v");
+  renew_sudo($self);
 
   print "Building dns... ";
 
@@ -597,7 +604,7 @@ sub build_finger_data {
   my $self = shift;
   my $udb = $self->udb;
 
-  system("sudo -v");
+  renew_sudo($self);
 
   print "Building finger data... ";
   #DANGER Looks like no other file called "data" is created...
