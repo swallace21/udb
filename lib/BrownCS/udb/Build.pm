@@ -131,9 +131,8 @@ sub build_tftpboot {
       printf "link %s (%s) -> %s\n", $comp->device_name, $hex_ip, $bootimage;
     }
     if (not $self->dryrun) {
-      #TODO Sudo?
-      unlink("$tftpboot_path/$hex_ip");
-      symlink("$bootimage", "$tftpboot_path/$hex_ip");
+      maybe_system("sudo rm $tftpboot_path/$hex_ip");
+      maybe_system("sudo ln -s $bootimage $tftpboot_path/$hex_ip");
     }
   }
 
@@ -547,7 +546,6 @@ sub build_dns {
   my @files = ();
 
   foreach my $subnet (@subnets) {
-    #TODO What is the working directory here?
     my $file = $self->build_dns_map_reverse($serial_num, $subnet);
     push @files, $file;
   }
@@ -560,16 +558,15 @@ sub build_dns {
 
   # fix permissions
   foreach my $file (@files) {
-    #TODO What are these files?
-    $self->commit_local("/tmp/$file.tmp", $file);
+    $self->commit_local($TMPDIR . basename($file), $file);
     if ($self->verbose) {
       print "DEBUG: fix permissions\n";
     }
     if (not $self->dryrun) {
       # fix permissions the file
-      # TODO Make use of SUDO
-      chown(0, (getgrnam('sys'))[2], $file) || warn "$0: WARNING: Failed to chown $file: $!\n";
-      chmod(0444, $file) || warn "$0: WARNING: Failed to chmod $file: $!\n";
+      my $group = (getgrnam('sys'))[2];
+      maybe_system("sudo chown 0:$group $file") || warn "$0: WARNING: Failed to chown $file: $!\n";
+      maybe_system("sudo chmod 0444 $file") || warn "$0: WARNING: Failed to chmod $file: $!\n";
     }
   }
 
@@ -599,8 +596,8 @@ sub build_finger_data {
   system("sudo -v");
 
   print "Building finger data... ";
-  #TODO Naming here is tricky, because "data" is a possible collision.
-  my $file = $self->dryrun ? '/tmp/finger_data' : '/u/system/sysadmin/data';
+  #DANGER Looks like no other file called "data" is created...
+  my $file = '/u/system/sysadmin/data';
   my $PATH_TMPFILE = $TMPDIR . basename($file);
   my $vars = {filename => $file, date => get_date(), dbh => $udb->storage->dbh};
   $self->tt->process('finger_data.tt2', $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
