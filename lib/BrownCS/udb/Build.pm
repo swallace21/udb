@@ -32,6 +32,7 @@ sub maybe_system {
 }
 
 sub maybe_rename {
+  if($dryrun) return;
   my $self = shift;
   my $udb = $self->udb;
   my ($old, $new) = @_;
@@ -44,6 +45,7 @@ sub maybe_rename {
 }
 
 sub commit_local {
+  if($dryrun) return;
   my $self = shift;
   my $udb = $self->udb;
   my $dst = $_[-1];
@@ -59,6 +61,7 @@ sub commit_local {
 }
 
 sub commit_scp {
+  if($dryrun) return;
   my $self = shift;
   my $udb = $self->udb;
   my $dst = $_[-1];
@@ -559,7 +562,7 @@ sub build_dns {
   # fix permissions
   foreach my $file (@files) {
     #TODO What are these files?
-    $self->commit_local("$file.tmp", $file);
+    $self->commit_local("/tmp/$file.tmp", $file);
     if ($self->verbose) {
       print "DEBUG: fix permissions\n";
     }
@@ -600,7 +603,7 @@ sub build_finger_data {
   my $PATH_TMPFILE = $TMPDIR . basename($file);
   my $vars = {filename => $file, date => get_date(), dbh => $udb->storage->dbh};
   $self->tt->process('finger_data.tt2', $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
-  $self->maybe_rename($PATH_TMPFILE, $file);
+  $self->commit_local($PATH_TMPFILE, $file);
   print "done.\n";
 }
 
