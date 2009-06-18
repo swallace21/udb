@@ -8,6 +8,7 @@ use BrownCS::udb::Util qw(:all);
 use NetAddr::IP qw(Coalesce);
 use List::MoreUtils qw(uniq);
 use File::Temp qw(tempfile tempdir);
+use File::Basename;
 
 has 'udb' => ( is => 'ro', isa => 'BrownCS::udb::Schema', required => 1 );
 has 'verbose' => ( is => 'ro', isa => 'Bool', required => 1 );
@@ -18,7 +19,7 @@ has 'TMPDIR' => (is => 'rw', isa => 'Str', required => 0 );
 sub BUILD {
   my $self = shift;
   $self->{tt} = Template->new({INCLUDE_PATH => "$RealBin/../templates"}) || die "$Template::ERROR\n";
-  $self->{TMPDIR} = File::Temp::tempdir("/tmp/udb-build.XXXX");
+  $self->{TMPDIR} = File::Temp::tempdir("/tmp/udb-build.XXXX") . "/";
 }
 
 
@@ -260,6 +261,7 @@ sub build_dhcp {
   my @CDB_DHCP_SERVERS = qw(payday snickers);
   foreach my $host (@CDB_DHCP_SERVERS) {
     $self->commit_scp($file, "$host:/etc");
+    #TODO Change or remove this check (is it necessary?)
     if ( $? != 0 ) {
       warn "$0: ERROR: Failed to copy DNS files to $host\n";
     }
@@ -581,6 +583,7 @@ sub build_dns {
     }
 
     $self->maybe_system('sudo', 'ssh', '-x', $host, '/usr/sbin/rndc reload');
+    #TODO Dryrun check
     if ( $? != 0 ) {
         warn "$0: ERROR: Failed to send DNS reload command to on $host\n";
     }
