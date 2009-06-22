@@ -32,6 +32,7 @@ sub renew_sudo {
 
 sub maybe_system {
   my $self = shift;
+  print $self;
   my $udb = $self->udb;
   if ($self->verbose) {
     print "@_\n";
@@ -140,8 +141,8 @@ sub build_tftpboot {
       printf "link %s (%s) -> %s\n", $comp->device_name, $hex_ip, $bootimage;
     }
     if (not $self->dryrun) {
-      maybe_system("sudo rm $tftpboot_path/$hex_ip");
-      maybe_system("sudo ln -s $bootimage $tftpboot_path/$hex_ip");
+      $self->maybe_system("sudo rm $tftpboot_path/$hex_ip");
+      $self->maybe_system("sudo ln -s $bootimage $tftpboot_path/$hex_ip");
     }
   }
 
@@ -575,8 +576,8 @@ sub build_dns {
     if (not $self->dryrun) {
       # fix permissions the file
       my $group = (getgrnam('sys'))[2];
-      maybe_system("sudo chown 0:$group $file") || warn "$0: WARNING: Failed to chown $file: $!\n";
-      maybe_system("sudo chmod 0444 $file") || warn "$0: WARNING: Failed to chmod $file: $!\n";
+      $self->maybe_system("sudo chown 0:$group $file") || warn "$0: WARNING: Failed to chown $file: $!\n";
+      $self->maybe_system("sudo chmod 0444 $file") || warn "$0: WARNING: Failed to chmod $file: $!\n";
     }
   }
 
