@@ -32,7 +32,6 @@ sub renew_sudo {
 
 sub maybe_system {
   my $self = shift;
-  print $self;
   my $udb = $self->udb;
   if ($self->verbose) {
     print "@_\n";
