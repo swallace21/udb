@@ -313,7 +313,7 @@ sub build_nagios_services {
 
   my $file = '/maytag/sys0/Linux/files/add/group.debian.server.nagios3/etc/nagios3/conf.d/services.cfg';
   my $PATH_TMPFILE = $self->TMPDIR . basename($file);
-  my $vars = {filename => $file, date => get_date(), dbh => $udb->storage->dbh};
+  my $vars = {filename => $PATH_TMPFILE, date => get_date(), dbh => $udb->storage->dbh};
   $self->tt->process('services.cfg.tt2', $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
 
   # send new config file to each server
