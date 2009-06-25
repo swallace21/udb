@@ -62,7 +62,7 @@ sub commit_local {
   }
   if (not $self->dryrun) {
     # The following line works. Think about it. 
-    if (!system("cp @_") == 0){
+    if (!system("sudo cp @_") == 0){
       die "$0: ERROR: Failed committing $dst: $!\n" ;
     }
   }
