@@ -269,7 +269,7 @@ sub build_dhcp {
   foreach my $host (@CDB_DHCP_SERVERS) {
     $self->commit_scp($file, "$host:/etc");
     #TODO Change or remove this check (is it necessary?)
-    if (not $dryrun && $? != 0 ) {
+    if (not $self->dryrun && $? != 0 ) {
       warn "$0: ERROR: Failed to copy DNS files to $host\n";
     }
   }
@@ -302,7 +302,7 @@ sub build_nagios_hosts {
   # send new config file to each server
   $self->commit_local($PATH_TMPFILE, $file);
   $self->commit_scp($file, "storm:/etc/nagios3/conf.d/");
-  if ( not $dryrun && $? != 0 ) {
+  if ( not $self->dryrun && $? != 0 ) {
     warn "$0: ERROR: Failed to copy nagios files to storm\n";
   }
 }
@@ -319,7 +319,7 @@ sub build_nagios_services {
   # send new config file to each server
   $self->commit_local($PATH_TMPFILE, $file);
   $self->commit_scp($file, "storm:/etc/nagios3/conf.d/");
-  if ( not $dryrun && $? != 0 ) {
+  if ( not $self->dryrun && $? != 0 ) {
     warn "$0: ERROR: Failed to copy nagios files to storm\n";
   }
 }
@@ -585,12 +585,12 @@ sub build_dns {
   foreach my $host (@dns_servers) {
     #Be careful, note @files != $file
     $self->commit_scp(@files, "$host:/var/cache/bind");
-    if ( not $dryrun && $? != 0 ) {
+    if ( not $self->dryrun && $? != 0 ) {
       warn "$0: ERROR: Failed to copy DNS files to $host\n";
     }
 
     $self->maybe_system('sudo', 'ssh', '-x', $host, '/usr/sbin/rndc reload');
-    if ( not $dryrun && $? != 0 ) {
+    if ( not $self->dryrun && $? != 0 ) {
         warn "$0: ERROR: Failed to send DNS reload command to on $host\n";
     }
   }
