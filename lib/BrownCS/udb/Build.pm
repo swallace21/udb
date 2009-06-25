@@ -165,7 +165,7 @@ sub build_netgroup {
   my $self = shift;
   my $udb = $self->udb;
 
-  BrownCS::udb::Util::okay_kerberos;
+  if(not $self->dryrun){BrownCS::udb::Util::okay_kerberos;}
 
   print "Building netgroups... ";
 
