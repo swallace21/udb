@@ -579,8 +579,12 @@ sub build_dns {
     if ((not $self->dryrun)) {
       # fix permissions the file
       my $group = (getgrnam('sys'))[2];
-      $self->maybe_system("sudo chown 0:$group $file") || warn "$0: WARNING: Failed to chown $file: $!\n";
-      $self->maybe_system("sudo chmod 0444 $file") || warn "$0: WARNING: Failed to chmod $file: $!\n";
+      # Dropped warnings - mostly superfluous
+      $self->maybe_system("sudo chown 0:$group $file");
+      $self->maybe_system("sudo chmod 0444 $file");
+      # With warnings:
+      #$self->maybe_system("sudo chown 0:$group $file") || warn "$0: WARNING: Failed to chown $file: $!\n";
+      #$self->maybe_system("sudo chmod 0444 $file") || warn "$0: WARNING: Failed to chmod $file: $!\n";
     }
   }
 
