@@ -7,17 +7,28 @@ use FindBin qw($RealBin);
 use BrownCS::udb::Util qw(:all);
 use NetAddr::IP qw(Coalesce);
 use List::MoreUtils qw(uniq);
+use File::Temp qw(tempfile tempdir);
+use File::Basename;
 
 has 'udb' => ( is => 'ro', isa => 'BrownCS::udb::Schema', required => 1 );
 has 'verbose' => ( is => 'ro', isa => 'Bool', required => 1 );
 has 'dryrun' => ( is => 'ro', isa => 'Bool', required => 1 );
 has 'tt' => ( is => 'ro', isa => 'Template', required => 0 );
+has 'TMPDIR' => (is => 'rw', isa => 'Str', required => 0 );
 
 sub BUILD {
   my $self = shift;
   $self->{tt} = Template->new({INCLUDE_PATH => "$RealBin/../templates"}) || die "$Template::ERROR\n";
+  $self->{TMPDIR} = File::Temp::tempdir("/tmp/udb-build.XXXX") . "/";
 }
 
+sub renew_sudo {
+  my $self = shift;
+  my $udb = $self->udb;
+  if (not $self->dryrun){
+    system("sudo -v");
+  }
+}
 
 sub maybe_system {
   my $self = shift;
@@ -42,9 +53,41 @@ sub maybe_rename {
   }
 }
 
+sub commit_local {
+  my $self = shift;
+  my $udb = $self->udb;
+  my $dst = $_[-1];
+  if ($self->verbose) {
+    print "Committing $dst on local\n";
+  }
+  if (not $self->dryrun) {
+    # The following line works. Think about it. 
+    if (!system("sudo cp @_") == 0){
+      die "$0: ERROR: Failed committing $dst: $!\n" ;
+    }
+  }
+}
+
+sub commit_scp {
+  my $self = shift;
+  my $udb = $self->udb;
+  my $dst = $_[-1];
+  if ($self->verbose) {
+    print "Committing $dst via scp\n";
+  }
+  if (not $self->dryrun) {
+    # The following line works. Think about it. 
+    if (!system("sudo scp -pq @_") == 0){
+      die "$0: ERROR: Failed committing $dst: $!\n" ;
+    }
+  }
+}
+
 sub build_tftpboot {
   my $self = shift;
   my $udb = $self->udb;
+
+  renew_sudo($self);
 
   print "Building tftpboot... ";
 
@@ -97,8 +140,8 @@ sub build_tftpboot {
       printf "link %s (%s) -> %s\n", $comp->device_name, $hex_ip, $bootimage;
     }
     if (not $self->dryrun) {
-      unlink("$tftpboot_path/$hex_ip");
-      symlink("$bootimage", "$tftpboot_path/$hex_ip");
+      $self->maybe_system("sudo rm $tftpboot_path/$hex_ip");
+      $self->maybe_system("sudo ln -s $bootimage $tftpboot_path/$hex_ip");
     }
   }
 
@@ -121,6 +164,8 @@ sub add_to_group {
 sub build_netgroup {
   my $self = shift;
   my $udb = $self->udb;
+
+  if(not $self->dryrun){BrownCS::udb::Util::okay_kerberos;}
 
   print "Building netgroups... ";
 
@@ -212,23 +257,30 @@ sub build_dhcp {
   my $self = shift;
   my $udb = $self->udb;
 
+  renew_sudo($self);
+
+  if((not $self->dryrun) && 1){
+    print "Dryun\n";
+  }
+
   print "Building dhcp... ";
 
-  my $file = $self->dryrun ? '/tmp/dhcpd.conf' : '/maytag/sys0/dhcp/dhcpd.conf';
-  my $PATH_TMPFILE = $file . '.tmp';
+  my $file = '/maytag/sys0/dhcp/dhcpd.conf';
+  my $PATH_TMPFILE = $self->TMPDIR . basename($file);
   my $vars = {filename => $file, date => get_date(), dbh => $udb->storage->dbh};
   $self->tt->process('dhcpd.conf.tt2', $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
 
   # send new config file to each server
-  $self->maybe_rename($PATH_TMPFILE, $file);
+  $self->commit_local($PATH_TMPFILE, $file);
   my @CDB_DHCP_SERVERS = qw(payday snickers);
   foreach my $host (@CDB_DHCP_SERVERS) {
-    $self->maybe_system('scp', '-pq', $file, "$host:/etc");
-    if ( $? != 0 ) {
+    $self->commit_scp($file, "$host:/etc");
+    #TODO Change or remove this check (is it necessary?)
+    if ((not $self->dryrun) && $? != 0 ) {
       warn "$0: ERROR: Failed to copy DNS files to $host\n";
     }
   }
-  $self->maybe_system('ssh', '-x', 'dhcp', '/etc/init.d/dhcp restart');
+  $self->maybe_system('sudo', 'ssh', '-x', 'dhcp', '/etc/init.d/dhcp restart');
 
   print "done.\n";
 
@@ -237,10 +289,11 @@ sub build_dhcp {
 sub build_nagios {
   my $self = shift;
   my $udb = $self->udb;
+  renew_sudo($self);
   print "Building nagios files... ";
   $self->build_nagios_hosts;
   $self->build_nagios_services;
-  $self->maybe_system('ssh', '-x', 'storm', '/etc/init.d/nagios3 restart');
+  $self->maybe_system('sudo', 'ssh', '-x', 'storm', '/etc/init.d/nagios3 restart');
   print "done.\n";
 }
 
@@ -248,15 +301,15 @@ sub build_nagios_hosts {
   my $self = shift;
   my $udb = $self->udb;
 
-  my $file = $self->dryrun ? '/tmp/hosts.cfg' : '/maytag/sys0/Linux/files/add/group.debian.server.nagios3/etc/nagios3/conf.d/hosts.cfg';
-  my $PATH_TMPFILE = $file . '.tmp';
+  my $file = '/maytag/sys0/Linux/files/add/group.debian.server.nagios3/etc/nagios3/conf.d/hosts.cfg';
+  my $PATH_TMPFILE = $self->TMPDIR . basename($file);
   my $vars = {filename => $file, date => get_date(), dbh => $udb->storage->dbh};
   $self->tt->process('hosts.cfg.tt2', $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
 
   # send new config file to each server
-  $self->maybe_rename($PATH_TMPFILE, $file);
-  $self->maybe_system('scp', '-pq', $file, "storm:/etc/nagios3/conf.d/");
-  if ( $? != 0 ) {
+  $self->commit_local($PATH_TMPFILE, $file);
+  $self->commit_scp($file, "storm:/etc/nagios3/conf.d/");
+  if ( (not $self->dryrun) && $? != 0 ) {
     warn "$0: ERROR: Failed to copy nagios files to storm\n";
   }
 }
@@ -265,15 +318,15 @@ sub build_nagios_services {
   my $self = shift;
   my $udb = $self->udb;
 
-  my $file = $self->dryrun ? '/tmp/services.cfg' : '/maytag/sys0/Linux/files/add/group.debian.server.nagios3/etc/nagios3/conf.d/services.cfg';
-  my $PATH_TMPFILE = $file . '.tmp';
-  my $vars = {filename => $file, date => get_date(), dbh => $udb->storage->dbh};
+  my $file = '/maytag/sys0/Linux/files/add/group.debian.server.nagios3/etc/nagios3/conf.d/services.cfg';
+  my $PATH_TMPFILE = $self->TMPDIR . basename($file);
+  my $vars = {filename => $PATH_TMPFILE, date => get_date(), dbh => $udb->storage->dbh};
   $self->tt->process('services.cfg.tt2', $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
 
   # send new config file to each server
-  $self->maybe_rename($PATH_TMPFILE, $file);
-  $self->maybe_system('scp', '-pq', $file, "storm:/etc/nagios3/conf.d/");
-  if ( $? != 0 ) {
+  $self->commit_local($PATH_TMPFILE, $file);
+  $self->commit_scp($file, "storm:/etc/nagios3/conf.d/");
+  if ( (not $self->dryrun) && $? != 0 ) {
     warn "$0: ERROR: Failed to copy nagios files to storm\n";
   }
 }
@@ -282,10 +335,12 @@ sub build_wpkg_hosts {
   my $self = shift;
   my $udb = $self->udb;
 
+  renew_sudo($self);
+
   print "Building wpkg hosts file... ";
 
-  my $file = $self->dryrun ? '/tmp/wpkg-hosts.xml' : '/u/system/win32/WPKG/hosts/cdb.xml';
-  my $PATH_TMPFILE = $file . '.tmp';
+  my $file = '/u/system/win32/WPKG/hosts/cdb.xml';
+  my $PATH_TMPFILE = $self->TMPDIR . basename($file);
 
   my $vars = {
     filename => $file,
@@ -415,7 +470,7 @@ sub build_wpkg_hosts {
   }
 
   $self->tt->process('wpkg-hosts.xml.tt2', $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
-  $self->maybe_rename($PATH_TMPFILE, $file);
+  $self->commit_local($PATH_TMPFILE, $file);
 
   print "done.\n";
 
@@ -429,8 +484,8 @@ sub build_dns_map_forward {
   my @domain_parts = split(/\./, $domain);
   my $zone = $domain_parts[0];
 
-  my $file = $self->dryrun ? "/tmp/db.$zone" : "/maytag/sys0/DNS/db.$zone";
-  my $PATH_TMPFILE = $file . '.tmp';
+  my $file = "/maytag/sys0/DNS/db.$zone";
+  my $PATH_TMPFILE = $self->TMPDIR . basename($file);
   my $vars = {
     filename => $file,
     date => get_date(),
@@ -451,10 +506,10 @@ sub build_dns_map_reverse {
   my ($serial_num, $subnet) = @_;
   my $zone = $subnet->prefix;
 
-  my $file = $self->dryrun ? "/tmp/db.$zone" : "/maytag/sys0/DNS/db.$zone";
+  my $file = "/maytag/sys0/DNS/db.$zone";
   chop($file);
 
-  my $PATH_TMPFILE = $file . '.tmp';
+  my $PATH_TMPFILE = $self->TMPDIR . basename($file);
   my $vars = {
     filename => $file,
     date => get_date(),
@@ -472,6 +527,8 @@ sub build_dns_map_reverse {
 sub build_dns {
   my $self = shift;
   my $udb = $self->udb;
+
+  renew_sudo($self);
 
   print "Building dns... ";
 
@@ -520,27 +577,33 @@ sub build_dns {
 
   # fix permissions
   foreach my $file (@files) {
-    $self->maybe_rename("$file.tmp", $file);
+    $self->commit_local($self->TMPDIR . basename($file), $file);
     if ($self->verbose) {
       print "DEBUG: fix permissions\n";
     }
-    if (not $self->dryrun) {
+    if ((not $self->dryrun)) {
       # fix permissions the file
-      chown(0, (getgrnam('sys'))[2], $file) || warn "$0: WARNING: Failed to chown $file: $!\n";
-      chmod(0444, $file) || warn "$0: WARNING: Failed to chmod $file: $!\n";
+      my $group = (getgrnam('sys'))[2];
+      # Dropped warnings - mostly superfluous
+      $self->maybe_system("sudo chown 0:$group $file");
+      $self->maybe_system("sudo chmod 0444 $file");
+      # With warnings:
+      #$self->maybe_system("sudo chown 0:$group $file") || warn "$0: WARNING: Failed to chown $file: $!\n";
+      #$self->maybe_system("sudo chmod 0444 $file") || warn "$0: WARNING: Failed to chmod $file: $!\n";
     }
   }
 
   # send new config file to each server
   my @dns_servers = qw(payday snickers);
   foreach my $host (@dns_servers) {
-    $self->maybe_system('scp', '-pq', @files, "$host:/var/cache/bind");
-    if ( $? != 0 ) {
+    #Be careful, note @files != $file
+    $self->commit_scp(@files, "$host:/var/cache/bind");
+    if ( (not $self->dryrun) && $? != 0 ) {
       warn "$0: ERROR: Failed to copy DNS files to $host\n";
     }
 
-    $self->maybe_system('ssh', '-x', $host, '/usr/sbin/rndc reload');
-    if ( $? != 0 ) {
+    $self->maybe_system('sudo', 'ssh', '-x', $host, '/usr/sbin/rndc reload');
+    if ( (not $self->dryrun) && $? != 0 ) {
         warn "$0: ERROR: Failed to send DNS reload command to on $host\n";
     }
   }
@@ -552,12 +615,16 @@ sub build_dns {
 sub build_finger_data {
   my $self = shift;
   my $udb = $self->udb;
+
+  renew_sudo($self);
+
   print "Building finger data... ";
-  my $file = $self->dryrun ? '/tmp/finger_data' : '/u/system/sysadmin/data';
-  my $PATH_TMPFILE = $file . '.tmp';
+  #DANGER Looks like no other file called "data" is created...
+  my $file = '/u/system/sysadmin/data';
+  my $PATH_TMPFILE = $self->TMPDIR . basename($file);
   my $vars = {filename => $file, date => get_date(), dbh => $udb->storage->dbh};
   $self->tt->process('finger_data.tt2', $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
-  $self->maybe_rename($PATH_TMPFILE, $file);
+  $self->commit_local($PATH_TMPFILE, $file);
   print "done.\n";
 }
 
