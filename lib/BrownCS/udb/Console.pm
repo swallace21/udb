@@ -461,16 +461,6 @@ sub get_ip_and_vlan {
   my $self = shift;
   my ($dynamic) = @_;
 
-#print "dynamic: $dynamic\n";
-#
-#  if ($dynamic) { 
-#    $dynamic = 1; 
-#  } else {
-#    $dynamic = 0;
-#  }
-#
-#print "dynamic: $dynamic\n";
-
   my $ip_or_vlan_preamble = <<EOF;
 What is IP address do you want assigned?
 If you just want an arbitrary IP on a given VLAN (e.g. 31, 36),
@@ -516,10 +506,10 @@ sub get_switchport {
 
   # if this is an existing port, then retrieve current port information
   if ($iface->net_port_id) {
-    $switch_name = $iface->net_port->net_switch->switch_name;
-    $blade_num = $iface->net_port->net_switch->blade_num;
-    $port_num = $iface->net_port->net_switch->port_num;
-    $wall_plate = $iface->net_port->net_switch->wall_plate;
+    $switch_name = $iface->net_port->switch_name;
+    $blade_num = $iface->net_port->blade_num;
+    $port_num = $iface->net_port->port_num;
+    $wall_plate = $iface->net_port->wall_plate;
   }
 
   my $port;
