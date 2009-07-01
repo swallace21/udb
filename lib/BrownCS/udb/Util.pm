@@ -422,8 +422,8 @@ sub okay_tstaff_user {
   my $self = shift;
 
   my @groupinf = getgrnam("tstaff");
-  my $user = getlogin;
-  if($groupinf[3] !~ /\b$user\b/){
+  my $user = getlogin || getpwuid($<);
+  if((!$user) || $groupinf[3] !~ /\b$user\b/){
     print "Sorry, you're not in tstaff.\n";
     return 0;
   }
