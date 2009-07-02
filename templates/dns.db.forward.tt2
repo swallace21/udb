@@ -94,6 +94,7 @@ www                                 IN          CNAME           tux.cs.brown.edu
 debian          60                  IN          A               128.148.33.94
 debian          60                  IN          A               128.148.33.24
 kits                                IN          CNAME           debian.cs.brown.edu.
+centos                              IN          CNAME           debian.cs.brown.edu.
 pkgs                                IN          CNAME           debian.cs.brown.edu.
 debian                              IN          MX              10 mx.cs.brown.edu.
 
