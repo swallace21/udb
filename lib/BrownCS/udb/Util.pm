@@ -445,7 +445,7 @@ sub okay_tstaff_machine {
       return 1;
     }
   }
-  if ($host eq "adminhost.cs.brown.edu"){
+  if (okay_adminhost()){
     return 1;
   }
   print "Sorry, this is not a tstaff machine.\n";
