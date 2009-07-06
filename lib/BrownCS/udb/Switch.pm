@@ -38,7 +38,7 @@ sub connect {
     # this is not a typo: missing letter can be either p or P
     # ####
     # With regards to the above comment: WHAT?
-    $self->wait_for("assword: ", "Never got a password prompt on $name");
+    $self->wait_for("assword: ", "Never got a password prompt on $name : $fqdn");
 
     $self->send("$password\r");
 
