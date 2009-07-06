@@ -34,7 +34,7 @@ my $udb = BrownCS::udb::Schema->connect;
 my $uc = new BrownCS::udb::Console(udb => $udb);
 
 if (not $dryrun) {
-  if (not BrownCS::udb::Util::okay_tstaff) {
+  if (!BrownCS::udb::Util::okay_tstaff || !BrownCS::udb::Util::okay_adminhost) {
     print "Insufficient privileges - check your warnings.\n";
     exit;
   }
