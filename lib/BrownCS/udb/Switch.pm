@@ -36,6 +36,8 @@ sub connect {
   if ($connection_type eq 'ssh') {
     # Login
     # this is not a typo: missing letter can be either p or P
+    # ####
+    # With regards to the above comment: WHAT?
     $self->wait_for("assword: ", "Never got a password prompt on $name");
 
     $self->send("$password\r");
