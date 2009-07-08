@@ -485,7 +485,7 @@ sub get_port {
 
   if ($place && $place->room) {
     my $room = $place->room;
-    # FIX ME - this check needs to be checked against a db entry, but I need this working now!
+    # TODO FIX ME - this check needs to be checked against a db entry, but I need this working now!
     if ($room eq '531' || $room eq '310') {
       $port = $self->get_switchport($iface, $vlan);
     } else {
