@@ -92,10 +92,18 @@ sub verify_ip {
   return sub {
     my ($ipaddr) = @_;
 
-print "ipaddr: $ipaddr\n";
-    my $netaddr_ip = new NetAddr::IP ($ipaddr);
+    my $netaddr_ip = $udb->resultset('NetAddresses')->search({
+        ipaddr => $ipaddr,
+      })->single;
+
+    if ($netaddr_ip) {
+      print "\nIP address $ipaddr is already in use\n";
+      return (0, undef);
+    }
+
+    $netaddr_ip = new NetAddr::IP ($ipaddr);
     if (not $netaddr_ip) {
-      print "Invalid IP address: $netaddr_ip!\n";
+      print "\nInvalid IP address: $netaddr_ip!\n";
       return (0, undef);
     }
 

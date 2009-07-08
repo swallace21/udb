@@ -318,7 +318,7 @@ sub verify_ip_or_vlan {
 
     if ($ip_or_vlan_str =~ /\./) {
       # we got an IP address
-      return verify_ip($udb)->($ip_or_vlan_str);
+      return BrownCS::udb::Net::verify_ip($udb)->($ip_or_vlan_str);
     }
 
     # we got a VLAN
