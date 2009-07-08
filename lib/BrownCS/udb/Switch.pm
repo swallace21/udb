@@ -134,7 +134,9 @@ sub get_port_vlans {
 
   # TODO check this in the database schema
   if (scalar(keys(%native_vlans)) > 1) {
-    warn "Error: primary addresses should never have different VLANs!\n";
+  # I am not sure why this is being done
+    warn "Warning: primary addresses should never have different VLANs!\n";
+    warn "Setting VLAN to 36\n";
     $native_vlan = '36';
   } elsif (not $native_vlan) {
     $native_vlan = '36';
