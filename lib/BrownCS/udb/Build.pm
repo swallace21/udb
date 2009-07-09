@@ -272,12 +272,12 @@ sub build_dhcp {
 
   # send new config file to each server
   $self->commit_local($PATH_TMPFILE, $file);
-  my @CDB_DHCP_SERVERS = qw(payday snickers);
-  foreach my $host (@CDB_DHCP_SERVERS) {
+  my @dhcp_servers = qw(payday snickers);
+  foreach my $host (@dhcp_servers) {
     $self->commit_scp($file, "$host:/etc");
     #TODO Change or remove this check (is it necessary?)
     if ((not $self->dryrun) && $? != 0 ) {
-      warn "$0: ERROR: Failed to copy DNS files to $host\n";
+      warn "$0: ERROR: Failed to copy DHCP files to $host\n";
     }
   }
   $self->maybe_system('sudo', 'ssh', '-x', 'dhcp', '/etc/init.d/dhcp restart');
@@ -594,7 +594,7 @@ sub build_dns {
   }
 
   # send new config file to each server
-  my @dns_servers = qw(payday snickers);
+  my @dns_servers = qw(heath rally payday snickers);
   foreach my $host (@dns_servers) {
     #Be careful, note @files != $file
     $self->commit_scp(@files, "$host:/var/cache/bind");
