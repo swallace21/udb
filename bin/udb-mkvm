@@ -80,11 +80,11 @@ if ($vm_type eq 'tstaff') {
   ($ipaddr, $vlan) = $uc->get_ip_and_vlan(1);
 } elsif ($vm_type eq 'unsup') {
   $managed_by = 'user';
-  $equip_usage_type = 'userserver';
+  $equip_usage_type = 'virtual';
   (undef, $ipaddr, $vlan) = verify_ip_or_vlan($udb)->("36");
 } elsif ($vm_type eq 'userdmz') {
   $managed_by = 'user';
-  $equip_usage_type = 'userserver';
+  $equip_usage_type = 'virtual';
   (undef, $ipaddr, $vlan) = verify_ip_or_vlan($udb)->("892");
 }
 
