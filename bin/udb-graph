@@ -1,0 +1,18 @@
+#!/bin/sh 
+#Uses sqlt-graph to make a graph of udb. 
+#Quick-n-Dirty
+
+awk '
+BEGIN {flag=0; check=0}
+check>0 && /\(/ {check++}
+/check/ {check=1}
+check>0 && /\)/ {check--}
+/}}}/ {flag=0}
+flag==1 && check==0 {print}
+flag==0 && /tables --/ {flag=1}
+' ${0%/*}/../schema/schema.sql | \
+sed -e 's/dns_safe_text/text/g' > \
+/tmp/schema.sql
+sqlt-graph -f PostgreSQL -o schema.svg -t svg /tmp/schema.sql
+
+exit 0
