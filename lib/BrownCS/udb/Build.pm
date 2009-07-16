@@ -125,6 +125,10 @@ sub build_tftpboot {
       $bootimage = "fai-workstation-i386";
     } elsif ($os->os_type eq 'debian64') {
       $bootimage = "fai-workstation-amd64";
+    } elsif ($os->os_type eq 'centos') {
+      $bootimage = "centos-workstation-i386";
+    } elsif ($os->os_type eq 'centos64') {
+      $bootimage = "centos-workstation-x86_64";
     }
 
     next if not defined($bootimage);
