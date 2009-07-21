@@ -53,6 +53,13 @@ __PACKAGE__->add_columns(
     size => undef,
   },
   "last_updated" => { data_type => "timestamp without time zone", default_value => "now()", is_nullable => 0, size => 8, },
+  "private",
+  {
+    data_type => "boolean",
+    default_value => "false",
+    is_nullable => 0,
+    size => 1,
+  },
 );
 __PACKAGE__->set_primary_key("vlan_num");
 __PACKAGE__->add_unique_constraint("net_vlans_pkey", ["vlan_num"]);

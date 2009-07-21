@@ -278,6 +278,7 @@ create table net_vlans (
                               on delete cascade,
   network                   cidr not null,
   gateway                   inet not null,
+  private                   boolean not null default false,
   dhcp                      boolean not null default true,
   last_updated              timestamp not null default now(),
   dynamic_dhcp_start        inet,

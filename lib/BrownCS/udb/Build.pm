@@ -483,12 +483,12 @@ sub build_wpkg_hosts {
 sub build_dns_map_forward {
   my $self = shift;
   my $udb = $self->udb;
-  my ($serial_num, $domain) = @_;
+  my ($serial_num, $region, $domain) = @_;
 
   my @domain_parts = split(/\./, $domain);
   my $zone = $domain_parts[0];
 
-  my $file = "/maytag/sys0/DNS/db.$zone";
+  my $file = "/maytag/sys0/DNS/db.$zone.$region";
   my $PATH_TMPFILE = $self->TMPDIR . basename($file);
   my $vars = {
     filename => $file,
@@ -499,7 +499,7 @@ sub build_dns_map_forward {
     domain => $domain,
   };
 
-  $self->tt->process('dns.db.forward.tt2', $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
+  $self->tt->process("dns.db.forward.$region.tt2", $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
 
   return $file;
 }
@@ -507,11 +507,11 @@ sub build_dns_map_forward {
 sub build_dns_map_reverse {
   my $self = shift;
   my $udb = $self->udb;
-  my ($serial_num, $subnet) = @_;
+  my ($serial_num, $region, $subnet) = @_;
   my $zone = $subnet->prefix;
 
-  my $file = "/maytag/sys0/DNS/db.$zone";
-  chop($file);
+  my $file = "/maytag/sys0/DNS/db.$zone$region";
+  chomp($file);
 
   my $PATH_TMPFILE = $self->TMPDIR . basename($file);
   my $vars = {
@@ -523,7 +523,7 @@ sub build_dns_map_reverse {
     cidr => $subnet->cidr,
   };
 
-  $self->tt->process('dns.db.reverse.tt2', $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
+  $self->tt->process("dns.db.reverse.$region.tt2", $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
 
   return $file;
 }
@@ -547,7 +547,7 @@ sub build_dns {
   # TODO increment the SOA line
   my ($serial_num) = $udb->storage->dbh->selectrow_array("select nextval('dns_serial_num_seq')");
 
-  my $subnets = $udb->resultset("NetVlans")->search(
+  my $subnets_rs = $udb->resultset("NetVlans")->search(
     {
       'zone.zone_manager' => 'tstaff',
     },
@@ -556,9 +556,11 @@ sub build_dns {
     }
   );
 
+  my %cs_subnets = ();
   my @spread_subnets = ();
 
-  while (my $subnet = $subnets->next) {
+  while (my $subnet = $subnets_rs->next) {
+    $cs_subnets{new NetAddr::IP($subnet->network)} = $subnet->private;
     push @spread_subnets, (new NetAddr::IP($subnet->network));
   }
 
@@ -568,15 +570,22 @@ sub build_dns {
 
   my @files = ();
 
-  foreach my $subnet (@subnets) {
-    my $file = $self->build_dns_map_reverse($serial_num, $subnet);
-    push @files, $file;
+  my @regions = qw(internal external);
+  foreach my $region (@regions) {
+    foreach my $subnet (@subnets) {
+      next if ($region =~ /external/ && $cs_subnets{$subnet});
+      my $file = $self->build_dns_map_reverse($serial_num, $region, $subnet);
+      push @files, $file;
+    }
   }
 
   my @domains = qw(cs.brown.edu ilab.cs.brown.edu);
-  foreach my $domain (@domains) {
-    my $file = $self->build_dns_map_forward($serial_num, $domain);
-    push @files, $file;
+  foreach my $region (@regions) {
+    foreach my $domain (@domains) {
+      next if ($region =~ /external/ && $domain =~/ilab.cs.brown.edu/);
+      my $file = $self->build_dns_map_forward($serial_num, $region, $domain);
+      push @files, $file;
+    }
   }
 
   # fix permissions
@@ -588,12 +597,8 @@ sub build_dns {
     if ((not $self->dryrun)) {
       # fix permissions the file
       my $group = (getgrnam('sys'))[2];
-      # Dropped warnings - mostly superfluous
       $self->maybe_system("sudo chown 0:$group $file");
       $self->maybe_system("sudo chmod 0444 $file");
-      # With warnings:
-      #$self->maybe_system("sudo chown 0:$group $file") || warn "$0: WARNING: Failed to chown $file: $!\n";
-      #$self->maybe_system("sudo chmod 0444 $file") || warn "$0: WARNING: Failed to chmod $file: $!\n";
     }
   }
 
