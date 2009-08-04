@@ -182,10 +182,12 @@ sub update_port {
   $self->send("config term\r");
   $self->wait_for("$name\(config\)\#", "Never got config prompt");
 
-  if ($switch_type eq '6500') {
-    $self->send("int g$blade_num/$port_num\r");
+  if ($switch_type eq '3560G') {
+    $self->send("int g0/$port_num\r");
   } elsif ($switch_type eq '3750E') {
     $self->send("int g$blade_num/0/$port_num\r");
+  } elsif ($switch_type eq '6500') {
+    $self->send("int g$blade_num/$port_num\r");
   } else {
     die "Unknown switch type: $switch_type!\n";
   }

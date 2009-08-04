@@ -37,7 +37,7 @@ my $tables = [];
 
 foreach my $arg (@ARGV) {
   # extract the table name if there is one
-  if ($arg =~ /^([a-zA-Z0-9_]+)[.](.*)$/) {
+  if ($arg =~ /^([a-zA-Z0-9_]+)\.(.*)$/) {
     my $table = $1;
     push @$tables, $table;
     $arg = $2;
@@ -61,6 +61,8 @@ my $search_args = {
   join => $tables,
 };
 
+#TODO Fix this. 
+#It's naive and doesn't work. 
 my $device_rs = $udb->resultset('Devices')->search($search_attrs, $search_args);
 die "No results.\n" if not $device_rs->count;
 
