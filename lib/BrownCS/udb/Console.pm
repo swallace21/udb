@@ -486,7 +486,7 @@ sub get_port {
   if ($place && $place->room) {
     my $room = $place->room;
     # TODO FIX ME - this check needs to be checked against a db entry, but I need this working now!
-    if ($room eq '531' || $room eq '310') {
+    if ($room eq '310' || $room eq '431' || $room eq '531') {
       $port = $self->get_switchport($iface, $vlan);
     } else {
       $port = $self->get_walljack($iface);
@@ -516,17 +516,23 @@ sub get_switchport {
 
   # prompt user for updated port information
   $switch_name = $self->get_updated_val("Switch",$switch_name, verify_switch($self->udb));
-  $blade_num = $self->get_updated_val("Blade Number",$blade_num,verify_blade($self->udb,$switch_name));
+  my $net_switch = $self->udb->resultset('NetSwitches')->find($switch_name);
+
+  if ($net_switch->num_blades > 0 ) {
+    $blade_num = $self->get_updated_val("Blade Number",$blade_num,verify_blade($self->udb,$switch_name));
+  } else {
+    $blade_num = 0;
+  }
+
   $port_num = $self->get_updated_val("Port Number",$port_num,verify_port_num($self->udb,$switch_name));
   
   # FIX ME - this needs to be checked against a db entry
-  if ($room  && ($room == '531' || $room == '310')) {
+  if ($room  && ($room == '310' || $room == '431' || $room == '531')) {
     $wall_plate = "MR";
   } else {
     $wall_plate = $self->get_updated_val("Wall Plate", $wall_plate);
   }
 
-  my $net_switch = $self->udb->resultset('NetSwitches')->find($switch_name);
 
   # get the associated port number
   $port = $self->udb->resultset('NetPorts')->search({
