@@ -125,7 +125,15 @@ sub format_address_short {
   my ($addr) = @_;
   my $out = {};
   if ($addr->ipaddr) {
-    $out->{"IP"} = $addr->ipaddr;
+    $out->{"IP"} = $addr->ipaddr . " (";
+    # collect DNS names and associated zones
+    my $dns_entries_rs = $self->udb->resultset('NetDnsEntries')->search({
+      net_address_id => $addr->net_address_id,
+      });
+    while (my $dns_entry = $dns_entries_rs->next) {
+      $out->{"IP"} .= " " . $dns_entry->dns_name . ":" . $dns_entry->dns_region->dns_region;
+    }
+    $out->{"IP"} .= " )";
   } else {
     $out->{"Dynamic IP on VLAN"} = $addr->vlan_num;
   }

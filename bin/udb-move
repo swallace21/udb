@@ -78,17 +78,12 @@ eval {
 
     if ($device->status->equip_status_type ne 'spare') {
       if ($device->place->building eq 'CIT') {
-        my $iface = $device->net_interfaces->single;
-        if ($iface) {
+        my $iface_rs = $device->net_interfaces;
+        while (my $iface = $iface_rs->next) {
           my $port = $uc->get_port($iface);
-
-          my $ifaces_rs = $device->net_interfaces;
-          while (my $iface = $ifaces_rs->next) {
-            $iface->net_port($port);
-            $iface->update;
-          }
+          $iface->net_port($port);
+          $iface->update;
         }
-
       } else {
         if ($device->net_interfaces) {
           my $iface_rs = $device->net_interfaces;

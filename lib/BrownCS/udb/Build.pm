@@ -488,7 +488,7 @@ sub build_dns_map_forward {
   my @domain_parts = split(/\./, $domain);
   my $zone = $domain_parts[0];
 
-  my $file = "/maytag/sys0/DNS/db.$zone.$region";
+  my $file = "/maytag/sysvol/DNS/db.$zone.$region";
   my $PATH_TMPFILE = $self->TMPDIR . basename($file);
   my $vars = {
     filename => $file,
@@ -510,7 +510,7 @@ sub build_dns_map_reverse {
   my ($serial_num, $region, $subnet) = @_;
   my $zone = $subnet->prefix;
 
-  my $file = "/maytag/sys0/DNS/db.$zone$region";
+  my $file = "/maytag/sysvol/DNS/db.$zone$region";
   chomp($file);
 
   my $PATH_TMPFILE = $self->TMPDIR . basename($file);
@@ -556,29 +556,33 @@ sub build_dns {
     }
   );
 
-  my %cs_subnets = ();
-  my @spread_subnets = ();
+  my %private_subnets = ();
+  my @all_subnets = ();
 
   while (my $subnet = $subnets_rs->next) {
-    $cs_subnets{new NetAddr::IP($subnet->network)} = $subnet->private;
-    push @spread_subnets, (new NetAddr::IP($subnet->network));
+    $private_subnets{new NetAddr::IP($subnet->network)} = $subnet->private;
+    push @all_subnets, (new NetAddr::IP($subnet->network));
   }
 
-  my $classC = Coalesce(24, 1, @spread_subnets);
-  my $classB = Coalesce(16, 1, grep {$_->masklen < 24} @spread_subnets);
+  my $classC = Coalesce(24, 1, @all_subnets);
+  my $classB = Coalesce(16, 1, grep {$_->masklen < 24} @all_subnets);
   my @subnets = uniq( @{$classC}, @{$classB} );
 
   my @files = ();
 
+  # Build reverse maps.  Don't add entries to external maps for private
+  # subnets.
   my @regions = qw(internal external);
   foreach my $region (@regions) {
     foreach my $subnet (@subnets) {
-      next if ($region =~ /external/ && $cs_subnets{$subnet});
+      next if ($region =~ /external/ && $private_subnets{$subnet});
       my $file = $self->build_dns_map_reverse($serial_num, $region, $subnet);
       push @files, $file;
     }
   }
 
+  # Build forward maps.  Once the ilab.cs.brown.edu domain is no longer, then
+  # remove the foreach loop and next statement below.
   my @domains = qw(cs.brown.edu ilab.cs.brown.edu);
   foreach my $region (@regions) {
     foreach my $domain (@domains) {
@@ -603,19 +607,26 @@ sub build_dns {
   }
 
   # send new config file to each server
-  my @dns_servers = qw(heath rally payday snickers);
-  foreach my $host (@dns_servers) {
-    #Be careful, note @files != $file
-    $self->commit_scp(@files, "$host:/var/cache/bind");
-    if ( (not $self->dryrun) && $? != 0 ) {
-      warn "$0: ERROR: Failed to copy DNS files to $host\n";
-    }
+  my %dns_servers = (
+    internal => [ 'heath','rally','payday','snickers' ],
+    external => [ 'salt','pepper' ],
+  );
 
-    $self->maybe_system('sudo', 'ssh', '-x', $host, '/usr/sbin/rndc reload');
-    if ( (not $self->dryrun) && $? != 0 ) {
+  foreach my $region (@regions) {
+    foreach my $host (@{$dns_servers{$region}}) {
+      my @tosend = grep(/$region/,@files);
+      #Be careful, note @tosend != $tosend
+      $self->commit_scp(@tosend, "$host:/var/cache/bind");
+      if ( (not $self->dryrun) && $? != 0 ) {
+        warn "$0: ERROR: Failed to copy DNS files to $host\n";
+      }
+  
+      $self->maybe_system('sudo', 'ssh', '-x', $host, '/usr/sbin/rndc reload');
+      if ( (not $self->dryrun) && $? != 0 ) {
         warn "$0: ERROR: Failed to send DNS reload command to on $host\n";
+      }
     }
-  }
+  } 
 
   print "done.\n";
 

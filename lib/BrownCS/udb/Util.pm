@@ -27,6 +27,7 @@ our @EXPORT_OK = qw(
   verify_mac
   verify_nonempty
 	verify_port_num
+  verify_port
   verify_switch
   verify_walljack
 );
@@ -281,6 +282,10 @@ sub verify_port_num {
 			return (0, undef);
 		}
 	}
+}
+
+sub verify_port {
+  print "check to make sure specified port isn't already in use\n";
 }
 
 #sub verify_ip {
