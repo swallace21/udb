@@ -486,7 +486,7 @@ sub get_port {
   if ($place && $place->room) {
     my $room = $place->room;
     # TODO FIX ME - this check needs to be checked against a db entry, but I need this working now!
-    if ($room eq '310' || $room eq '431' || $room eq '531') {
+    if ($room eq '310' || $room eq '431A' || $room eq '531') {
       $port = $self->get_switchport($iface, $vlan);
     } else {
       $port = $self->get_walljack($iface);
@@ -527,7 +527,7 @@ sub get_switchport {
   $port_num = $self->get_updated_val("Port Number",$port_num,verify_port_num($self->udb,$switch_name));
   
   # FIX ME - this needs to be checked against a db entry
-  if ($room  && ($room == '310' || $room == '431' || $room == '531')) {
+  if ($room  && ($room == '310' || $room == '431A' || $room == '531')) {
     $wall_plate = "MR";
   } else {
     $wall_plate = $self->get_updated_val("Wall Plate", $wall_plate);
