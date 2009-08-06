@@ -36,11 +36,13 @@ my @comps;
 foreach my $arg (@ARGV) {
   # This describes all valid search terms
   if ($arg =~ /^([a-zA-Z0-9_]*\.)?([^=]+)=(.*)$/) {
-    if ($1) {my $table = substr($1, 0, -1);} #kill the dot
+    my $table;
+    if ($1) {$table = substr($1, 0, -1);} #kill the dot
     if (!$table) {$table = "devices"}
     my $field = $2;
     my $value = $3;
-    print "$table;$field;$value\n";
+    #DEBUG
+    #print "$table;$field;$value\n";
     my $device_rs = $udb->resultset(ucfirst($table))->search({ $field => $value}, undef);
     die "No results.\n" if not $device_rs->count;
     my @comps2 = $device_rs->get_column("me.device_name")->all;
