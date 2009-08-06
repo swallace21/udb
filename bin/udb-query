@@ -31,42 +31,37 @@ if (@ARGV < 1) {
   usage(2);
 }
 
-my $search_attrs = {};
-
-my $tables = [];
-
+my $run = 0;
+my @comps;
 foreach my $arg (@ARGV) {
-  # extract the table name if there is one
-  if ($arg =~ /^([a-zA-Z0-9_]+)\.(.*)$/) {
-    my $table = $1;
-    push @$tables, $table;
-    $arg = $2;
-  }
-
-  # syntax 1: operator and ''
-  if ($arg =~ /^([a-zA-Z0-9_]+)([^'a-zA-Z0-9_]+)'(.*)'$/) {
-    my $field = $1;
-    my $value = { $2 => $3};
-    $search_attrs->{$field} = $value;
-  } elsif ($arg =~ /^([a-zA-Z0-9_]+)=(.*)$/) {
-    my $field = $1;
-    my $value = $2;
-    $search_attrs->{$field} = $value;
+  # This describes all valid search terms
+  if ($arg =~ /^([a-zA-Z0-9_]*\.)?([^=]+)=(.*)$/) {
+    if ($1) {my $table = substr($1, 0, -1);} #kill the dot
+    if (!$table) {$table = "devices"}
+    my $field = $2;
+    my $value = $3;
+    print "$table;$field;$value\n";
+    my $device_rs = $udb->resultset(ucfirst($table))->search({ $field => $value}, undef);
+    die "No results.\n" if not $device_rs->count;
+    my @comps2 = $device_rs->get_column("me.device_name")->all;
+    #store current results 
+    if ($run) {
+      #compute intersection
+      my %union;
+      my %isect;
+      #calculate intersection
+      
+      foreach my $thing (@comps) { $union{$thing} = 1}
+      foreach my $thing (@comps2) { 
+        if ($union{$thing}) {$isect{$thing} = 1}
+      }
+      @comps = keys %isect;
+    } else { @comps = @comps2;} #first time
+    $run = 1;
   } else {
     die "Invalid search term $arg.\n";
   }
 }
-
-my $search_args = {
-  join => $tables,
-};
-
-#TODO Fix this. 
-#It's naive and doesn't work. 
-my $device_rs = $udb->resultset('Devices')->search($search_attrs, $search_args);
-die "No results.\n" if not $device_rs->count;
-
-my @comps = $device_rs->get_column("me.device_name")->all;
 
 print join("\n", sort(@comps)) . "\n";
 
