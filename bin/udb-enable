@@ -93,7 +93,13 @@ EOF
       $device->contact($uc->get_contact($device->contact));
 
       if ($device->usage->tracked) {
-        $device->owner($uc->get_owner($device->owner or $device->contact));
+        my $owner;
+        if ($device->manager->management_type =~ /tstaff/) {
+          $owner = "dept"; 
+        } else {
+          $owner = $device->contact;
+        }
+        $device->owner($uc->get_owner($device->owner or $owner));
       } else {
         $device->owner($device->contact);
       }
@@ -216,7 +222,23 @@ EOF
             monitored => 0,
           });
 
-        dns_insert($name, 'cs.brown.edu', $addr, 1, 'all');
+        # query the database to determine which vlans are private.
+        # by default, those vlans that are private are not given DNS
+        # entries on the external servers
+        my $private_vlans_rs = $udb->resultset('NetVlans')->search({
+          private => 't',
+        });
+        my @private_vlans = ();
+        while (my $private_vlan = $private_vlans_rs->next) {
+          push @private_vlans, $private_vlan->vlan_num;
+        }
+
+        my $host_vlan = $vlan->vlan_num;
+        if (grep(/$host_vlan/, @private_vlans) || ! ($device->usage->equip_usage_type =~ /tstaff/ || $device->usage->equip_usage_type =~ /server/ || $device->usage->equip_usage_type =~ /virtual/)) {
+          dns_insert($name, 'cs.brown.edu', $addr, 1, 'internal');
+        } else {
+          dns_insert($name, 'cs.brown.edu', $addr, 1, 'all');
+        }
 
         $addr->add_to_net_interfaces($iface);
 
