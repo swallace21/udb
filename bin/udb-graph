@@ -16,7 +16,7 @@ check>0 && /\)/ {
 }
 /}}}/ {flag=0}
 flag==0 && /tables --/ {flag=1}
-' schema.sql | \
+' ../schema/schema.sql | \
 sed -e 's/dns_safe_text/text/g' | \
 sed -e :a -e '$!N;s/\n)/)/;ta' -e 'P;D' | \
 sed -e 's/,)/)/g' > \
