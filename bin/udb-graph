@@ -4,14 +4,22 @@
 
 awk '
 BEGIN {flag=0; check=0}
-check>0 && /\(/ {check++}
+check>0 && /\(/ {
+	pie=gsub("/\\(/","");
+	check+=length(pie);
+}
 /check/ {check=1}
-check>0 && /\)/ {check--}
-/}}}/ {flag=0}
 flag==1 && check==0 {print}
+check>0 && /\)/ {
+	pie=gsub("/\\)/","");
+	check-=length(pie);
+}
+/}}}/ {flag=0}
 flag==0 && /tables --/ {flag=1}
-' ${0%/*}/../schema/schema.sql | \
-sed -e 's/dns_safe_text/text/g' > \
+' schema.sql | \
+sed -e 's/dns_safe_text/text/g' | \
+sed -e :a -e '$!N;s/\n)/)/;ta' -e 'P;D' | \
+sed -e 's/,)/)/g' > \
 /tmp/schema.sql
 sqlt-graph -f PostgreSQL -o schema.svg -t svg /tmp/schema.sql
 
