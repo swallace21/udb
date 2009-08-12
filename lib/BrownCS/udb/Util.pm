@@ -23,8 +23,6 @@ our @EXPORT_OK = qw(
   verify_unprotected
 	verify_blade
   verify_device_name
-  verify_ip_or_vlan
-  verify_mac
   verify_nonempty
 	verify_port_num
   verify_port
@@ -227,23 +225,6 @@ sub verify_device_name {
 	};
 }
 
-sub verify_mac {
-  my $udb = shift;
-  # TODO: check that value is not in use
-  return sub {
-    my ($mac_str) = @_;
-    my $mac;
-    eval {
-      $mac = Net::MAC->new('mac' => $mac_str);
-    };
-    if ($@) {
-      return (0, undef);
-    } else {
-      return (1, $mac_str);
-    }
-  };
-}
-
 sub verify_switch {
 	my $udb = shift;
 	return sub {
@@ -286,78 +267,6 @@ sub verify_port_num {
 
 sub verify_port {
   print "check to make sure specified port isn't already in use\n";
-}
-
-#sub verify_ip {
-#  my $udb = shift;
-#  # TODO: check that value is not in use
-#  return sub {
-#    my ($ipaddr) = @_;
-#
-#    my $netaddr_ip = new NetAddr::IP ($ipaddr);
-#    if (not $netaddr_ip) {
-#      print "Invalid IP address: $netaddr_ip!\n";
-#      return (0, undef);
-#    }
-#
-#    my $vlan = $udb->resultset('NetVlans')->search({
-#        network => {'>>', $ipaddr},
-#      })->single;
-#
-#    if (not $vlan) {
-#      print "Invalid IP address: $netaddr_ip is not on a recognized subnet.\n";
-#      return (0, undef);
-#    }
-#
-#    return (1, $ipaddr, $vlan);
-#  };
-#}
-
-sub verify_ip_or_vlan {
-  my $udb = shift;
-  # TODO: check that value is not in use
-  return sub {
-    my ($ip_or_vlan_str) = @_;
-
-    return (0, undef) if not $ip_or_vlan_str;
-
-    if ($ip_or_vlan_str =~ /\./) {
-      # we got an IP address
-      return BrownCS::udb::Net::verify_ip($udb)->($ip_or_vlan_str);
-    }
-
-    # we got a VLAN
-
-    my $dynamic = 0;
-    my $vlan_num = $ip_or_vlan_str;
-    my $ipaddr;
-
-    if (($ip_or_vlan_str =~ /^d(\d+)$/) or
-      ($ip_or_vlan_str =~ /^(\d+)d$/)) {
-      # we got a dynamic vlan
-      $dynamic = 1;
-      $vlan_num = $1;
-    } elsif ($ip_or_vlan_str =~ /^(\d+)$/) {
-      $vlan_num = $1;
-    } else {
-      return (0, undef);
-    }
-
-    my $vlan = $udb->resultset('NetVlans')->search({
-        vlan_num => $vlan_num,
-      })->single;
-
-    if (not $vlan) {
-      print "Invalid VLAN: $vlan_num!\n";
-      return (0, undef);
-    }
-
-    if (not $dynamic) {
-      $ipaddr = find_unused_ip($udb, $vlan);
-    }
-
-    return (1, $ipaddr, $vlan);
-  };
 }
 
 sub verify_walljack {

@@ -358,12 +358,11 @@ sub choose_interface {
       push @choices, {
         key => $iface_ix++,
         name => $iface,
-        desc => $iface->ethernet,
-        ip => $ip,
+        desc => $iface->ethernet . " (" . $ip . ")",
       };
     }
 
-    $iface = choose_from_menu("Select an interface", \@choices);
+    $iface = $self->choose_from_menu("Select an interface", \@choices);
   }
 
   return $iface;
@@ -467,10 +466,10 @@ If you just want an arbitrary IP on a given VLAN (e.g. 31, 36),
 enter the VLAN number, and an IP will be picked for you.
 EOF
 
-if ($dynamic) {
-  $ip_or_vlan_preamble .= "If you want a dynamic IP address, add a \"d\" to the start of the VLAN.\n";
-  $ip_or_vlan_preamble .= "For example, use 'd36' instead of '36'.\n";
-}
+  if ($dynamic) {
+    $ip_or_vlan_preamble .= "If you want a dynamic IP address, add a \"d\" to the start of the VLAN.\n";
+    $ip_or_vlan_preamble .= "For example, use 'd36' instead of '36'.\n";
+  }
 
   my $ip_or_vlan_prompt = "\n${ip_or_vlan_preamble}IP or VLAN:";
   my ($ipaddr, $vlan) = $self->demand($ip_or_vlan_prompt, verify_ip_or_vlan($self->udb));
@@ -486,7 +485,7 @@ sub get_port {
   if ($place && $place->room) {
     my $room = $place->room;
     # TODO FIX ME - this check needs to be checked against a db entry, but I need this working now!
-    if ($room eq '310' || $room eq '431' || $room eq '531') {
+    if ($room eq '310' || $room =~ /^431A$/ || $room eq '531') {
       $port = $self->get_switchport($iface, $vlan);
     } else {
       $port = $self->get_walljack($iface);
@@ -527,7 +526,7 @@ sub get_switchport {
   $port_num = $self->get_updated_val("Port Number",$port_num,verify_port_num($self->udb,$switch_name));
   
   # FIX ME - this needs to be checked against a db entry
-  if ($room  && ($room == '310' || $room == '431' || $room == '531')) {
+  if ($room  && ($room == '310' || $room =~ /^431A$/ || $room == '531')) {
     $wall_plate = "MR";
   } else {
     $wall_plate = $self->get_updated_val("Wall Plate", $wall_plate);
@@ -657,7 +656,7 @@ sub get_device_name {
 sub get_contact {
   my $self = shift;
   my ($default) = @_;
-  return $self->get_updated_val("Primary user", $default, \&verify_nonempty_nonq);
+  return $self->get_updated_val("Primary user/contact", $default, \&verify_nonempty_nonq);
 }
 
 sub get_owner {

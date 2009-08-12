@@ -12,6 +12,7 @@ use lib "$RealBin/../lib";
 use BrownCS::udb::Schema;
 use BrownCS::udb::Util qw(:all);
 use BrownCS::udb::Console qw(:all);
+use BrownCS::udb::Net qw(:all);
 
 # Print a simple help message.
 sub usage {
@@ -222,29 +223,13 @@ EOF
             monitored => 0,
           });
 
-        # query the database to determine which vlans are private.
-        # by default, those vlans that are private are not given DNS
-        # entries on the external servers
-        my $private_vlans_rs = $udb->resultset('NetVlans')->search({
-          private => 't',
-        });
-        my @private_vlans = ();
-        while (my $private_vlan = $private_vlans_rs->next) {
-          push @private_vlans, $private_vlan->vlan_num;
-        }
-
-        my $host_vlan = $vlan->vlan_num;
-        if (grep(/$host_vlan/, @private_vlans) || ! ($device->usage->equip_usage_type =~ /tstaff/ || $device->usage->equip_usage_type =~ /server/ || $device->usage->equip_usage_type =~ /virtual/)) {
-          dns_insert($name, 'cs.brown.edu', $addr, 1, 'internal');
-        } else {
-          dns_insert($name, 'cs.brown.edu', $addr, 1, 'all');
-        }
-
         $addr->add_to_net_interfaces($iface);
 
         $iface->update({
             primary_address => $addr,
         });
+
+        dns_insert($udb, $name, 'cs.brown.edu', $addr, 1);
 
         if ($port and (! grep { $_ = $vlan } $port->net_vlans)) {
           printf("bind port %s to vlan %s\n", $port->wall_plate, $vlan->vlan_num);
@@ -273,23 +258,6 @@ Failed to enable $name. Try again.
 Details:
   $@
 EOF
-}
-
-sub dns_insert {
-  my ($a, $b, $c, $d, $e) = @_;
-  $udb->resultset('NetDnsEntries')->find_or_create({
-      dns_name => $a,
-      domain => $b,
-      net_address => $c,
-      authoritative => $d,
-      dns_region => $e,
-    });
-}
-
-sub dns_insert_both {
-  my ($a, $b, $c, $d) = @_;
-  dns_insert($a, $b, $c, $d, "internal");
-  dns_insert($a, $b, $c, $d, "external");
 }
 
 __END__
