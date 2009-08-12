@@ -97,7 +97,7 @@ sub format_interface {
   my $addrs_rs = $iface->net_addresses;
   my $addrs = [];
   while (my $addr = $addrs_rs->next) {
-    if ($addr->net_address_id ne $iface->primary_address->net_address_id) {
+    if (!$iface->primary_address || $addr->net_address_id ne $iface->primary_address->net_address_id) {
       push @$addrs, $self->format_address_short($addr);
     }
   }
