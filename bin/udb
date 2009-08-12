@@ -9,104 +9,24 @@ use Pod::Usage;
 use FindBin qw($RealBin);
 
 my %udb_commands = (
-  'get-next-uid' => {
-    'desc' => "get the next free uid",
-    'common' => 0,
-  },
-  'get-next-gid' => {
-    'desc' => "get the next free gid",
-    'common' => 0,
-  },
   'add' => {
     'desc' => "add a new device",
     'common' => 1,
-  },
-  'mkvm' => {
-    'desc' => "add a new xen vm",
-    'common' => 0,
-  },
-  'build' => {
-    'desc' => "build server configuration based on the database",
-    'common' => 1,
-  },
-  'add-to-class' => {
-    'desc' => "add one or more computers to a class",
-    'common' => 0,
   },
   'add-dns-alias' => {
     'desc' => "add a new DNS alias or associated a DNS alias with an existing entry",
     'common' => 0,
   },
-  'classes' => {
-    'desc' => "list the classes to which the computers belongs",
+  'add-interface' => {
+    'desc' => "add a new network interface to an existing device",
     'common' => 0,
   },
-  'del-dns-alias' => {
-    'desc' => "delete a DNS alias",
-    'common' => 0,
-   },
-  'del-from-class' => {
-    'desc' => "remove one or more computers from a class",
+  'add-to-class' => {
+    'desc' => "add one or more computers to a class",
     'common' => 0,
   },
-  'query' => {
-    'desc' => "search for devices",
-    'common' => 0,
-  },
-  'show-class' => {
-    'desc' => "list the members of a class",
-    'common' => 0,
-  },
-  'contact-list' => {
-    'desc' => "print out a contact list for all devices in a class",
-    'common' => 0,
-  },
-  'delete' => {
-    'desc' => "delete a device",
-    'common' => 0,
-  },
-  'edit' => {
-    'desc' => "modify a device record in a text editor",
-    'common' => 0,
-  },
-  'show' => {
-    'desc' => "print a summary of a device",
-    'common' => 1,
-  },
-  'index' => {
-    'desc' => "interface like the old index db",
-    'common' => 1,
-  },
-  'rename' => {
-    'desc' => "rename a device",
-    'common' => 1,
-  },
-  'move' => {
-    'desc' => "move a device to a new location",
-    'common' => 1,
-  },
-  'enable' => {
-    'desc' => "enable (deploy a device)",
-    'common' => 1,
-  },
-  'disable' => {
-    'desc' => "disable (make a device spare)",
-    'common' => 1,
-  },
-  'make-surplus' => {
-    'desc' => "surplus a device",
-    'common' => 1,
-  },
-  'show-surplus' => {
-    'desc' => "print a summary of a surplus device",
-    'common' => 1,
-  },
-  'change-os' => {
-    'desc' => "change a computer's software configuration",
-    'common' => 1,
-  },
-  'reset-port' => {
-    'desc' => "reset a port on a switch",
+  'build' => {
+    'desc' => "build server configuration based on the database",
     'common' => 1,
   },
   'change-ip' => {
@@ -117,8 +37,96 @@ my %udb_commands = (
     'desc' => "change a networked device's MAC address",
     'common' => 1,
   },
+  'change-os' => {
+    'desc' => "change a computer's software configuration",
+    'common' => 1,
+  },
   'change-user' => {
     'desc' => "change a device's primary user",
+    'common' => 1,
+  },
+  'classes' => {
+    'desc' => "list the classes to which the computers belongs",
+    'common' => 0,
+  },
+  'contact-list' => {
+    'desc' => "print out a contact list for all devices in a class",
+    'common' => 0,
+  },
+  'del-dns-alias' => {
+    'desc' => "delete a DNS alias",
+    'common' => 0,
+   },
+  'del-from-class' => {
+    'desc' => "remove one or more computers from a class",
+    'common' => 0,
+  },
+  'del-interface' => {
+    'desc' => "delet a network interface to an existing device",
+    'common' => 0,
+  },
+  'delete' => {
+    'desc' => "delete a device",
+    'common' => 0,
+  },
+  'disable' => {
+    'desc' => "disable (make a device spare)",
+    'common' => 1,
+  },
+  'edit' => {
+    'desc' => "modify a device record in a text editor",
+    'common' => 0,
+  },
+  'enable' => {
+    'desc' => "enable (deploy a device)",
+    'common' => 1,
+  },
+  'get-next-uid' => {
+    'desc' => "get the next free uid",
+    'common' => 0,
+  },
+  'get-next-gid' => {
+    'desc' => "get the next free gid",
+    'common' => 0,
+  },
+  'index' => {
+    'desc' => "interface like the old index db",
+    'common' => 1,
+  },
+  'make-surplus' => {
+    'desc' => "surplus a device",
+    'common' => 1,
+  },
+  'mkvm' => {
+    'desc' => "add a new xen vm",
+    'common' => 0,
+  },
+  'move' => {
+    'desc' => "move a device to a new location",
+    'common' => 1,
+  },
+  'query' => {
+    'desc' => "search for devices",
+    'common' => 0,
+  },
+  'rename' => {
+    'desc' => "rename a device",
+    'common' => 1,
+  },
+  'show' => {
+    'desc' => "print a summary of a device",
+    'common' => 1,
+  },
+  'show-class' => {
+    'desc' => "list the members of a class",
+    'common' => 0,
+  },
+  'show-surplus' => {
+    'desc' => "print a summary of a surplus device",
+    'common' => 1,
+  },
+  'reset-port' => {
+    'desc' => "reset a port on a switch",
     'common' => 1,
   },
 );

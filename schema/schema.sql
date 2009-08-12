@@ -83,6 +83,22 @@ begin
 end;
 $$ language plpgsql;
 
+create or replace function delete_net_address() returns trigger as
+$$
+begin
+delete from net_addresses na where na.net_address_id = old.net_address_id;
+return old;
+end;
+$$ language plpgsql;
+
+create or replace function delete_net_dns_entry() returns trigger as
+$$
+begin
+delete from net_dns_entries nde where nde.dns_name = old.device_name;
+return old;
+end;
+$$ language plpgsql;
+
 create or replace function vlan_zone(integer)
 returns text
 as 'select zone_name from net_vlans where vlan_num = $1'
@@ -640,7 +656,7 @@ create unique index idx_wall_ports on net_ports (
 ) where wall_plate != 'MR';
 
 drop index if exists authoritative_dns_entries_index;
-create unique index authoritative_dns_entries_index on net_dns_entries (
+create index authoritative_dns_entries_index on net_dns_entries (
   dns_name,
   domain,
   dns_region
@@ -755,6 +771,14 @@ create trigger vlan_zone_trigger before insert or update on net_addresses
 drop trigger if exists delete_primary_address_trigger on net_interfaces;
 create trigger delete_primary_address_trigger after delete on net_interfaces
   for each row execute procedure delete_primary_address();
+
+drop trigger if exists delete_net_address_trigger on net_dns_entries;
+create trigger delete_net_address_trigger after delete on net_dns_entries
+for each row execute procedure delete_net_address();
+
+drop trigger if exists delete_net_dns_entry_trigger on devices;
+create trigger delete_net_dns_entry_trigger after delete on devices
+for each row execute procedure delete_net_dns_entry();
 
 -- }}}
 

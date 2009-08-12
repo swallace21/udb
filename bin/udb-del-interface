@@ -37,22 +37,16 @@ my $name;
 if (@ARGV == 1) {
   $name = shift @ARGV;
 
-  if (! dns_name_exists($udb, $name)) {
-    die "No record for DNS name \"$name\".\n";
+  if (! device_exists($udb, $name)) {
+    die "No record for device named \"$name\".\n";
   }
 }
 
 my $rs;
 eval {
   $rs = $udb->txn_do(sub {
-    my $dns_entry_rs = $udb->resultset('NetDnsEntries')->search({
-      dns_name => {'=', $name},
-    });
-
-    while (my $dns_entry = $dns_entry_rs->next) {
-      $dns_entry->delete;
-    }
-
+    my $iface = $uc->choose_interface($name);
+    $iface->delete;
   });
 };
 if ($@) {
@@ -66,16 +60,16 @@ __END__
 
 =head1 NAME
 
-udb-del-dns-alias - Delete an existing DNS alias (CNAME)
+udb-del-interface - Delete an existing network interface from a device
 
 =head1 SYNOPSIS
 
-udb-add-dns-alias <dns alias>
+udb-del-interface <device>
 
 =head1 DESCRIPTION
 
-udb-del-dns-alias allows a user to delete an existing DNS 
-alias (CNAME)
+udb-del-interface allows a user to delete an existing network interface from
+a device.
 
 =head1 OPTIONS
 
