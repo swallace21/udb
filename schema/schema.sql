@@ -86,7 +86,7 @@ $$ language plpgsql;
 create or replace function delete_net_address() returns trigger as
 $$
 begin
-delete from net_addresses na where na.net_address_id = old.net_address_id;
+delete from net_addresses na where na.net_address_id = old.net_address_id and old.authoritative='t';
 return old;
 end;
 $$ language plpgsql;
