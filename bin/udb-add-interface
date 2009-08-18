@@ -47,49 +47,21 @@ if (! $device) {
 my $rs;
 eval {
   $rs = $udb->txn_do(sub {
-    my $existing_iface;
     my ($ipaddr, $vlan);
 
     # get information about current device interfaces
     my $iface_rs = $device->net_interfaces;
     
-    # save current count before any changes have been made
-    my $iface_count = $iface_rs->count;
-
     my $mac_addr = $uc->get_mac();
-    my $iface = $device->add_to_net_interfaces({
-      device => $device,
-      ethernet => $mac_addr,
-    });
 
-    if (!$iface_count || $uc->confirm("Do you want to associate a new IP address with this interface (y/n)?")) {
+    if (!$iface_rs->count || $uc->confirm("Do you want to associate a new IP address with this interface (y/n)?")) {
+      my $iface = $device->add_to_net_interfaces({
+        device => $device,
+        ethernet => $mac_addr,
+      });
+      
       ($ipaddr, $vlan) = $uc->get_ip_and_vlan(1);
-    } else {
-      print "\n********** CAUTION *********\n";
-      print "This requires that the switch and device be configured to support\n";
-      print "bonded interfaces.  Please talk with someone in the software group\n";
-      print "if you aren't sure what this means before continuing.\n";
-      print "****************************\n";
-      if (!$uc->confirm("Are you sure you want to continue? (y/N)", "no")) {
-        exit (0);
-      }
-      $existing_iface = $uc->choose_interface($name);
-    }
 
-    if ($existing_iface) {
-      # associate network port with this interface
-      my $port = $uc->get_port($iface);
-      if ($port) {
-        $iface->net_port($port);
-        $iface->update;
-      }
-
-      # associate existing ip addresses with this new network interface
-      my $addrs_rs = $existing_iface->net_addresses;
-      while (my $addr = $addrs_rs->next) {
-        $addr->add_to_net_interfaces($iface);
-      }
-    } else {
       # create a new network address
       my $addr = $udb->resultset('NetAddresses')->create({
         vlan => $vlan,
@@ -112,14 +84,47 @@ eval {
         });
       }
 
-
-      my $port = $uc->get_port($iface, $vlan->vlan_num);
+      my $port;
+      ($port,$iface) = $uc->get_port($iface);
       if ($port) {
         $iface->net_port($port);
         $iface->update;
       }
 
       dns_insert($udb, $name, 'cs.brown.edu', $addr, 1);
+    } else {
+      print "\n----------------------- WARNING ---------------------------\n";
+      print "This requires that the switch and device be configured to support\n";
+      print "bonded interfaces.  At the moment, udb does not take care of\n";
+      print "configuring the network switch, so this must be configured in advance\n";
+      print "Please talk with someone in the software group if you aren't sure what\n";
+      print "this means before continuing.\n";
+      print "------------------------------------------------------------\n";
+      if (!$uc->confirm("Are you sure you want to continue? (y/N)", "no")) {
+        exit (0);
+      }
+
+      my $existing_iface = $uc->choose_interface($name);
+
+      # create the new interface
+      my $iface = $device->add_to_net_interfaces({
+        device => $device,
+        ethernet => $mac_addr,
+      });
+      
+      # associate network port with this interface
+      my $port;
+      ($port,$iface) = $uc->get_port($iface);
+      if ($port) {
+        $iface->net_port($port);
+        $iface->update;
+      }
+
+      # associate existing ip addresses with this new network interface
+      my $addrs_rs = $existing_iface->net_addresses;
+      while (my $addr = $addrs_rs->next) {
+        $addr->add_to_net_interfaces($iface);
+      }
     }
   });
 };

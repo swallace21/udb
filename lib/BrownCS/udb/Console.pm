@@ -345,6 +345,7 @@ sub choose_interface {
 
   my $device = $self->udb->resultset('Devices')->find($name);
   my $ifaces_rs = $device->net_interfaces;
+
   if ($ifaces_rs->count == 0) {
     print "The device $device->device_name does not have any network interfaces.\n";
     exit(0);
