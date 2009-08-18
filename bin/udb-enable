@@ -184,24 +184,26 @@ EOF
             primary_address => $addr,
         });
 
-        # get port information from the user
-        my $port;
-        ($port,$iface) = $uc->get_port($iface);
+        if(! dynamic_vlan($udb, $vlan->vlan_num)) {
+          # get port information from the user
+          my $port;
+          ($port,$iface) = $uc->get_port($iface);
+  
+          # it's possible, if there was a conflict, that the addr could have changed
+          # make sure we are still referencing the correct addr
+          $addr = $udb->resultset('NetAddresses')->find($iface->primary_address_id);
 
-        # it's possible, if there was a conflict, that the addr could have changed
-        # make sure we are still referencing the correct addr
-        $addr = $udb->resultset('NetAddresses')->find($iface->primary_address_id);
+          # associate port information with interface
+          if ($port) {
+            $iface->net_port($port);
+            $iface->update;
+          } 
 
-        # associate port information with interface
-        if ($port) {
-          $iface->net_port($port);
-          $iface->update;
-        } 
+          dns_insert($udb, $name, 'cs.brown.edu', $addr, 1);
 
-        dns_insert($udb, $name, 'cs.brown.edu', $addr, 1);
-
-        if ($port and (! grep { $_ = $vlan } $port->net_vlans)) {
-          $port->add_to_net_vlans($vlan);
+          if ($port and (! grep { $_ = $vlan } $port->net_vlans)) {
+            $port->add_to_net_vlans($vlan);
+          }
         }
       }
 

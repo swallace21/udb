@@ -9,6 +9,7 @@ use BrownCS::udb::Console qw(:all);
 use Exporter qw(import);
 
 our @EXPORT_OK = qw(
+  dynamic_vlan
   dns_insert
   dns_update
   verify_dns_alias
@@ -24,6 +25,32 @@ our @EXPORT_OK = qw(
 );
 
 our %EXPORT_TAGS = ("all" => [@EXPORT_OK]);
+
+sub dynamic_vlan {
+  my $udb = shift;
+  my ($vlan) = @_;
+
+  # get a list of dynamic vlans
+  my $net_zones_rs = $udb->resultset('NetZones')->search({
+    dynamic_dhcp => 't',
+  });
+
+  my @dynamic_vlans;
+  while (my $net_zone = $net_zones_rs->next) {
+    my $net_vlans_rs = $udb->resultset('NetVlans')->search({
+      zone_name => $net_zone->zone_name,
+    });
+    while (my $net_vlan = $net_vlans_rs->next) {
+      push @dynamic_vlans, $net_vlan->vlan_num;
+    }
+  }
+
+  if (grep(/$vlan/, @dynamic_vlans)) {
+    return 1;
+  } else {
+    return 0;
+  }
+}
 
 sub dns_insert {
   my $udb = shift;
@@ -316,30 +343,16 @@ sub verify_port_iface {
   # determine what, if any, other machines are connected to this port
   my (@devices) = $switch->get_port_devices($port);  
 
-  # get a list of dynamic vlans
-  my $net_zones_rs = $udb->resultset('NetZones')->search({
-    dynamic_dhcp => 't',
-   });
-  my @dynamic_vlans;
-  while (my $net_zone = $net_zones_rs->next) {
-    my $net_vlans_rs = $udb->resultset('NetVlans')->search({
-      zone_name => $net_zone->zone_name,
-    });
-    while (my $net_vlan = $net_vlans_rs->next) {
-      push @dynamic_vlans, $net_vlan->vlan_num;
-    }
-  }
-
   my @msg = ("----------------------- WARNING ---------------------------");
   push @msg, "";
-  if ($primary_vlan && $primary_vlan != $native_vlan && ! grep(/$native_vlan/, @dynamic_vlans)) {
+  if ($primary_vlan && $primary_vlan != $native_vlan && ! dynamic_vlan($udb, $native_vlan)) {
     push @msg, "* The primary VLAN of this device's interface is $primary_vlan while";
     push @msg, "the switch port's native VLAN is $native_vlan.  If continue, this";
     push @msg, "interface will not be able to netboot";
     push @msg, "";
   }
 
-  if (! @other_vlans && (@vlans > 1 || (($primary_vlan && $primary_vlan != $native_vlan) && ! grep(/$native_vlan/, @dynamic_vlans)))) {
+  if (! @other_vlans && (@vlans > 1 || (($primary_vlan && $primary_vlan != $native_vlan) && ! dynamic_vlan($udb, $native_vlan)))) {
     push @msg, "* The switch port is currently not configured to support";
     push @msg, "trunking.  Adding this interface to the switch port will";
     push @msg, "require the following hosts support trunking:";
