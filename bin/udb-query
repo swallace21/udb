@@ -45,7 +45,7 @@ foreach my $arg (@ARGV) {
     #DEBUG
     #print "$table;$field;$value\n";
 
-    my $device_rs = $udb->resultset(ucfirst($table))->search({ $field => $value}, undef);
+    my $device_rs = $udb->resultset($table)->search({ $field => $value}, undef);
     die "No results.\n" if not $device_rs->count;
 
     my @comps2 = $device_rs->get_column("me.device_name")->all;
@@ -82,7 +82,9 @@ udb-query [<field>=<value> ...]
 
 =head1 DESCRIPTION
 
-udb-query queries the UDB database for all computers that match certain fields.
+udb-query queries the UDB database for all computers that match certain fields. It only works on tables with a device_name column; it returns a newline-separated list of hostnames. If multiple conditions are specified, the list of hostnames matching the B<intersection> of those rules is returned. 
+
+Field may optionally have a table before it. The name of the table should be CamelCased without spaces or underscores. If no table is specified, it is assumed that the table is Devices. 
 
 =head1 OPTIONS
 
@@ -96,7 +98,7 @@ Print a help message and exit.
 
 =head1 AUTHORS
 
-Aleks Bromfield.
+Aleks Bromfield, Paul McCann.
 
 =head1 SEE ALSO
 
