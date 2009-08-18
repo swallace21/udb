@@ -139,6 +139,73 @@ EOF
       }
 
       #
+      # network-specific
+      #
+
+      my $is_networked = $uc->confirm("\nIs this a networked device? (Y/n)", "y");
+      if ($is_networked) {
+
+        # check to see if there are existing network interfaces for this device.  This
+        # should only happen if the device was set to be spare.
+        my $iface = $device->net_interfaces->single;
+        if ($iface && $device->status->equip_status_type ne "spare") {
+          print "Error: an active device interface already exists and shouldn't, contact";
+          print "someone from the software group\n";
+          exit 1;
+        }
+
+        # get ip address and mac address information from the user
+        my ($ipaddr, $vlan) = $uc->get_ip_and_vlan(1);
+        
+        my $mac_addr;
+        if ($iface) {
+          $mac_addr = $iface->ethernet;
+        }
+        $mac_addr = $uc->get_mac($mac_addr);
+
+        # if necessary, create an interface associated with this mac address
+        if (! $iface) {
+          $iface = $device->add_to_net_interfaces({
+            device => $device,
+            ethernet => $mac_addr,
+          });
+        }
+
+        # associate the ip address and vlan with the interface
+        my $addr = $udb->resultset('NetAddresses')->create({
+            vlan => $vlan,
+            ipaddr => $ipaddr,
+            monitored => 0,
+          });
+
+        $addr->add_to_net_interfaces($iface);
+
+        $iface->update({
+            primary_address => $addr,
+        });
+
+        # get port information from the user
+        my $port;
+        ($port,$iface) = $uc->get_port($iface);
+
+        # it's possible, if there was a conflict, that the addr could have changed
+        # make sure we are still referencing the correct addr
+        $addr = $udb->resultset('NetAddresses')->find($iface->primary_address_id);
+
+        # associate port information with interface
+        if ($port) {
+          $iface->net_port($port);
+          $iface->update;
+        } 
+
+        dns_insert($udb, $name, 'cs.brown.edu', $addr, 1);
+
+        if ($port and (! grep { $_ = $vlan } $port->net_vlans)) {
+          $port->add_to_net_vlans($vlan);
+        }
+      }
+
+      #
       # computer-specific
       #
 
@@ -175,68 +242,6 @@ EOF
         }
       }
   
-      #
-      # network-specific
-      #
-
-      my $is_networked = $uc->confirm("\nIs this a networked device? (Y/n)", "y");
-      if ($is_networked) {
-
-        # make sure there isn't a device out there already
-        my $iface = $device->net_interfaces->single;
-        if ($iface && $device->status->equip_status_type ne "spare") {
-          print "Error: device interface already exists and shouldn't, contact someone from\n"; 
-          print "software\n";
-          exit 1;
-        }
-
-        # get ip address and mac address information from the user
-        my ($ipaddr, $vlan) = $uc->get_ip_and_vlan(1);
-        
-        my $mac_addr;
-        if ($iface) {
-          $mac_addr = $iface->ethernet;
-        }
-        $mac_addr = $uc->get_mac($mac_addr);
-
-        # if necessary, create an interface associated with this mac address
-        if (! $iface) {
-          $iface = $device->add_to_net_interfaces({
-            device => $device,
-            ethernet => $mac_addr,
-          });
-        }
-
-        # get port information from the user
-        my $port = $uc->get_port($iface,$vlan->vlan_num);
-
-        # associate port information with interface
-        if ($port) {
-          $iface->net_port($port);
-          $iface->update;
-        } 
-
-        # associate the ip address and vlan with the interface
-        my $addr = $udb->resultset('NetAddresses')->create({
-            vlan => $vlan,
-            ipaddr => $ipaddr,
-            monitored => 0,
-          });
-
-        $addr->add_to_net_interfaces($iface);
-
-        $iface->update({
-            primary_address => $addr,
-        });
-
-        dns_insert($udb, $name, 'cs.brown.edu', $addr, 1);
-
-        if ($port and (! grep { $_ = $vlan } $port->net_vlans)) {
-          printf("bind port %s to vlan %s\n", $port->wall_plate, $vlan->vlan_num);
-          $port->add_to_net_vlans($vlan);
-        }
-      }
-
       #
       # any additional comments
       #

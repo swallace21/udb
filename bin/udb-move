@@ -80,9 +80,12 @@ eval {
       if ($device->place->building eq 'CIT') {
         my $iface_rs = $device->net_interfaces;
         while (my $iface = $iface_rs->next) {
-          my $port = $uc->get_port($iface);
-          $iface->net_port($port);
-          $iface->update;
+          my $port;
+          ($port, $iface) = $uc->get_port($iface);
+          if ($port) {
+            $iface->net_port($port);
+            $iface->update;
+          }
         }
       } else {
         if ($device->net_interfaces) {

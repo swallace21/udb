@@ -7,7 +7,6 @@ use warnings;
 use Exporter qw(import);
 use Net::MAC;
 use NetAddr::IP;
-#use BrownCS::udb::Net qw(:all);
 
 our @EXPORT_OK = qw(
   bool2str
@@ -21,13 +20,8 @@ our @EXPORT_OK = qw(
   get_host_class_map
   ipv4_n2x
   verify_unprotected
-	verify_blade
   verify_device_name
   verify_nonempty
-	verify_port_num
-  verify_port
-  verify_switch
-  verify_walljack
 );
 
 our %EXPORT_TAGS = ("all" => [@EXPORT_OK]);
@@ -223,61 +217,6 @@ sub verify_device_name {
 
   	return (1, $device);
 	};
-}
-
-sub verify_switch {
-	my $udb = shift;
-	return sub {
-		my ($switch) = @_;
-    if ($udb->resultset('NetSwitches')->find($switch)) {
-			return (1, $switch);
-		} else {
-			return (0, undef);
-		}
-	}
-}
-
-sub verify_blade {
-	my $udb = shift;
-	my ($switch) = @_;
-	return sub {
-		my ($blade_num) = @_;
-		my $num_blades = $udb->resultset('NetSwitches')->find($switch)->num_blades;
-		if (1 <= $blade_num && $blade_num <= $num_blades) {
-			return (1, $blade_num);
-		} else {
-			return (0, undef);
-		}
-	}
-}
-
-sub verify_port_num {
-	my $udb = shift;
-	my ($switch) = @_;
-	return sub {
-		my ($port_num) = @_;
-		my $num_ports = $udb->resultset('NetSwitches')->find($switch)->num_ports;
-		if (1 <= $port_num && $port_num <= $num_ports) {
-			return (1, $port_num);
-		} else {
-			return (0, undef);
-		}
-	}
-}
-
-sub verify_port {
-  print "check to make sure specified port isn't already in use\n";
-}
-
-sub verify_walljack {
-  my $udb = shift;
-  return sub {
-    my ($walljack_str) = @_;
-    my $walljack = $udb->resultset('NetPorts')->search({
-        wall_plate => $walljack_str,
-      })->single;
-    return ($walljack ? (1, $walljack) : (0, undef));
-  };
 }
 
 sub okay_adminhost {

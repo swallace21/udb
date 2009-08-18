@@ -10,11 +10,17 @@ use Exporter qw(import);
 
 our @EXPORT_OK = qw(
   dns_insert
+  dns_update
   verify_dns_alias
-	verify_dns_region
+  verify_dns_region
   verify_ip
   verify_ip_or_vlan
   verify_mac
+  verify_blade
+  verify_port_num
+  verify_switch
+  verify_port_iface
+  verify_wall_plate
 );
 
 our %EXPORT_TAGS = ("all" => [@EXPORT_OK]);
@@ -52,6 +58,11 @@ sub dns_insert {
     dns_region => $region,
   });
 }
+
+sub dns_update{
+  my $udb = shift;
+  my ($old_addr, $new_addr) = @_;
+}  
 
 sub verify_dns_alias {
   my $udb = shift;
@@ -228,6 +239,186 @@ sub verify_mac {
         return (1, $mac_str);
       }
     }
+  };
+}
+
+sub verify_blade {
+  my $udb = shift;
+  my ($switch) = @_;
+  return sub {
+    my ($blade_num) = @_;
+    my $num_blades = $udb->resultset('NetSwitches')->find($switch)->num_blades;
+    if (1 <= $blade_num && $blade_num <= $num_blades) {
+      return (1, $blade_num);
+    } else {
+      return (0, undef);
+    }
+  }
+}
+
+sub verify_port_num {
+  my $udb = shift;
+  my ($switch) = @_;
+  return sub {
+    my ($port_num) = @_;
+    my $num_ports = $udb->resultset('NetSwitches')->find($switch)->num_ports;
+    if (1 <= $port_num && $port_num <= $num_ports) {
+      return (1, $port_num);
+    } else {
+      return (0, undef);
+    }
+  }
+}
+
+sub verify_switch {
+  my $udb = shift;
+  return sub {
+    my ($switch) = @_;
+    if ($udb->resultset('NetSwitches')->find($switch)) {
+      return (1, $switch);
+    } else {
+      return (0, undef);
+    }
+  }
+}
+
+sub verify_port_iface {
+  my $udb = shift;
+  my ($port,$iface) = @_;
+
+  if (!$port) {
+    return 0;
+  }
+
+  my $uc = new BrownCS::udb::Console(udb => $udb);
+
+  my $switch_name = $port->switch_name;
+  my $net_switch = $udb->resultset('NetSwitches')->find($switch_name);
+  my $switch = BrownCS::udb::Switch->new({
+    net_switch => $net_switch,
+    verbose => 0,
+  });
+
+  my $primary_vlan;
+  if ($iface->primary_address_id) {
+    $primary_vlan = $iface->primary_address->vlan_num;
+  }
+
+  my $addr_rs = $iface->net_addresses;
+  my @vlans;
+  while (my $addr = $addr_rs->next) {
+      push @vlans, $addr->vlan_num;
+  } 
+
+  # determine what the native VLAN of this port is
+  my ($native_vlan, @other_vlans) = $switch->get_port_vlans($port);
+
+  # determine what, if any, other machines are connected to this port
+  my (@devices) = $switch->get_port_devices($port);  
+
+  # get a list of dynamic vlans
+  my $net_zones_rs = $udb->resultset('NetZones')->search({
+    dynamic_dhcp => 't',
+   });
+  my @dynamic_vlans;
+  while (my $net_zone = $net_zones_rs->next) {
+    my $net_vlans_rs = $udb->resultset('NetVlans')->search({
+      zone_name => $net_zone->zone_name,
+    });
+    while (my $net_vlan = $net_vlans_rs->next) {
+      push @dynamic_vlans, $net_vlan->vlan_num;
+    }
+  }
+
+  my @msg = ("----------------------- WARNING ---------------------------");
+  push @msg, "";
+  if ($primary_vlan && $primary_vlan != $native_vlan && ! grep(/$native_vlan/, @dynamic_vlans)) {
+    push @msg, "* The primary VLAN of this device's interface is $primary_vlan while";
+    push @msg, "the switch port's native VLAN is $native_vlan.  If continue, this";
+    push @msg, "interface will not be able to netboot";
+    push @msg, "";
+  }
+
+  if (! @other_vlans && (@vlans > 1 || (($primary_vlan && $primary_vlan != $native_vlan) && ! grep(/$native_vlan/, @dynamic_vlans)))) {
+    push @msg, "* The switch port is currently not configured to support";
+    push @msg, "trunking.  Adding this interface to the switch port will";
+    push @msg, "require the following hosts support trunking:";
+    push @msg, "";
+    foreach my $device (@devices) {
+      push @msg,$device;
+    }
+    push @msg, "";
+  }
+
+  push @msg, "-----------------------------------------------------------";
+
+  if (@msg > 3) {
+    foreach my $msg (@msg) {
+      print $msg . "\n";
+    }
+    my @choices = ();
+    push @choices, { key => 1, name => "reassign", desc => "Automatically reassign " . $iface->device_name . " an IP address on the $native_vlan vlan"};
+    push @choices, { key => 2, name => "reenter", desc => "Re-enter network information for " . $iface->device_name};
+    push @choices, { key => 3, name => "trunk", desc => "Reconfigure network port for trunking"};
+    push @choices, { key => 4, name => "quit", desc => "Quit"};
+    my $choice = $uc->choose_from_menu("What would you like to do", \@choices);
+
+    if ($choice =~ /quit/) {
+      exit;
+    } elsif ($choice =~ /reassign/) {
+      my ($valid, $new_ipaddr, $new_vlan) = verify_ip_or_vlan($udb)->($native_vlan);
+
+      # find the old network address associated with this interface
+      my $old_addr = $udb->resultset('NetAddresses')->find($iface->primary_address_id);
+ 
+      # associate this new network address with this interface
+      my $new_addr = $udb->resultset('NetAddresses')->create({
+        vlan => $new_vlan,
+        ipaddr => $new_ipaddr,
+        monitored => 0,
+      });
+
+      $new_addr->add_to_net_interfaces($iface);
+      if($iface->primary_address_id) {
+        $iface->update({
+          primary_address => $new_addr,
+        });
+      }
+
+      my $net_dns_entries_rs = $udb->resultset('NetDnsEntries')->search({
+        net_address_id => $old_addr->net_address_id,
+      });
+      while (my $net_dns_entry = $net_dns_entries_rs->next) {
+        $net_dns_entry->update({
+          net_address_id => $new_addr->net_address_id,
+        });
+      }
+
+      # delete the old network address associated with the interface
+      $old_addr->delete;
+    } elsif ($choice =~ /reenter/) {
+      return (undef,$iface);
+    }
+  }
+
+  return ($port, $iface);
+}
+
+sub verify_wall_plate {
+  my $udb = shift;
+  return sub {
+    my ($wall_plate_str) = @_;
+    $wall_plate_str = uc($wall_plate_str);
+    my $port = $udb->resultset('NetPorts')->search({
+        wall_plate => $wall_plate_str,
+      })->single;
+
+    if($port) {
+      my $wall_plate = $port->wall_plate;
+      return (1, $wall_plate);
+    }
+
+    return (0, undef);
   };
 }
 
