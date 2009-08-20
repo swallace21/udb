@@ -244,6 +244,7 @@ sub verify_ip_or_vlan {
 
 sub verify_mac {
   my $udb = shift;
+  my ($iface) = @_;
 
   return sub {
     my ($mac_str) = @_;
@@ -255,12 +256,12 @@ sub verify_mac {
       return (0, undef);
     } else {
       # make sure it's not already in use
-      my $iface = $udb->resultset('NetInterfaces')->search({
+      my $iface_tmp = $udb->resultset('NetInterfaces')->search({
         ethernet => $mac_str,
       })->single;
 
-      if ($iface) {
-        print "Ethernet address \"$mac_str\" already associated with device \"" . $iface->device_name . "\"\n";
+      if (($iface_tmp && !$iface) || ($iface_tmp && $iface && $iface->ethernet ne $iface_tmp->ethernet)) {
+        print "Ethernet address \"$mac_str\" already associated with device \"" . $iface_tmp->device_name . "\"\n";
         return(0, undef);
       } else {
         return (1, $mac_str);

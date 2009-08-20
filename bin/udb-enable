@@ -157,11 +157,7 @@ EOF
         # get ip address and mac address information from the user
         my ($ipaddr, $vlan) = $uc->get_ip_and_vlan(1);
         
-        my $mac_addr;
-        if ($iface) {
-          $mac_addr = $iface->ethernet;
-        }
-        $mac_addr = $uc->get_mac($mac_addr);
+        my $mac_addr = $uc->get_mac($iface);
 
         # if necessary, create an interface associated with this mac address
         if (! $iface) {

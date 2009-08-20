@@ -560,8 +560,15 @@ sub get_updated_val {
 
 sub get_mac {
   my $self = shift;
-  my ($default) = @_;
-  return $self->get_updated_val("MAC address", $default, verify_mac($self->udb));
+  my ($iface) = @_;
+ 
+  my $default;
+
+  if ($iface) {
+    $default = $iface->ethernet;
+  }
+
+  return $self->get_updated_val("MAC address", $default, verify_mac($self->udb,$iface));
 }
 
 sub get_protected {
