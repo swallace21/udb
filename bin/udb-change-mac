@@ -80,7 +80,7 @@ if ($ifaces_rs->count == 0) {
 }
 
 if ($new_mac) {
-  die if not verify_mac($udb)->($new_mac);
+  die if not BrownCS::udb::Net::verify_mac($udb)->($new_mac);
 } else {
   $new_mac = $uc->demand("Enter the new MAC address:", verify_mac($udb));
 }
