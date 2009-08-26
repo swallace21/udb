@@ -11,6 +11,7 @@ use lib "$RealBin/../lib";
 use BrownCS::udb::Schema;
 use BrownCS::udb::Util qw(:all);
 use BrownCS::udb::Console qw(:all);
+use BrownCS::udb::Net qw(:all);
 
 # Print a simple help message.
 sub usage {
