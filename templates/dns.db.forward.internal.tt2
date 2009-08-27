@@ -138,19 +138,8 @@ cs-left                             IN          A               10.117.4.101
 cs-right                            IN          A               10.117.4.102
 cs-floor                            IN          A               10.117.4.103
 cs-top                              IN          A               10.117.4.104
+
 [%   CASE 'ilab.cs.brown.edu' -%]
-ilab.cs.brown.edu.                  IN          A               10.116.1.200
-ilab.cs.brown.edu.                  IN          MX              10 mx.cs.brown.edu.
-        
-; ILAB gw machines      
-cat4k-ilab                          IN          A               192.168.10.1
-cat4k-ilab                          IN          MX              10 mx.cs.brown.edu.
-gw                                  IN          A               192.168.10.2
-gw                                  IN          MX              10 mx.cs.brown.edu.
-bounty                              IN          A               192.168.10.5
-bounty                              IN          MX              10 mx.cs.brown.edu.
-pbcup                               IN          A               192.168.10.6
-pbcup                               IN          MX              10 mx.cs.brown.edu.
 [% END -%]
 
 [% FOREACH entry IN DBI.query("select nde.dns_name, na.ipaddr from net_dns_entries nde, net_addresses na where ( nde.dns_region = 'internal' or nde.dns_region = 'all' ) and nde.net_address_id = na.net_address_id and na.ipaddr is not null and na.enabled and nde.domain = '$domain' and nde.authoritative order by nde.dns_name") -%]
