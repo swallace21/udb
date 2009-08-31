@@ -18,28 +18,43 @@ define host{
         retain_status_information       1
         retain_nonstatus_information    1
         contact_groups                  tstaff_group
-        name                            host_template
+        name                            host_notification_template
         register                        0
 }
 
 define host{
-        use                             host_template
+        use                             host_notification_template
         notification_options            n
-        name                            workstation_template
+        notifications_enabled           0
+        name                            host_monitor_template
         register                        0
 }
 
 define host{
-        use                             host_template
+        use                             host_notification_template
         notification_options            d,u,r
         name                            ugrad_template
         contact_groups                  consult_group
         register                        0
 }
 
-[% FOREACH host IN DBI.query("select na.ipaddr, fqdn_brown(nde.dns_name, nde.domain) as hostname from net_addresses na, net_dns_entries nde where na.monitored and na.enabled and nde.authoritative and nde.net_address_id = na.net_address_id order by hostname") -%]
+[% FOREACH host IN DBI.query("select na.ipaddr, fqdn_brown(nde.dns_name, nde.domain) as hostname from net_addresses na, net_dns_entries nde where na.monitored and na.notification and na.enabled and nde.authoritative and nde.net_address_id = na.net_address_id order by hostname") -%]
 define host{
-        use                             host_template
+        use                             host_notification_template
+        host_name                       [% host.hostname %]
+        address                         [% host.ipaddr %]
+}
+
+define service{
+        use                             ping_template
+        host_name                       [% host.hostname %]
+}
+
+[% END -%]
+
+[% FOREACH host IN DBI.query("select na.ipaddr, fqdn_brown(nde.dns_name, nde.domain) as hostname from net_addresses na, net_dns_entries nde where na.monitored and not na.notification and na.enabled and nde.authoritative and nde.net_address_id = na.net_address_id order by hostname") -%]
+define host{
+        use                             host_monitor_template
         host_name                       [% host.hostname %]
         address                         [% host.ipaddr %]
 }
