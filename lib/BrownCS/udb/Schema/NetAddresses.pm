@@ -38,8 +38,8 @@ __PACKAGE__->add_columns(
     is_nullable => 0,
     size => 1,
   },
-  "monitored",
-  { data_type => "boolean", default_value => undef, is_nullable => 0, size => 1 },
+  "monitored", { data_type => "boolean", default_value => undef, is_nullable => 0, size => 1 },
+  "notification", { data_type => "boolean", default_value => undef, is_nullable => 0, size => 1 },
   "last_updated",
   {
     data_type => "timestamp without time zone",

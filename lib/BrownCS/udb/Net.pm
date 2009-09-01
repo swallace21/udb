@@ -12,6 +12,7 @@ our @EXPORT_OK = qw(
   dynamic_vlan
   dns_insert
   dns_update
+  monitored_vlan
   verify_dns_alias
   verify_dns_region
   verify_ip
@@ -90,6 +91,27 @@ sub dns_update{
   my $udb = shift;
   my ($old_addr, $new_addr) = @_;
 }  
+
+sub monitored_vlan {
+  my $udb = shift;
+  my ($vlan) = @_;
+
+  # get a list of monitored vlans
+  my $net_vlans_rs = $udb->resultset('NetVlans')->search({
+    monitored => 't',
+  });
+
+  my @monitored_vlans;
+  while (my $net_vlan = $net_vlans_rs->next) {
+    push @monitored_vlans, $net_vlan->vlan_num;
+  }
+
+  if (grep(/$vlan/, @monitored_vlans)) {
+    return 1;
+  } else {
+    return 0;
+  }
+}
 
 sub verify_dns_alias {
   my $udb = shift;

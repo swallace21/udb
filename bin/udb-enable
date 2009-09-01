@@ -167,11 +167,22 @@ EOF
           });
         }
 
+        my $monitored = 0;
+        my @monitored_vlans;
+        my $net_vlans_rs = $udb->resultset('NetVlans')->search({
+            monitored => 't',
+        });
+
+        if (monitored_vlan($udb, $vlan->vlan_num)) {
+          $monitored = 1;
+        }
+
         # associate the ip address and vlan with the interface
         my $addr = $udb->resultset('NetAddresses')->create({
             vlan => $vlan,
             ipaddr => $ipaddr,
-            monitored => 0,
+            monitored => $monitored,
+            notification => 0,
           });
 
         $addr->add_to_net_interfaces($iface);
@@ -234,7 +245,7 @@ EOF
               $comp->add_to_comp_classes($class);
             }
           }
-  
+
           $comp->update_or_insert;
           $device->comp_sysinfo->update_or_insert;
         }

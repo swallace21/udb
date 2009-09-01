@@ -134,6 +134,14 @@ sub format_address_short {
       $out->{"IP"} .= " " . $dns_entry->dns_name . ":" . $dns_entry->dns_region->dns_region;
     }
     $out->{"IP"} .= " )";
+    if ($addr->monitored) {
+      $out->{"IP"} .= " - monitored ";
+      if ($addr->notification) {
+        $out->{"IP"} .= "with notifications";
+      } else {
+        $out->{"IP"} .= "without notifications";
+      }
+    }
   } else {
     $out->{"Dynamic IP on VLAN"} = $addr->vlan_num;
   }

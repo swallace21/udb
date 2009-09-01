@@ -101,6 +101,10 @@ my %udb_commands = (
     'desc' => "add a new xen vm",
     'common' => 0,
   },
+  'monitoring' => {
+    'desc' => "control whether a dns name/device is monitored",
+    'common' => 0,
+  },
   'move' => {
     'desc' => "move a device to a new location",
     'common' => 1,
