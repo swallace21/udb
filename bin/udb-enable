@@ -168,11 +168,6 @@ EOF
         }
 
         my $monitored = 0;
-        my @monitored_vlans;
-        my $net_vlans_rs = $udb->resultset('NetVlans')->search({
-            monitored => 't',
-        });
-
         if (monitored_vlan($udb, $vlan->vlan_num)) {
           $monitored = 1;
         }

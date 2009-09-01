@@ -11,6 +11,7 @@ use lib "$RealBin/../lib";
 use BrownCS::udb::Schema;
 use BrownCS::udb::Util qw(:all);
 use BrownCS::udb::Console qw(:all);
+use BrownCS::udb::Net qw(:all);
 use BrownCS::udb::Switch;
 
 # Print a simple help message.
@@ -107,9 +108,15 @@ if ($dryrun) {
   exit;
 }
 
+my $monitored = 0;
+if (monitored_vlan($udb, $vlan->vlan_num)) {
+  $monitored = 1;
+}
+
 $chosen_addr->vlan($vlan);
 $chosen_addr->update({
     ipaddr => $ipaddr,
+    monitored => $monitored,
   });
 
 if ($build) {

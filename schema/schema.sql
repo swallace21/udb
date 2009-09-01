@@ -314,6 +314,7 @@ create table net_addresses (
   ipaddr                    inet,
   enabled                   boolean not null default true,
   monitored                 boolean not null,
+  notification              boolean not null default false,
   last_updated              timestamp not null default now(),
   check (
     ipaddr is null or (
