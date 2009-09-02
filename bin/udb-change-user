@@ -79,7 +79,7 @@ udb-change-user - Perform maintenance on an existing device record in UDB
 
 =head1 SYNOPSIS
 
-udb-change-user <device>
+udb-change-user <device> [contact,...]
 
 =head1 DESCRIPTION
 

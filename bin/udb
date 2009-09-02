@@ -137,6 +137,10 @@ my %udb_commands = (
     'desc' => "reset a port on a switch",
     'common' => 1,
   },
+  'tracking-info' => {
+    'desc' => "update device tracking information",
+    'common' => 1,
+  },
 );
 
 # Print a simple help message.
