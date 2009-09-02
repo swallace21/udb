@@ -29,6 +29,10 @@ my %udb_commands = (
     'desc' => "build server configuration based on the database",
     'common' => 1,
   },
+  'change-comment' => {
+    'desc' => "change a device's comment",
+    'common' => 1,
+  },
   'change-ip' => {
     'desc' => "change a networked device's IP or VLAN",
     'common' => 1,
@@ -42,7 +46,7 @@ my %udb_commands = (
     'common' => 1,
   },
   'change-user' => {
-    'desc' => "change a device's primary user",
+    'desc' => "change a device's primary user or contact",
     'common' => 1,
   },
   'classes' => {
