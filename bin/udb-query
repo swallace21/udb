@@ -5,11 +5,13 @@ use warnings;
 
 use Getopt::Long;
 use Pod::Usage;
+use Switch;
 
 use FindBin qw($RealBin);
 use lib "$RealBin/../lib";
 use BrownCS::udb::Schema;
 use BrownCS::udb::Console qw(:all);
+use BrownCS::udb::Search qw(:all);
 
 # Print a simple help message.
 sub usage {
@@ -18,73 +20,98 @@ sub usage {
 }
 
 my $help = 0;
+my $surplus = 0;
 
 GetOptions (
-  'help|h|?' => \$help, 
+  'help|h' => \$help, 
+  'surplus|s' => \$surplus,
 ) or usage(1);
 usage(0) if $help;
 
 my $udb = BrownCS::udb::Schema->connect;
 my $uc = new BrownCS::udb::Console(udb => $udb);
 
-if (@ARGV < 1) {
+if (@ARGV != 2) {
   usage(2);
 }
 
-my $run = 0;
-my @comps;
-foreach my $arg (@ARGV) {
-  # This describes all valid search terms
-  if ($arg =~ /^([a-zA-Z0-9_]*\.)?([^=]+)=(.*)$/) {
-    my $table;
-    if ($1) {$table = substr($1, 0, -1);} #kill the dot
-    if (!$table) {$table = "devices"}
-    my $field = $2;
-    my $value = $3;
+my $type = shift;
+my $string = shift;
+my $success = 0;
+my @results;
 
-    #DEBUG
-    #print "$table;$field;$value\n";
+switch($type) {
 
-    my $device_rs = $udb->resultset($table)->search({ $field => $value}, undef);
-    die "No results.\n" if not $device_rs->count;
-
-    my @comps2 = $device_rs->get_column("me.device_name")->all;
-
-    #store current results 
-    if ($run) {
-      #compute intersection
-      my %union;
-      my %isect;
-      
-      foreach my $thing (@comps) { $union{$thing} = 1}
-      foreach my $thing (@comps2) { 
-        if ($union{$thing}) {$isect{$thing} = 1}
-      }
-      @comps = keys %isect;
-    } else { @comps = @comps2;} #first time
-    $run = 1;
-  } else {
-    die "Invalid search term $arg.\n";
+  case "brownid" {
+    ($success, @results) = search_brown_id($udb)->($string,1);
+  }
+  case "comment" {
+    ($success, @results) = search_comment($udb)->($string,1);
+  }
+  case "contact" {
+    ($success, @results) = search_contact($udb)->($string,1);
+  }
+  case "device" {
+    ($success, @results) = search_device($udb)->($string,1);
+  }
+  case "dns" {
+    ($success, @results) = search_dns($udb)->($string,1);
+  }
+  case "po" {
+    ($success, @results) = search_po($udb)->($string,1);
+  }
+  case "room" {
+    ($success, @results) = search_room($udb)->($string,1);
+  }
+  case "serial" {
+    ($success, @results) = search_serial($udb)->($string,1);
+  }
+  case "walljack" {
+    ($success, @results) = search_walljack($udb)->($string,1);
+  }
+  else {
+    print "Unknown search type\n";
+    usage(2);
   }
 }
 
-print join("\n", sort(@comps)) . "\n";
+if ($success) {
+  print "Found the following matching devices:\n\n";
+  foreach my $result (@results) {
+    print "$result\n";
+  }
+  print "\n";
+} else {
+  print "No matching results found\n";
+}
 
 __END__
 
 =head1 NAME
 
-udb-query - Query for hosts in udb
+udb-query - Query for a variety of data in udb.
 
 =head1 SYNOPSIS
 
-udb-query [<field>=<value> ...]
+udb-query [-hs] <type of search> <search string>
+
+  -h        - help information
+  -s        - include surplus information in searches
+
+where <type of search> can be one of:
+
+  brownid   - search for a Brown ID number
+  comment   - search within the comment fields
+  contact   - search for a device whose contact is a given user
+  device    - search for a given device name
+  dns       - search for a given dns name
+  room      - search for devices within a given room
+  serial    - search for a given serial number
+  walljack  - search for devices connected to a given walljack
 
 =head1 DESCRIPTION
 
-udb-query queries the UDB database for all computers that match certain fields. It only works on tables with a device_name column; it returns a newline-separated list of hostnames. If multiple conditions are specified, the list of hostnames matching the B<intersection> of those rules is returned. 
-
-Field may optionally have a table before it. The name of the table should be CamelCased without spaces or underscores. If no table is specified, it is assumed that the table is Devices. 
+udb-query provides a pre-defined number of queries a user can perform on the udb data.  It is intended to provide an easy way to search for the most common information tstaff members need to retrieve.
 
 =head1 OPTIONS
 
@@ -98,7 +125,7 @@ Print a help message and exit.
 
 =head1 AUTHORS
 
-Aleks Bromfield, Paul McCann.
+Aleks Bromfield, Paul McCann, Mark Dieterich.
 
 =head1 SEE ALSO
 
