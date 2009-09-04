@@ -57,6 +57,9 @@ switch($type) {
   case "dns" {
     ($success, @results) = search_dns($udb)->($string,1);
   }
+  case "ethernet" {
+    ($success, @results) = search_ethernet($udb)->($string,1);
+  }
   case "po" {
     ($success, @results) = search_po($udb)->($string,1);
   }
@@ -105,6 +108,7 @@ where <type of search> can be one of:
   contact   - search for a device whose contact is a given user
   device    - search for a given device name
   dns       - search for a given dns name
+  ethernet  - search for a given ethernet address
   room      - search for devices within a given room
   serial    - search for a given serial number
   walljack  - search for devices connected to a given walljack

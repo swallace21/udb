@@ -14,6 +14,7 @@ our @EXPORT_OK = qw(
   search_contact
   search_device
   search_dns
+  search_ethernet
   search_po
   search_room
   search_serial
@@ -261,6 +262,32 @@ sub search_walljack {
     } 
     return (0, undef);
   }
+}
+
+sub search_ethernet {
+  my $udb = shift;
+
+  return sub {
+    my ($ethernet, $verbose) = @_;
+
+    my $ifaces_rs = $udb->resultset('NetInterfaces')->search({
+      ethernet => $ethernet,
+    });
+
+    if ($ifaces_rs->count) {
+      my @results;
+
+      while (my $iface = $ifaces_rs->next) {
+        push @results, $iface->device_name;
+      }
+
+      if (@results) {
+        return (1, @results);
+      }
+    }
+
+    return (0, undef);
+  };
 }
 
 1;
