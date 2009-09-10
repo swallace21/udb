@@ -138,6 +138,8 @@ EOF
         $device->place($loc);
       }
 
+      $device->update_or_insert;
+
       #
       # network-specific
       #
