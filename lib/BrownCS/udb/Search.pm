@@ -18,6 +18,8 @@ our @EXPORT_OK = qw(
   search_po
   search_room
   search_serial
+  search_ssh_known_hosts
+  search_spare
   search_walljack
 );
 
@@ -214,6 +216,69 @@ sub search_serial {
 
     my @results = fuzzy_device_search($udb, 'serial_num', $serial, $verbose);
 
+    if (@results) {
+      return (1, @results);
+    } else {
+      return (0, undef);
+    }
+  };
+}
+
+sub search_spare {
+  my $udb = shift;
+  return sub {
+    my ($verbose) = @_;
+
+    my $devices_rs = $udb->resultset('Devices')->search({
+      status => 'spare',
+    });
+
+    my @results;
+
+    while (my $device = $devices_rs->next) {
+      my $room = "";
+
+      if ($device->place->room) {
+        $room = " (room: " . $device->place->room . ")";
+      }
+
+      push @results, $device->device_name . $room;
+    }
+
+    if (@results) {
+      return (1, @results);
+    } else {
+      return (0, undef);
+    }
+  };
+}
+
+sub search_ssh_known_hosts {
+  my $udb = shift;
+  return sub {
+    my ($verbose) = @_;
+    my @results;
+
+    # this should really be a join!
+    my $devices_rs = $udb->resultset('Devices')->search ({
+      manager => 'tstaff' ,
+      status => 'deployed',
+    });
+
+    while (my $device = $devices_rs->next) {
+      if ($device->computer) {
+        my $os_type;
+
+        if ($device->computer->os_type) {
+          $os_type = $device->computer->os_type->os_type;
+        }
+          
+        if ($os_type && ($os_type =~ /debian/ || $os_type =~ /centos/)) {
+          push @results, $device->device_name;
+        }
+      }
+    }
+    
     if (@results) {
       return (1, @results);
     } else {
