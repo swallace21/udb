@@ -1,0 +1,108 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+use Pod::Usage;
+
+use FindBin qw($RealBin);
+use lib "$RealBin/../lib";
+use BrownCS::udb::Schema;
+use BrownCS::udb::Console qw(:all);
+
+# Print a simple help message.
+sub usage {
+  my ($exit_status) = @_;
+  pod2usage({ -exitval => $exit_status, -verbose => 1});
+}
+
+my $help = 0;
+
+GetOptions (
+  'help|h|?' => \$help, 
+) or usage(1);
+usage(0) if $help;
+
+my $udb = BrownCS::udb::Schema->connect;
+my $uc = new BrownCS::udb::Console(udb => $udb);
+
+if (@ARGV < 1) {
+  usage(2);
+}
+
+my $run = 0;
+my @comps;
+foreach my $arg (@ARGV) {
+  # This describes all valid search terms
+  if ($arg =~ /^([a-zA-Z0-9_]*\.)?([^=]+)=(.*)$/) {
+    my $table;
+    if ($1) {$table = substr($1, 0, -1);} #kill the dot
+    if (!$table) {$table = "devices"}
+    my $field = $2;
+    my $value = $3;
+
+    #DEBUG
+    #print "$table;$field;$value\n";
+
+    my $device_rs = $udb->resultset($table)->search({ $field => $value}, undef);
+    die "No results.\n" if not $device_rs->count;
+
+    my @comps2 = $device_rs->get_column("me.device_name")->all;
+
+    #store current results 
+    if ($run) {
+      #compute intersection
+      my %union;
+      my %isect;
+      
+      foreach my $thing (@comps) { $union{$thing} = 1}
+      foreach my $thing (@comps2) { 
+        if ($union{$thing}) {$isect{$thing} = 1}
+      }
+      @comps = keys %isect;
+    } else { @comps = @comps2;} #first time
+    $run = 1;
+  } else {
+    die "Invalid search term $arg.\n";
+  }
+}
+
+print join("\n", sort(@comps)) . "\n";
+
+__END__
+
+=head1 NAME
+
+udb-query - Query for hosts in udb
+
+=head1 SYNOPSIS
+
+udb-query [<field>=<value> ...]
+
+=head1 DESCRIPTION
+
+udb-query queries the UDB database for all computers that match certain fields. It only works on tables with a device_name column; it returns a newline-separated list of hostnames. If multiple conditions are specified, the list of hostnames matching the B<intersection> of those rules is returned. 
+
+Field may optionally have a table before it. The name of the table should be CamelCased without spaces or underscores. If no table is specified, it is assumed that the table is Devices. 
+
+=head1 OPTIONS
+
+=over
+
+=item B<-h>, B<--help>
+
+Print a help message and exit.
+
+=back
+
+=head1 AUTHORS
+
+Aleks Bromfield, Paul McCann.
+
+=head1 SEE ALSO
+
+B<udb>
+
+=cut
+
