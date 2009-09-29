@@ -47,7 +47,7 @@ if (@ARGV != 1) {
 
 my $name = shift @ARGV;
 my $verified = 0;
-($verified, $name) = verify_device_name($udb)->($name, $verbose);
+($verified, $name) = verify_hostname($udb)->($name, $verbose);
 unless ($verified) { die "ERROR: device name contains illegal characters\n" };
 
 my $rs;

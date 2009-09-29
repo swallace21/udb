@@ -19,9 +19,10 @@ our @EXPORT_OK = qw(
   get_date
   get_host_class_map
   ipv4_n2x
-  verify_unprotected
-  verify_device_name
+  verify_domainname
+  verify_hostname
   verify_nonempty
+  verify_unprotected
 );
 
 our %EXPORT_TAGS = ("all" => [@EXPORT_OK]);
@@ -202,20 +203,37 @@ sub verify_nonempty {
   }
 }
 
-sub verify_device_name {
+sub verify_domainname {
 	my $udb = shift;
 	return sub {
-  	my($device, $verbose) = @_;
+  	my($domainname, $verbose) = @_;
 
 		if ($verbose) {
-			print "Ensuring all device names are lowercase\n";
+			print "Ensuring all domain names are lowercase\n";
 		}
-  	$device = lc($device);
-  	if($device !~ /^[a-z0-9]([a-z0-9\-\_]{0,253}[a-z0-9])?$/) {
-    	return (0, $device);
+  	$domainname = lc($domainname);
+  	if($domainname !~ /^[a-z0-9]([a-z0-9\-\.]{0,253}[a-z0-9])?$/) {
+    	return (0, $domainname);
   	}
 
-  	return (1, $device);
+  	return (1, $domainname);
+	};
+}
+
+sub verify_hostname {
+	my $udb = shift;
+	return sub {
+  	my($hostname, $verbose) = @_;
+
+		if ($verbose) {
+			print "Ensuring all hostnames names are lowercase\n";
+		}
+  	$hostname = lc($hostname);
+  	if($hostname !~ /^[a-z0-9]([a-z0-9\-]{0,253}[a-z0-9])?$/) {
+    	return (0, $hostname);
+  	}
+
+  	return (1, $hostname);
 	};
 }
 

@@ -5,6 +5,7 @@ use strict;
 use warnings;
 
 use BrownCS::udb::Console qw(:all);
+use BrownCS::udb::Util qw(:all);
 
 use Exporter qw(import);
 
@@ -117,6 +118,7 @@ sub verify_dns_alias {
   my $udb = shift;
   return sub {
     my ($dns_alias) = @_;
+    my $verified;
 
     if ($dns_alias eq "") {
       print "ERROR: DNS alias can not be blank\n";
@@ -129,6 +131,20 @@ sub verify_dns_alias {
     my ($alias, $domain) = $dns_alias =~ /([^\.]+)\.?(.*)/;
     if (! $domain) {
       $domain = 'cs.brown.edu';
+    }
+
+    # ensure the DNS alias only contains valid characters
+    ($verified, $alias) = verify_hostname($udb)->($alias);
+    if (! $verified) {
+      print "ERROR: DNS alias contains illegal characters\n";
+      return (0, undef);
+    }
+
+    # ensure the DNS domainn name only contains valid characters
+    ($verified, $domain) = verify_domainname($udb)->($domain);
+    if (! $verified) {
+      print "ERROR: DNS domain name contains illegal characters\n";
+      return (0, undef);
     }
 
     # ensure this DNS alias doesn't match a primary device name of any CS devices
