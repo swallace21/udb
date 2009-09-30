@@ -188,7 +188,11 @@ EOF
             primary_address => $addr,
         });
 
-        if(! dynamic_vlan($udb, $vlan->vlan_num)) {
+        # once we have dynamic DNS updates on the dynamic subnets, we
+        # should remove the $ipaddr check below.  It will always be
+        # the case that the $ipaddr is empty.  Right now, we are "sharing"
+        # the 36 subnet for dynamic and user static addresses.
+        if(! dynamic_vlan($udb, $vlan->vlan_num) || $ipaddr) {
           # get port information from the user
           my $port;
           ($port,$iface) = $uc->get_port($iface);
