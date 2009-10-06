@@ -15,6 +15,24 @@
 ## Global Parameters
 ##
 
+include "/etc/bind/rndc.key";
+
+# dynamic DNS settings
+ddns-updates on;
+ddns-update-style interim;
+ddns-domainname "smn.cs.brown.edu";
+
+# Communication zone
+zone smn.cs.brown.edu. {
+  primary 128.148.38.9;
+  key rndc-key;
+}
+
+#
+# This dhcp server is authoritative, i.e. should know about all leases
+#
+authoritative;
+
 #
 # Default time for a lease (in seconds).  3600 = 1 hours
 #
@@ -34,25 +52,18 @@ max-lease-time 86400;
 #	means use wins server only
 #	patpaul 6-2-06
 #
-    option netbios-name-servers 128.148.33.125;
-    option netbios-node-type 2;
+option netbios-name-servers 128.148.33.125;
+option netbios-node-type 2;
 
 #
 # Fully Automated Install (FAI) - debian unattended install options
 #
-#	option-170 is FAI_LOCATION, target is /usr/local/share/fai
-#		- this is the custom portion of the install
-option option-170 "dmznfs.cs.brown.edu:/vol/fai/config";
-option option-171 "install";
-option option-172 "createvt sshd";
-
-#
-# For Windows RIS clients
-#
-#option tftp-server-name "gigan.cs.brown.edu";
-#option bootfile-name "startrom.com";
-#option dhcp-class-identifier "PXEClient";
-#next-server gigan.cs.brown.edu;
+option fai_config_src code 170 = text;
+option fai_config_src "dmznfs.cs.brown.edu:/vol/fai/config";
+option fai_install_server code 171 = text;
+option fai_install_server "install.cs.brown.edu";
+option fai_install_options code 172 = text;
+option fai_install_options "createvt sshd";
 
 #
 # For PXELINUX clients
@@ -73,9 +84,13 @@ subnet [% subnet.network %] netmask [% subnet.netmask %] {
     option routers [% subnet.gateway %];
     [%- SWITCH subnet.vlan_num %]
     [%-   CASE '898' %]
-    option domain-name "ilab.cs.brown.edu";
+    option domain-name "ilab.cs.brown.edu cs.brown.edu";
+    [%-   CASE '4007' %]
+    option domain-name "smn.cs.brown.edu cs.brown.edu";
+    [%-   CASE ['32', '892'] %]
+    option domain-name cs.brown.edu";
     [%-   CASE DEFAULT %]
-    option domain-name "cs.brown.edu";
+    option domain-name "cs.brown.edu smn.cs.brown.edu ilab.cs.brown.edu";
     [%- END %]
     [%- SWITCH subnet.vlan_num %]
     [%-   CASE ['32', '892'] %]
@@ -89,6 +104,19 @@ subnet [% subnet.network %] netmask [% subnet.netmask %] {
 
     [%- SWITCH subnet.vlan_num %]
     [%-   CASE '36' %]
+    default-lease-time 3600;
+    max-lease-time 10800;
+    [%-   CASE '4007' %]
+    zone smn.cs.brown.edu. {
+      primary 128.148.38.9;
+      key "rndc-key";
+    }
+
+    zone 70.116.10.in-addr.arpa. {
+      primary 128.148.39.9;
+      key "rndc-key";
+    }
+
     default-lease-time 3600;
     max-lease-time 10800;
     [%-   CASE DEFAULT %]

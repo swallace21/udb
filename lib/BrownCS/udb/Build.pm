@@ -274,17 +274,27 @@ sub build_dhcp {
   my $vars = {filename => $file, date => get_date(), dbh => $udb->storage->dbh};
   $self->tt->process('dhcpd.conf.tt2', $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
 
-  # send new config file to each server
   $self->commit_local($PATH_TMPFILE, $file);
-  my @dhcp_servers = qw(payday snickers);
+
+  # send new config file to each server
+  my $class_rs = $udb->resultset('CompClasses')->search({
+    name => 'dhcp.server',
+  });
+
+  my @dhcp_servers = ();
+  while (my $class = $class_rs->next) {
+    @dhcp_servers = (@dhcp_servers, $class->computers->get_column("me.device_name")->all);
+  }
   foreach my $host (@dhcp_servers) {
-    $self->commit_scp($file, "$host:/etc");
-    #TODO Change or remove this check (is it necessary?)
-    if ((not $self->dryrun) && $? != 0 ) {
+    $self->commit_scp($file, "$host:/etc/dhcp3");
+    if ($? != 0) {
       warn "$0: ERROR: Failed to copy DHCP files to $host\n";
     }
   }
-  $self->maybe_system('sudo', 'ssh', '-x', 'dhcp', '/etc/init.d/dhcp restart');
+
+  # end of old server cruft
+
+  $self->maybe_system('sudo', 'ssh', '-x', 'dhcp.cs.brown.edu', '/etc/init.d/dhcp restart');
 
   print "done.\n";
 
@@ -623,7 +633,7 @@ sub build_dns {
   
       $self->maybe_system('sudo', 'ssh', '-x', $host, '/usr/sbin/rndc reload');
       if ( (not $self->dryrun) && $? != 0 ) {
-        warn "$0: ERROR: Failed to send DNS reload command to on $host\n";
+        warn "$0: ERROR: Failed to send DNS reload command on $host\n";
       }
     }
   } 
