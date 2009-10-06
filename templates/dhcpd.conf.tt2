@@ -88,7 +88,7 @@ subnet [% subnet.network %] netmask [% subnet.netmask %] {
     [%-   CASE '4007' %]
     option domain-name "smn.cs.brown.edu cs.brown.edu";
     [%-   CASE ['32', '892'] %]
-    option domain-name cs.brown.edu";
+    option domain-name "cs.brown.edu";
     [%-   CASE DEFAULT %]
     option domain-name "cs.brown.edu smn.cs.brown.edu ilab.cs.brown.edu";
     [%- END %]
