@@ -43,6 +43,13 @@ __PACKAGE__->add_columns(
     is_nullable => 0,
     size => 1,
   },
+  "description",
+  {
+    data_type => "text",
+    default_value => undef,
+    is_nullable => 0,
+    size => undef,
+  },
   "last_updated" => { data_type => "timestamp without time zone", default_value => "now()", is_nullable => 0, size => 8, },
 );
 __PACKAGE__->set_primary_key("zone_name");

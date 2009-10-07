@@ -118,7 +118,6 @@ sub verify_dns_alias {
   my $udb = shift;
   return sub {
     my ($dns_alias) = @_;
-    my $verified;
 
     if ($dns_alias eq "") {
       print "ERROR: DNS alias can not be blank\n";
@@ -133,13 +132,15 @@ sub verify_dns_alias {
       $domain = 'cs.brown.edu';
     }
 
+    my $verified;
+    
     # ensure the DNS alias only contains valid characters
     ($verified, $alias) = verify_hostname($udb)->($alias);
     if (! $verified) {
       print "ERROR: DNS alias contains illegal characters\n";
       return (0, undef);
     }
-
+ 
     # ensure the DNS domainn name only contains valid characters
     ($verified, $domain) = verify_domainname($udb)->($domain);
     if (! $verified) {
@@ -225,8 +226,19 @@ sub verify_ip {
       })->single;
 
     if (not $vlan) {
-      print "Invalid IP address: $netaddr_ip is not on a recognized subnet.\n";
+      print "\nInvalid IP address: $netaddr_ip is not on a recognized subnet.\n";
       return (0, undef);
+    }
+
+    # if this is a dynamic vlan, make sure static ip doesn't fall within DHCP
+    # range.
+    if (dynamic_vlan($udb, $vlan->vlan_num)) {
+      my $dhcp_start_ip = new NetAddr::IP ($vlan->dynamic_dhcp_start);
+      my $dhcp_end_ip = new NetAddr::IP ($vlan->dynamic_dhcp_end);
+      if ($netaddr_ip > $dhcp_start_ip && $netaddr_ip < $dhcp_end_ip) {
+        print "\nIP address falls within dynamic DHCP range.\n";
+        return(0, undef);
+      }
     }
 
     return (1, $ipaddr, $vlan);
@@ -239,7 +251,24 @@ sub verify_ip_or_vlan {
   return sub {
     my ($ip_or_vlan_str) = @_;
 
-    return (0, undef) if not $ip_or_vlan_str;
+    if (! $ip_or_vlan_str) {
+      my $net_zones_rs = $udb->resultset('NetZones');
+      my %net_zones;
+      while (my $net_zone = $net_zones_rs->next) {
+        $net_zones{$net_zone->zone_name} = $net_zone->description;
+      }      
+
+      print "ERROR: IP address or VLAN must be specified.  If you are unsure of\n"; 
+      print "the VLAN to select, these descriptions might help:\n\n";
+      my $net_vlans_rs = $udb->resultset('NetVlans');
+      print "VLAN\tDescription\n";
+      print "----------------------------\n";
+      while (my $vlan = $net_vlans_rs->next) {
+        print $vlan->vlan_num . "\t" . $net_zones{$vlan->zone_name} . "\n";
+      }
+      print "\n";
+      return (0, undef);
+    }
 
     if ($ip_or_vlan_str =~ /\./) {
       # we got an IP address
@@ -248,21 +277,10 @@ sub verify_ip_or_vlan {
 
     # we got a VLAN
 
-    my $dynamic = 0;
-    my $vlan_num = $ip_or_vlan_str;
     my $ipaddr;
+    my $vlan_num = $ip_or_vlan_str;
 
-    if (($ip_or_vlan_str =~ /^d(\d+)$/) or
-      ($ip_or_vlan_str =~ /^(\d+)d$/)) {
-      # we got a dynamic vlan
-      $dynamic = 1;
-      $vlan_num = $1;
-    } elsif ($ip_or_vlan_str =~ /^(\d+)$/) {
-      $vlan_num = $1;
-    } else {
-      return (0, undef);
-    }
-
+    # check to make sure it is a valid vlan
     my $vlan = $udb->resultset('NetVlans')->search({
         vlan_num => $vlan_num,
       })->single;
@@ -272,7 +290,8 @@ sub verify_ip_or_vlan {
       return (0, undef);
     }
 
-    if (not $dynamic) {
+    # assign it a ip address if it's not dynamic
+    if (! dynamic_vlan($udb, $vlan_num)) {
       $ipaddr = BrownCS::udb::Util::find_unused_ip($udb, $vlan);
     }
 

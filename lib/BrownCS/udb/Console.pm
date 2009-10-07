@@ -459,18 +459,12 @@ EOF
 
 sub get_ip_and_vlan {
   my $self = shift;
-  my ($dynamic) = @_;
 
   my $ip_or_vlan_preamble = <<EOF;
 What is IP address do you want assigned?
 If you just want an arbitrary IP on a given VLAN (e.g. 31, 36),
 enter the VLAN number, and an IP will be picked for you.
 EOF
-
-  if ($dynamic) {
-    $ip_or_vlan_preamble .= "If you want a dynamic IP address, add a \"d\" to the start of the VLAN.\n";
-    $ip_or_vlan_preamble .= "For example, use 'd36' instead of '36'.\n";
-  }
 
   my $ip_or_vlan_prompt = "\n${ip_or_vlan_preamble}IP or VLAN:";
   my ($ipaddr, $vlan) = $self->demand($ip_or_vlan_prompt, verify_ip_or_vlan($self->udb));

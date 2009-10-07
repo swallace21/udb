@@ -294,7 +294,7 @@ sub build_dhcp {
 
   # end of old server cruft
 
-  $self->maybe_system('sudo', 'ssh', '-x', 'dhcp.cs.brown.edu', '/etc/init.d/dhcp restart');
+  $self->maybe_system('sudo', 'ssh', '-x', 'dhcp.cs.brown.edu', '/etc/init.d/dhcp3-server restart');
 
   print "done.\n";
 

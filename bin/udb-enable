@@ -64,21 +64,6 @@ eval {
         die "Device $name is already active.\n";
       }
 
-      print <<'EOF';
------------------------------------------------------------
-Note: If any of the following are true:
-
-  - The device is a switch
-  - The device has more than one network card
-  - The device will have more than one IP address
-  - The device will be a virtual host
-  - The device's domain name is not 'cs.brown.edu' (e.g. ilab)
-
-then you need to edit this device manually after running
-this script.
------------------------------------------------------------
-EOF
-
       #
       # fields that apply to all devices
       #
