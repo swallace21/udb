@@ -282,8 +282,9 @@ create table net_zones (
   routing_type              text not null references routing_types
                               on update cascade
                               on delete restrict,
-  last_updated              timestamp not null default now(),
-  dynamic_dhcp              boolean not null default true
+  dynamic_dhcp              boolean not null default true,
+  description               text not null,
+  last_updated              timestamp not null default now()
 ) ;
 
 drop table if exists net_vlans cascade;
