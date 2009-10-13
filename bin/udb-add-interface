@@ -84,14 +84,16 @@ eval {
         });
       }
 
-      my $port;
-      ($port,$iface) = $uc->get_port($iface);
-      if ($port) {
-        $iface->net_port($port);
-        $iface->update;
-      }
+      if (! dynamic_vlan($udb, $vlan->vlan_num)) {
+        my $port;
+        ($port,$iface) = $uc->get_port($iface);
+        if ($port) {
+          $iface->net_port($port);
+          $iface->update;
+        }
 
-      dns_insert($udb, $name, 'cs.brown.edu', $addr, 1);
+        dns_insert($udb, $name, 'cs.brown.edu', $addr, 1);
+      }
     } else {
       print "\n----------------------- WARNING ---------------------------\n";
       print "This requires that the switch and device be configured to support\n";

@@ -9,8 +9,9 @@ use Pod::Usage;
 use FindBin qw($RealBin);
 use lib "$RealBin/../lib";
 use BrownCS::udb::Schema;
-use BrownCS::udb::Util qw(:all);
 use BrownCS::udb::Console qw(:all);
+use BrownCS::udb::Util qw(:all);
+use BrownCS::udb::Net qw(:all);
 
 # Print a simple help message.
 sub usage {
@@ -80,11 +81,21 @@ eval {
       if ($device->place->building eq 'CIT') {
         my $iface_rs = $device->net_interfaces;
         while (my $iface = $iface_rs->next) {
-          my $port;
-          ($port, $iface) = $uc->get_port($iface);
-          if ($port) {
-            $iface->net_port($port);
-            $iface->update;
+          my $addr_rs = $iface->net_addresses;
+          my $dynamic = 1;
+          while (my $addr = $addr_rs->next) {
+            if (! dynamic_vlan($udb, $addr->vlan_num)) {
+              $dynamic = 0;
+            }
+          }
+          
+          if (! $dynamic) {
+            my $port;
+            ($port, $iface) = $uc->get_port($iface);
+            if ($port) {
+              $iface->net_port($port);
+              $iface->update;
+            }
           }
         }
       } else {
