@@ -391,22 +391,14 @@ EOF
 
 sub get_equip_usage_type {
   my $self = shift;
-  my ($default) = @_;
-  if (ref($default) eq 'BrownCS::udb::Schema::EquipUsageTypes') {
-    $default = $default->equip_usage_type;
-  }
-  my @equip_usage_types = $self->udb->resultset('EquipUsageTypes')->get_column("equip_usage_type")->all;
+
   my $equip_usage_prompt = <<EOF;
 
 What is the usage type of this computer?
 EOF
-  my $def_msg = def_msg($default);
-  if ($default) {
-    $equip_usage_prompt .= "Usage [default: $def_msg]:";
-  } else {
-    $equip_usage_prompt .= "Usage:";
-  }
-  return $self->choose($equip_usage_prompt, \@equip_usage_types, $default);
+  $equip_usage_prompt .= "Usage:";
+
+  return $self->demand($equip_usage_prompt, verify_equip_usage_types($self->udb));
 }
 
 sub get_os_type {

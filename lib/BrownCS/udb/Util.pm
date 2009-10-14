@@ -20,6 +20,7 @@ our @EXPORT_OK = qw(
   get_host_class_map
   ipv4_n2x
   verify_domainname
+  verify_equip_usage_types
   verify_hostname
   verify_nonempty
   verify_unprotected
@@ -218,6 +219,32 @@ sub verify_domainname {
 
   	return (1, $domainname);
 	};
+}
+
+sub verify_equip_usage_types {
+  my $udb = shift;
+  return sub {
+    my ($equip_usage_type, $verbose) = @_;
+
+    my $equip_usage_types_rs = $udb->resultset('EquipUsageTypes');
+    my %equip_usage_types;
+    while (my $type = $equip_usage_types_rs->next) {
+      $equip_usage_types{$type->equip_usage_type} =  $type->description;
+    }
+
+    if (! $equip_usage_type || ! $equip_usage_types{$equip_usage_type}) {
+      print "ERROR: Uknown equipment usage type.  It must be one of:\n\n";
+      print "Type      Description\n";
+      print "----------------------------\n";
+      foreach my $key (keys(%equip_usage_types)) {
+        printf "%-10s%s\n", $key, $equip_usage_types{$key};
+      }
+      print "\n";
+      return (0, undef);
+    }
+
+    return (1, $equip_usage_type);
+  };
 }
 
 sub verify_hostname {

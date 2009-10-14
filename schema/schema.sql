@@ -190,7 +190,9 @@ create table equip_status_types (
 
 drop table if exists equip_usage_types cascade;
 create table equip_usage_types (
-  equip_usage_type          text primary key
+  equip_usage_type          text primary key,
+  tracked                   boolean not null default true,
+  description               text not null
 ) ;
 
 drop table if exists routing_types cascade;
