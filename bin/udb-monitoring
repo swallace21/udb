@@ -70,10 +70,7 @@ eval {
           }
         }
       } elsif (my $dns_entry = $udb->resultset('NetDnsEntries')->search({dns_name => $name,})->single) {
-        my $addrs_rs = $dns_entry->net_address; 
-        foreach (my $addr = $addrs_rs->next) {
-          push @addrs, $addr;
-        }
+        push @addrs, $dns_entry->net_address; 
       }
 
       if (! @addrs) {
@@ -85,24 +82,36 @@ eval {
         print "Dry run finished...\n";
         exit;
       }
+
+      if (@addrs == 1 && ! $addrs[0]->ipaddr) {
+        print "No static IP addresses associated with device or DNS name: $name\n";
+        next;
+      }
     
       print "The current addresses are associated with $name:\n\n";
       foreach my $addr (@addrs) {
-        my $iface = $addr->net_interfaces->single;
-        my $hostname = $iface->device_name;
-        print "$hostname (" . $addr->ipaddr . "):\n";
-        my $monitored = $uc->confirm("Should this device be monitored? (Y/n)", "y");
-        my $notification = 0;
-        if ($monitored) {
-          $notification = $uc->confirm("Should nagios notify Tstaff? (y/N)", "n");
-        } else {
-          $notification = 0;
-        }
+        if ($addr->ipaddr) {
+          my $iface = $addr->net_interfaces->single;
+          my $hostname;
+          if ($iface) {
+            $hostname = $iface->device_name;
+          } else {
+            $hostname = $name;
+          }
+          print "$hostname (" . $addr->ipaddr . "):\n";
+          my $monitored = $uc->confirm("Should this interface/DNS name be monitored? (Y/n)", "y");
+          my $notification = 0;
+          if ($monitored) {
+            $notification = $uc->confirm("Should nagios notify Tstaff? (y/N)", "n");
+          } else {
+            $notification = 0;
+          }
 
-        $addr->update({
-          monitored => $monitored,
-          notification => $notification,
-        });
+          $addr->update({
+            monitored => $monitored,
+            notification => $notification,
+          });
+        }
       }
     }
   });
