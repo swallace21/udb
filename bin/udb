@@ -146,7 +146,7 @@ my %udb_commands = (
 # Print a simple help message.
 sub usage {
   my ($exit_status, $long) = @_;
-  pod2usage({ -exitval => "NOEXIT", -verbose => 1});
+  pod2usage({ -exitval => "NOEXIT", -verbose => 2});
   print "Commands:\n\n";
   foreach my $k (sort(keys(%udb_commands))) {
     if (not $long) {
