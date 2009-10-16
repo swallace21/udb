@@ -85,7 +85,7 @@ __END__
 
 =head1 NAME
 
-udb-add-dns-alias - Adds a new DNS alias or CNAME
+udb-add-dns-alias - Adds a new DNS A record or CNAME
 
 =head1 SYNOPSIS
 
@@ -93,11 +93,25 @@ B<udb-add-dns-alias> [device name|existing DNS alias]
 
 =head1 DESCRIPTION
 
-B<udb-add-dns-alias> allows a user to create a new DNS alias. If you provide 
-an existing B<device name> or B<DNS alias> on the command line, then udb will 
-create a new CNAME referencing the existing device name or DNS alias.  If 
-you don't provide a name on the command line, then udb will create a new DNS
-alias.
+B<udb-add-dns-alias> allows a user to create a new DNS alias.  The command
+can create both A and CNAME records.
+
+=over
+
+=item B<Creating A records>
+
+If you do not provide a name on the command line, udb will create an A
+record with the information you provide.  If the name you provide already 
+exists, the result will be a DNS round robin; the same name resolving to
+two equally weighted DNS A records.
+
+=item B<Create CNAME records>
+
+If you provide an exising B<device name> or B<DNS alias> on the command line, 
+udb will create a new CNAME referencing the existing device name or DNS A
+record.
+
+=back
 
 =head1 OPTIONS
 
