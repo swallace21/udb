@@ -91,7 +91,7 @@ sub build_tftpboot {
 
   print "Building tftpboot... ";
 
-  my $tftpboot_path = "/maytag/sys0/tftpboot/pxelinux.cfg";
+  my $tftpboot_path = "/sysvol/tftpboot/pxelinux.cfg";
 
   my $addrs = $udb->resultset('NetAddresses')->search({},
     {
