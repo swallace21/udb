@@ -597,6 +597,12 @@ sub get_owner {
   );
 }
 
+sub get_pxelink {
+  my $self = shift;
+  my ($default) = @_;
+  return $self->get_updated_val("PXElink");
+}
+
 sub get_serial_num {
   my $self = shift;
   my ($default) = @_;

@@ -113,6 +113,10 @@ my %udb_commands = (
     'desc' => "move a device to a new location",
     'common' => 1,
   },
+  'pxelink' => {
+    'desc' => "create a new PXElink entry",
+    'common' => 0,
+  },
   'query' => {
     'desc' => "search for devices",
     'common' => 0,
