@@ -57,13 +57,15 @@ sub format_computer {
 sub format_sysinfo {
   my $self = shift;
   my ($out, $sysinfo) = @_;
-  $out->{"CPUs"} = $sysinfo->num_cpus;
-  $out->{"CPU type"} = $sysinfo->cpu_type;
-  $out->{"CPU speed"} = $sysinfo->cpu_speed;
-  $out->{"Memory"} = $sysinfo->memory;
-  $out->{"Hard drives"} = $sysinfo->hard_drives;
-  $out->{"Video cards"} = $sysinfo->video_cards;
-  $out->{"Last updated"} = $sysinfo->last_updated;
+  if ($sysinfo) {
+    $out->{"CPUs"} = $sysinfo->num_cpus;
+    $out->{"CPU type"} = $sysinfo->cpu_type;
+    $out->{"CPU speed"} = $sysinfo->cpu_speed;
+    $out->{"Memory"} = $sysinfo->memory;
+    $out->{"Hard drives"} = $sysinfo->hard_drives;
+    $out->{"Video cards"} = $sysinfo->video_cards;
+    $out->{"Last updated"} = $sysinfo->last_updated;
+  }
 }
 
 sub format_switch {
