@@ -618,7 +618,7 @@ sub build_dns {
 
   # send new config file to each server
   my %dns_servers = (
-    internal => [ 'heath','rally','payday','snickers' ],
+    internal => [ 'heath','rally' ],
     external => [ 'salt','pepper' ],
   );
 
