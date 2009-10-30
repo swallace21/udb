@@ -84,13 +84,13 @@ subnet [% subnet.network %] netmask [% subnet.netmask %] {
     option routers [% subnet.gateway %];
     [%- SWITCH subnet.vlan_num %]
     [%-   CASE '898' %]
-    option domain-name "ilab.cs.brown.edu cs.brown.edu";
+    option domain-name "ilab.cs.brown.edu";
     [%-   CASE '4007' %]
-    option domain-name "smn.cs.brown.edu cs.brown.edu";
+    option domain-name "smn.cs.brown.edu";
     [%-   CASE ['32', '892'] %]
     option domain-name "cs.brown.edu";
     [%-   CASE DEFAULT %]
-    option domain-name "cs.brown.edu smn.cs.brown.edu ilab.cs.brown.edu";
+    option domain-name "cs.brown.edu";
     [%- END %]
     [%- SWITCH subnet.vlan_num %]
     [%-   CASE ['32', '892'] %]
