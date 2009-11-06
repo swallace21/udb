@@ -12,6 +12,7 @@ use lib "$RealBin/../lib";
 use BrownCS::udb::Schema;
 use BrownCS::udb::Console qw(:all);
 use BrownCS::udb::Search qw(:all);
+use BrownCS::udb::DeviceHash;
 
 # Print a simple help message.
 sub usage {
@@ -20,13 +21,13 @@ sub usage {
 }
 
 my $help = 0;
-my $quiet = 0;
+my $batch = 0;
 my $surplus = 0;
 my $verbose = 0;
 
 GetOptions (
   'help|h' => \$help, 
-  'quiet|q' => \$quiet,
+  'batch|b' => \$batch,
   'surplus|s' => \$surplus,
   'verbose|v' => \$verbose,
 ) or usage(1);
@@ -34,6 +35,7 @@ usage(0) if $help;
 
 my $udb = BrownCS::udb::Schema->connect;
 my $uc = new BrownCS::udb::Console(udb => $udb);
+my $udh = new BrownCS::udb::DeviceHash(udb => $udb);
 
 if (@ARGV < 1 || @ARGV > 2) {
   usage(2);
@@ -138,19 +140,39 @@ switch($type) {
 }
 
 if ($success) {
-  if (!$quiet) {
+  if (!$batch) {
     print "Found the following matching devices:\n\n";
   }
   foreach my $result (@results) {
-    print "$result\n";
+    if ($batch) {
+      print "$result\n";
+    } else {
+      my ($name, $junk) = split(/ /, $result);
+
+      # display any results for non-surplused machines
+      my $device = $udb->resultset('Devices')->find($name);
+      if ($device) {
+        $uc->print_record('', $udh->format_device($device));
+      }
+
+      # dispaly surplused machine results
+      my $device_rs = $udb->resultset('SurplusDevices')->search({
+        device_name => $name
+      });
+      if ($device_rs) {
+        while ($device = $device_rs->next) {
+          $uc->print_record('', $udh->format_device($device));
+        }
+      }
+    }
   }
-  if (!$quiet) {
+  if (!$batch) {
     print "\n";
   }
   exit 0;
 
 } else {
-  if (!$quiet) {
+  if (!$batch) {
     print "No matching results found\n";
   }
 
@@ -165,7 +187,7 @@ udb-query - Query for a variety of data in udb.
 
 =head1 SYNOPSIS
 
-udb-query [-hqsv] <type of search> [search string]
+udb-query [-bhsv] <type of search> [search string]
 
 where <type of search> can be one of:
 
@@ -190,13 +212,13 @@ udb-query provides a pre-defined number of queries a user can perform on the udb
 
 =over
 
+=item B<-b>, B<--batch>
+
+Run in batch mode and only print out device entries matching query
+
 =item B<-h>, B<--help>
 
 Print a help message and exit.
-
-=item B<-s>, B<--quiet>
-
-Supress all extraneous output
 
 =item B<-s>, B<--surplus>
 

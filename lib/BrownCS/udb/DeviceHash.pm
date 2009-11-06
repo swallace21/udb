@@ -18,31 +18,45 @@ sub format_device {
   my $self = shift;
   my ($device) = @_;
   my $out = {};
+
+  my $surplus = 0;
+  my $class = $device->result_class;
+  if ($class =~ /SurplusDevices/) {
+    $surplus = 1;
+  }
+
+  # columns common to all active and surplus devices
   $out->{"Name"} = $device->device_name;
-  $out->{"Location"} = $self->format_location($device->place);
-  $out->{"Status"} = $device->status->equip_status_type;
-  $out->{"Usage"} = $device->usage->equip_usage_type;
-  $out->{"Managed by"} = $device->manager->management_type;
   $out->{"Purchase date"} = $device->purchased_on;
   $out->{"Install date"} = $device->installed_on;
   $out->{"Brown inv number"} = $device->brown_inv_num;
   $out->{"Serial number"} = $device->serial_num;
   $out->{"Purchase order"} = $device->po_num;
-  $out->{"Contact"} = $device->contact;
-  $out->{"Owner"} = $device->owner;
-  $out->{"Protected"} = bool2str($device->protected);
   $out->{"Comments"} = $device->comments;
-  if ($device->computer) {
-    $self->format_computer($out, $device->computer);
-    $self->format_sysinfo($out, $device->comp_sysinfo);
-  } elsif ($device->net_switch) {
-    $self->format_switch($out, $device->net_switch);
+
+  # columns only associated with active devices
+  if (! $surplus) {
+    $out->{"Location"} = $self->format_location($device->place);
+    $out->{"Status"} = $device->status->equip_status_type;
+    $out->{"Usage"} = $device->usage->equip_usage_type;
+    $out->{"Managed by"} = $device->manager->management_type;
+    $out->{"Contact"} = $device->contact;
+    $out->{"Owner"} = $device->owner;
+    $out->{"Protected"} = bool2str($device->protected);
+
+    if ($device->computer) {
+      $self->format_computer($out, $device->computer);
+      $self->format_sysinfo($out, $device->comp_sysinfo);
+    } elsif ($device->net_switch) {
+      $self->format_switch($out, $device->net_switch);
+    }
+    my $ifaces = [];
+    foreach my $iface ($device->net_interfaces) {
+      push @$ifaces, $self->format_interface($iface);
+    }
+    $out->{"Interfaces"} = $ifaces;
   }
-  my $ifaces = [];
-  foreach my $iface ($device->net_interfaces) {
-    push @$ifaces, $self->format_interface($iface);
-  }
-  $out->{"Interfaces"} = $ifaces;
+
   return $out;
 }
 
