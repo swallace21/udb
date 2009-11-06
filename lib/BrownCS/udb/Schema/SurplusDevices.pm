@@ -23,7 +23,7 @@ __PACKAGE__->add_columns(
   { data_type => "date", default_value => undef, is_nullable => 1, size => 4 },
   "installed_on",
   { data_type => "date", default_value => undef, is_nullable => 1, size => 4 },
-  "name",
+  "device_name",
   {
     data_type => "text",
     default_value => undef,

@@ -133,10 +133,6 @@ my %udb_commands = (
     'desc' => "list the members of a class",
     'common' => 0,
   },
-  'show-surplus' => {
-    'desc' => "print a summary of a surplus device",
-    'common' => 1,
-  },
   'reset-port' => {
     'desc' => "reset a port on a switch",
     'common' => 1,

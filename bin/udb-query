@@ -22,11 +22,13 @@ sub usage {
 my $help = 0;
 my $quiet = 0;
 my $surplus = 0;
+my $verbose = 0;
 
 GetOptions (
   'help|h' => \$help, 
   'quiet|q' => \$quiet,
   'surplus|s' => \$surplus,
+  'verbose|v' => \$verbose,
 ) or usage(1);
 usage(0) if $help;
 
@@ -54,66 +56,66 @@ switch($type) {
       print "ERROR: you must enter a brownid string to search for\n\n";
       usage(2)
     }
-    ($success, @results) = search_brown_id($udb)->($string,1);
+    ($success, @results) = search_brown_id($udb)->($string,$surplus,$verbose);
   } 
   case "comment" {
     if (! $string) {
       print "ERROR: you must enter a comment string to search for\n\n";
       usage(2)
     }
-    ($success, @results) = search_comment($udb)->($string,1);
+    ($success, @results) = search_comment($udb)->($string,$surplus,$verbose);
   }
   case "contact" {
     if (! $string) {
       print "ERROR: you must enter contact string to search for\n\n";
       usage(2)
     }
-    ($success, @results) = search_contact($udb)->($string,1);
+    ($success, @results) = search_contact($udb)->($string,$verbose);
   }
   case "device" {
     if (! $string) {
       print "ERROR: you must enter device string to search for\n\n";
       usage(2)
     }
-    ($success, @results) = search_device($udb)->($string,1);
+    ($success, @results) = search_device($udb)->($string,$surplus,$verbose);
   }
   case "dns" {
     if (! $string) {
       print "ERROR: you must enter dns name to search for\n\n";
       usage(2)
     }
-    ($success, @results) = search_dns($udb)->($string,1);
+    ($success, @results) = search_dns($udb)->($string,$verbose);
   }
   case "ethernet" {
     if (! $string) {
       print "ERROR: you must enter ethernet address to search for\n\n";
       usage(2)
     }
-    ($success, @results) = search_ethernet($udb)->($string,1);
+    ($success, @results) = search_ethernet($udb)->($string,$verbose);
   }
   case "po" {
     if (! $string) {
       print "ERROR: you must enter po number to search for\n\n";
       usage(2)
     }
-    ($success, @results) = search_po($udb)->($string,1);
+    ($success, @results) = search_po($udb)->($string,$surplus,$verbose);
   }
   case "room" {
     if (! $string) {
       print "ERROR: you must enter room number to search for\n";
       usage(2)
     }
-    ($success, @results) = search_room($udb)->($string,1);
+    ($success, @results) = search_room($udb)->($string,$verbose);
   }
   case "serial" {
     if (! $string) {
       print "ERROR: you must enter serial number to search for\n\n";
       usage(2)
     }
-    ($success, @results) = search_serial($udb)->($string,1);
+    ($success, @results) = search_serial($udb)->($string,$surplus,$verbose);
   }
   case "spare" {
-    ($success, @results) = search_spare($udb)->($string,1);
+    ($success, @results) = search_spare($udb)->($string,$verbose);
   }
   case "ssh_known_hosts" {
     if (@ARGV) {
@@ -127,7 +129,7 @@ switch($type) {
       print "ERROR: you must enter walljack to search for\n\n";
       usage(2)
     }
-    ($success, @results) = search_walljack($udb)->($string,1);
+    ($success, @results) = search_walljack($udb)->($string,$verbose);
   }
   else {
     print "Unknown search type\n";
@@ -163,7 +165,7 @@ udb-query - Query for a variety of data in udb.
 
 =head1 SYNOPSIS
 
-udb-query [-hqs] <type of search> [search string]
+udb-query [-hqsv] <type of search> [search string]
 
 where <type of search> can be one of:
 
@@ -199,6 +201,10 @@ Supress all extraneous output
 =item B<-s>, B<--surplus>
 
 Include surplused machines in results
+
+=item B<-v>, B<--verbose>
+
+Verbose output
 
 =back
 

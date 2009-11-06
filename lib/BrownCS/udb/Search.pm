@@ -27,9 +27,9 @@ our %EXPORT_TAGS = ("all" => [@EXPORT_OK]);
 
 sub fuzzy_device_search {
   my $udb = shift;
-  my ($key, $value, $verbose) = @_;
+  my ($table, $key, $value, $verbose) = @_;
 
-  my $devices_rs = $udb->resultset('Devices')->search({
+  my $devices_rs = $udb->resultset($table)->search({
     $key => $value,
   });
 
@@ -37,7 +37,7 @@ sub fuzzy_device_search {
     if ($verbose) {
       print "No exact match, trying fuzzy search...\n";
     }
-    $devices_rs = $udb->resultset('Devices')->search({
+    $devices_rs = $udb->resultset($table)->search({
       $key => { '~*' => $value },
     });
   }
@@ -46,7 +46,11 @@ sub fuzzy_device_search {
   while (my $device = $devices_rs->next) { 
     my $device_name = $device->device_name;
     if (! grep(/$device_name/,@results)) {
-      push @results, $device->device_name . " (" . $device->$key . ")";
+      my $additional_info = "";
+      if ($device->device_name ne $device->$key) {
+        $additional_info = " (" . $device->$key . ")";
+      }
+      push @results, $device->device_name . $additional_info;
     }
   }      
 
@@ -94,9 +98,13 @@ sub fuzzy_dns_search {
 sub search_brown_id {
   my $udb = shift;
   return sub {
-    my ($id, $verbose) = @_;
+    my ($id, $surplus, $verbose) = @_;
 
-    my @results = fuzzy_device_search($udb, 'brown_inv_num', $id, $verbose);
+    my @results = fuzzy_device_search($udb, 'Devices', 'brown_inv_num', $id, $verbose);
+
+    if ($surplus) {
+      push @results, fuzzy_device_search($udb, 'SurplusDevices', 'brown_inv_num', $id, $verbose);
+    }
 
     if (@results) {
       return (1, @results);
@@ -109,9 +117,13 @@ sub search_brown_id {
 sub search_comment {
   my $udb = shift;
   return sub {
-    my ($comment, $verbose) = @_;
+    my ($comment, $surplus, $verbose) = @_;
 
-    my @results = fuzzy_device_search($udb, 'comments', $comment, $verbose);
+    my @results = fuzzy_device_search($udb, 'Devices', 'comments', $comment, $verbose);
+
+    if ($surplus) {
+      push @results, fuzzy_device_search($udb, 'SurplusDevices', 'comments', $comment, $verbose);
+    }
 
     if (@results) {
       return (1, @results);
@@ -126,7 +138,7 @@ sub search_contact {
   return sub {
     my ($contact, $verbose) = @_;
 
-    my @results = fuzzy_device_search($udb, 'contact', $contact, $verbose);
+    my @results = fuzzy_device_search($udb, 'Devices', 'contact', $contact, $verbose);
 
     if (@results) {
       return (1, @results);
@@ -139,9 +151,13 @@ sub search_contact {
 sub search_device {
   my $udb = shift;
   return sub {
-    my ($name, $verbose) = @_;
+    my ($name, $surplus, $verbose) = @_;
 
-    my @results = fuzzy_device_search($udb, 'device_name', $name, $verbose);
+    my @results = fuzzy_device_search($udb, 'Devices', 'device_name', $name, $verbose);
+
+    if ($surplus) {
+      push @results, fuzzy_device_search($udb, 'SurplusDevices', 'device_name', $name, $verbose);
+    }
 
     if (@results) {
       return (1, @results);
@@ -169,9 +185,13 @@ sub search_dns {
 sub search_po {
   my $udb = shift;
   return sub {
-    my ($po, $verbose) = @_;
+    my ($po, $surplus, $verbose) = @_;
 
-    my @results = fuzzy_device_search($udb, 'po_num', $po, $verbose);
+    my @results = fuzzy_device_search($udb, 'Devices', 'po_num', $po, $verbose);
+
+    if ($surplus) {
+      push @results, fuzzy_device_search($udb, 'SurplusDevices', 'po_num', $po, $verbose);
+    }
 
     if (@results) {
       return (1, @results);
@@ -212,9 +232,13 @@ sub search_room {
 sub search_serial {
   my $udb = shift;
   return sub {
-    my ($serial, $verbose) = @_;
+    my ($serial, $surplus, $verbose) = @_;
 
-    my @results = fuzzy_device_search($udb, 'serial_num', $serial, $verbose);
+    my @results = fuzzy_device_search($udb, 'Devices', 'serial_num', $serial, $verbose);
+
+    if ($surplus) {
+      push @results, fuzzy_device_search($udb, 'SurplusDevices', 'serial_num', $serial, $verbose);
+    }
 
     if (@results) {
       return (1, @results);

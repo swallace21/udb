@@ -264,7 +264,7 @@ create table surplus_devices (
   purchased_on              date,
   installed_on              date,
   last_updated              timestamp not null default now(),
-  name                      text,
+  device_name               text,
   buyer                     text,
   brown_inv_num             text,
   serial_num                text,

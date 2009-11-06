@@ -102,7 +102,7 @@ sub make_surplus {
       surplus_date => $surplus_date,
       purchased_on => $device->purchased_on,
       installed_on => $device->installed_on,
-      name => $device->device_name,
+      device_name => $device->device_name,
       buyer => $buyer,
       brown_inv_num => $device->brown_inv_num,
       serial_num => $device->serial_num,
