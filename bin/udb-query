@@ -125,6 +125,8 @@ switch($type) {
       usage(2)
     }
     ($success, @results) = search_ssh_known_hosts($udb)->(1);
+    # this only makes sense to return a list of hosts, i.e. batch mode
+    $batch=1; 
   }
   case "walljack" {
     if (! $string) {
