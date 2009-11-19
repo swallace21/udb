@@ -46,13 +46,15 @@ max-lease-time 86400;
 
 #
 # WINS Server information
-#	the netbios-name-servers entry points
-#	to raisinets, currently for testing with the
-#	\\guestprint issue.  nebios-node-type 2
-#	means use wins server only
-#	patpaul 6-2-06
 #
-option netbios-name-servers 128.148.33.125;
+# Until Samba can handle full AD utilities, we rely on WINS
+# for windows name resolution.
+#
+# the netbios-node-type 2 tells clients to use point-to-point
+# queries instead of broadcats.  This should help cut down on
+# broadcast traffic
+#
+option netbios-name-servers 128.148.33.120;
 option netbios-node-type 2;
 
 #
