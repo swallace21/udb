@@ -54,7 +54,7 @@ max-lease-time 86400;
 # queries instead of broadcats.  This should help cut down on
 # broadcast traffic
 #
-option netbios-name-servers 128.148.33.120;
+option netbios-name-servers 128.148.33.135, 128.148.33.152;
 option netbios-node-type 2;
 
 #
