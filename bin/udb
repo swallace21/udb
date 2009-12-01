@@ -146,7 +146,7 @@ my %udb_commands = (
 # Print a simple help message.
 sub usage {
   my ($exit_status, $long) = @_;
-  pod2usage({ -exitval => "NOEXIT", -verbose => 2});
+  pod2usage({ -exitval => 'NOEXIT', -verbose => 2, -noperldoc => 1});
   print "Commands:\n\n";
   foreach my $k (sort(keys(%udb_commands))) {
     if (not $long) {
@@ -208,6 +208,10 @@ udb <command> [<arg> ...]
 
 Wrapper script for running other udb commands.
 
+=head1 VERSION
+
+1.0
+
 =head1 OPTIONS
 
 =over
@@ -220,7 +224,8 @@ Print a help message and exit.
 
 =head1 AUTHORS
 
-Aleks Bromfield.
+Aleks Bromfield,
+Mark Dieterich
 
 =cut
 
