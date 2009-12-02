@@ -115,13 +115,19 @@ sub monitored_vlan {
 }
 
 sub verify_dns_alias {
-  my $udb = shift;
+  my ($udb, $existing_name, $region) = @_;
+
   return sub {
     my ($dns_alias) = @_;
 
+    my $authoritative = 0;
+    if (! $existing_name) {
+      $authoritative = 1;
+    }
+
     if ($dns_alias eq "") {
       print "ERROR: DNS alias can not be blank\n";
-      return (0, undef);
+      return (0, undef, undef, undef);
     }
 
     my $uc = new BrownCS::udb::Console(udb => $udb);
@@ -138,14 +144,14 @@ sub verify_dns_alias {
     ($verified, $alias) = verify_hostname($udb)->($alias);
     if (! $verified) {
       print "ERROR: DNS alias contains illegal characters\n";
-      return (0, undef);
+      return (0, undef, undef, undef);
     }
  
-    # ensure the DNS domainn name only contains valid characters
+    # ensure the DNS domain name only contains valid characters
     ($verified, $domain) = verify_domainname($udb)->($domain);
     if (! $verified) {
       print "ERROR: DNS domain name contains illegal characters\n";
-      return (0, undef);
+      return (0, undef, undef, undef);
     }
 
     # ensure this DNS alias doesn't match a primary device name of any CS devices
@@ -153,38 +159,48 @@ sub verify_dns_alias {
       my $device = $udb->resultset('Devices')->find($alias);
       if ($device) {
         print "\nERROR: DNS alias \"$alias\" conflicts with a device of the same name.\n";
-        return (0, undef);
+        return (0, undef, undef, undef);
       }
     } 
 
     # determine if any other hosts currently have this DNS alias
     my $net_dns_entries_rs = $udb->resultset('NetDnsEntries')->search({
-      dns_name => {'=', $alias},
-      domain => {'=', $domain},
+      'dns_name' => {'=', $alias},
+      'domain' => {'=', $domain},
     });
 
-    # warn user if this name is already in use and confirm they want to setup a DNS round robin
-    if ($net_dns_entries_rs->count) {
-      print "This DNS alias is already associated with the following\n";
-      print "IP addresses (devices):\n\n";
-      while (my $net_dns_entry = $net_dns_entries_rs->next) {
-        my $ipaddr = $net_dns_entry->net_address->ipaddr;
-        my $device = "";
-        if ($net_dns_entry->net_address->net_interfaces->single) {
-          $device .= " (";
-          $device .= $net_dns_entry->net_address->net_interfaces->single->device->device_name;
-          $device .= ")";
-        }
-   
-        my $region = $net_dns_entry->dns_region->dns_region;
-        print "IP: $ipaddr$device, DNS Region: $region\n";
-      }
-      if (! $uc->confirm("\nAre you sure you want to enter another DNS alias (y/N)?",'n')) {
-        return (0, undef, undef);
+    # if this new alias is being associated with an existing dns alias (i.e. we are creating a
+    # CNAME), then make sure no other DNS entries exist.  DNS does not support round robins via
+    # CNAMEs and this will cause bind to fail.
+    if ($net_dns_entries_rs->count && $existing_name) {
+      if ($net_dns_entries_rs->count == 1 && $region !~ /all/ && $net_dns_entries_rs->single->dns_region !~ /$region/) {
+        return (1, $alias, $domain, $authoritative);
+      } else {
+        print "\nERROR: You are trying to create a DNS CNAME, with a name that already exists.\n";
+        print "DNS does not support round robins via CNAMEs.\n";
+        return (0, undef, undef, undef);
       }
     }
 
-    return (1, $alias, $domain);
+    # warn user if this name is already in use and confirm they want to setup a DNS round robin
+    if ($net_dns_entries_rs->count) {
+      # walk through the existing entries and make sure they are all authoritative, i.e. A records
+      while (my $net_dns_entry = $net_dns_entries_rs->next) {
+        if (! $net_dns_entry->authoritative) {
+          print "\nERROR: You are trying to create an A record, with a name that is already used\n";
+          print "as a CNAME.  You must choose a different DNS alias name\n";   
+          return (0, undef, undef, undef);
+        }
+      }
+
+      print "Adding this alias will create a DNS round robin\n";
+      if (! $uc->confirm("\nAre you sure you want to enter another DNS alias (y/N)?",'n')) {
+        return (0, undef, undef, undef, undef);
+      }
+
+    }
+
+    return (1, $alias, $domain, $authoritative);
   }
 }
 
@@ -206,13 +222,24 @@ sub verify_ip {
   return sub {
     my ($ipaddr) = @_;
 
+    my $uc = new BrownCS::udb::Console(udb => $udb);
+
     my $netaddr_ip = $udb->resultset('NetAddresses')->search({
         ipaddr => $ipaddr,
       })->single;
 
     if ($netaddr_ip) {
-      print "\nIP address $ipaddr is already in use\n";
-      return (0, undef);
+      print "\nIP address $ipaddr is already in use, which should only happen\n";
+      print "in one of two situations:\n\n";
+      print "1) You are creating an additional A record pointing to an existing\n";
+      print "   ip address, (i.e. a DNS round robin)\n";
+      print "2) You are creating a bonded network interface\n\n";
+      print "If neither of these are true or you don't know what this means\n";
+      print "then please don't continue with this operation\n\n";
+      
+      if (!$uc->confirm("Are you sure you want to continue? (y/N)", "no")) {
+        return(0, undef);
+      }
     }
 
     $netaddr_ip = new NetAddr::IP ($ipaddr);

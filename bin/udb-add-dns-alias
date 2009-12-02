@@ -45,10 +45,10 @@ if (@ARGV == 1) {
 my $rs;
 eval {
   $rs = $udb->txn_do(sub {
-    my ($alias, $domain, $region) = $uc->get_dns_alias($udb);
+    my ($alias, $domain, $region, $authoritative) = $uc->get_dns_alias($name);
 
     my $addr;
-    my $authoritative = 0;
+
     # associate the DNS alias with an network address
     if ($name) {
       $addr = $udb->resultset('NetDnsEntries')->search({
@@ -61,7 +61,6 @@ eval {
         ipaddr => $ip,
         monitored => 0,
       });
-      $authoritative = 1;
     }
 
     # create a DNS entry

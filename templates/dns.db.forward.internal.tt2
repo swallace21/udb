@@ -74,16 +74,6 @@ sa                                  IN          MX              10 sa.cs.brown.e
 mail                                IN          CNAME           sa.cs.brown.edu.
 smtp                                IN          CNAME           sa.cs.brown.edu.
 
-; nfs round robin
-nfs             60                  IN          A               128.148.33.90
-nfs             60                  IN          A               128.148.33.97
-nfs                                 IN          MX              10 mx.cs.brown.edu.
-
-; cifs round robin
-cifs            60                  IN          A               128.148.33.96
-cifs            60                  IN          A               128.148.33.107
-nfs                                 IN          MX              10 mx.cs.brown.edu.
-
 ; ntp round robin
 ntp-int         60                  IN          A               128.148.31.195
 ntp-int         60                  IN          A               128.148.31.180

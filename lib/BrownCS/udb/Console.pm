@@ -321,14 +321,16 @@ sub ask_with_help_option {
 }
 
 sub get_dns_alias {
-  my $self = shift;
+  my $self = shift; 
+  
+  my ($name) = @_;
 
   my @regions = $self->udb->resultset('DnsRegions')->get_column('dns_region')->all;
-
-  my ($alias, $domain) = $self->get_updated_val('DNS alias','', verify_dns_alias($self->udb));
   my $region = $self->choose('DNS region [all]:', \@regions,'all');
 
-  return ($alias, $domain, $region);
+  my ($alias, $domain, $authoritative) = $self->get_updated_val('DNS alias','', verify_dns_alias($self->udb, $name, $region));
+
+  return ($alias, $domain, $region, $authoritative);
 }
 
 sub get_dns_alias_ip {
