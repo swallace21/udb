@@ -60,6 +60,13 @@ switch($type) {
     }
     ($success, @results) = search_brown_id($udb)->($string,$surplus,$verbose);
   } 
+  case "class" {
+    if (! $string) {
+      print "ERROR: you must enter a class string to search for\n\n";
+      usage(2)
+    }
+    ($success, @results) = search_class($udb)->($string,$verbose);
+  } 
   case "comment" {
     if (! $string) {
       print "ERROR: you must enter a comment string to search for\n\n";
@@ -194,6 +201,7 @@ udb-query [-bhsv] <type of search> [search string]
 where <type of search> can be one of:
 
   brownid         - search for a given Brown ID number
+  class           - search for devices in a given class
   comment         - search for a given comment
   contact         - search for a device whose contact is a given user
   device          - search for a given device name

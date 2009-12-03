@@ -10,6 +10,7 @@ use Exporter qw(import);
 
 our @EXPORT_OK = qw(
   search_brown_id
+  search_class
   search_comment
   search_contact
   search_device
@@ -93,6 +94,28 @@ sub fuzzy_dns_search {
   }
 
   return (@results);
+}
+
+sub search_class {
+  my $udb = shift;
+  return sub {
+    my ($class, $verbose) = @_;
+
+    my $comp_classes_computers_rs = $udb->resultset('CompClasses')->search({
+      name => $class,
+    })->single->comp_classes_computers;
+
+    my @results = (); 
+    while (my $comp_classes_computers = $comp_classes_computers_rs->next) {
+      push @results, $comp_classes_computers->device_name;
+    } 
+    
+    if (@results) {
+      return (1, @results);
+    } else {
+      return (0, undef);
+    }
+  };
 }
 
 sub search_brown_id {
