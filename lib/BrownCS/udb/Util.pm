@@ -18,6 +18,7 @@ our @EXPORT_OK = qw(
   fmt_time
   get_date
   get_host_class_map
+  host_is_trusted
   ipv4_n2x
   verify_domainname
   verify_equip_usage_types
@@ -109,6 +110,16 @@ sub dns_name_exists {
 
   if ($records) {
     return $records;
+  } else {
+    return 0;
+  }
+}
+
+sub host_is_trusted {
+  my ($host) = @_;
+
+  if (($host->device->manager->management_type eq 'tstaff') || ($host->os_type && $host->os_type->trusted_nfs)) {
+    return 1;
   } else {
     return 0;
   }

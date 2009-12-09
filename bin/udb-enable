@@ -60,6 +60,11 @@ eval {
           device_name => $name,
           place_id => undef,
         });
+     
+      if ($device->status && $device->status->equip_status_type eq "deleted") {
+        die "Device is marked for deletion, please run udb build and retry addition\n";
+      }
+
       if ($device->status and ($device->status->equip_status_type ne "spare")) {
         die "Device $name is already active.\n";
       }

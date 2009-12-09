@@ -65,6 +65,10 @@ if ($dryrun) {
 my $rs;
 eval {
   $rs = $udb->txn_do(sub {
+    if ($device->status && $device->status->equip_status_type eq 'deleted') {
+      die "ERROR: Device is marked for deletion, please run udb build\n";
+    }
+
     my ($city, $building, $room,$description) = $uc->get_place($device->place);
 
     my $new_place = $udb->resultset('Places')->find_or_create({
@@ -77,7 +81,7 @@ eval {
     $device->place($new_place);
     $device->update;
 
-    if ($device->status->equip_status_type ne 'spare') {
+    if ($device->status && $device->status->equip_status_type ne 'spare') {
       if ($device->place->building eq 'CIT') {
         my $iface_rs = $device->net_interfaces;
         while (my $iface = $iface_rs->next) {

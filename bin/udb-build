@@ -7,6 +7,9 @@ use Getopt::Long;
 use Getopt::Std;
 use Pod::Usage;
 use Data::Dumper;
+use Date::Format;
+use DateTime::Format::Pg;
+use File::Temp;
 
 use FindBin qw($RealBin);
 use lib "$RealBin/../lib";
@@ -58,17 +61,53 @@ if (not $dryrun) {
   system("sudo -v");
 }
 
+my $rs;
+eval {
+  $rs = $udb->txn_do(sub {
+    my $build_start = time2str("%Y-%L-%d %T", time);
+    my %builds;
+  
+    $ub->build_lock;
+  
+    my $krbadmin = "udbuser/admin";
+    my $keytab = tmpnam();
+    $ub->get_keytab($krbadmin, $keytab);
 
-  $ub->build_tftpboot;
-  $ub->build_netgroup;
-  $ub->build_dhcp;
-  $ub->build_nagios;
-  $ub->build_wpkg_hosts;
-  $ub->build_dns;
-  $ub->build_finger_data;
+    # delete anything marked for deletion since last successful build
+    $ub->staged_deletions($krbadmin, $keytab, \%builds);
+  
+    # add anything staged for addition since last successful build
+    $ub->staged_additions($krbadmin, $keytab, \%builds);
 
-  exit;
+    # add anything staged for modification since last successful build
+    $ub->staged_modifications($krbadmin, $keytab, \%builds);
 
+    # build service and data files
+    $ub->build_tftpboot;
+    $ub->build_netgroup;
+    $ub->build_dhcp;
+    $ub->build_nagios;
+    $ub->build_wpkg_hosts;
+    $ub->build_dns;
+    $ub->build_finger_data;
+
+    my $count = unlink $keytab;
+    if ($count != 1) {
+      print "WARNING: unable to unlink keytab file \"$keytab\", please delete by hand\n";
+    }
+
+    $ub->update_build_times($build_start, \%builds);
+
+    $ub->build_unlock;
+  });
+};
+if ($@) {
+  $ub->build_unlock;
+  die <<EOF;
+Operation failed.  Details:
+  $@
+EOF
+}
 
 __END__
 
@@ -105,7 +144,8 @@ Print lots of text about what is going on.
 
 =head1 AUTHORS
 
-Aleks Bromfield.
+Aleks Bromfield
+Mark Dieterich
 
 =head1 SEE ALSO
 

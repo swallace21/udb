@@ -134,6 +134,12 @@ create sequence gid_seq;
 
 -- {{{
 
+drop table if exists build_log cascade;
+create table build_log (
+  table_name                text primary key,
+  last_build                timestamp not null
+) ;
+
 drop table if exists db_export_log_entries cascade;
 create table db_export_log_entries (
   db_export_log_entry_id    serial primary key,
@@ -158,6 +164,20 @@ create table macaddr_log_entries (
   port                      integer,
   macaddr                   text,
   data                      text
+) ;
+
+-- }}}
+
+----------------
+-- Log tables --
+----------------
+
+-- {{{
+
+drop table if exists state cascade;
+create table state (
+  key                       text primary key,
+  value                     integer
 ) ;
 
 -- }}}

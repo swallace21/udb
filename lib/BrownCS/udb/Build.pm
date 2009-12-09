@@ -30,6 +30,88 @@ sub renew_sudo {
   }
 }
 
+sub build_lock {
+  my $self = shift;
+
+  my $udb = $self->udb;
+  my $build_lock = $udb->resultset('State')->find('build_lock');
+
+  if ($build_lock->value != 0) {
+    print "ERROR: another build is in progress, please try again later\n";
+    exit 1;
+  }
+
+  $build_lock->value(1);
+  $build_lock->update;
+}
+
+sub build_unlock {
+  my $self = shift;
+
+  my $udb = $self->udb;
+  my $build_lock = $udb->resultset('State')->find('build_lock');
+
+  $build_lock->value(0);
+  $build_lock->update;
+}
+
+sub add_build_ref {
+  my $self = shift;
+  my ($buildref, $table) = @_;
+
+  if ($self->verbose) { print "Adding build reference for \"$table\" table.\n"; }
+  if ($buildref->{$table}) {
+    $buildref->{$table}++;
+  } else {
+    $buildref->{$table} = 1;
+  }
+}
+
+sub del_build_ref {
+  my $self = shift;
+  my ($buildref, $table) = @_;
+  
+  if ($buildref->{$table} && $buildref->{$table} > 0) {
+    if ($self->verbose) { print "Deleting build reference for \"$table\" table.\n"; }
+    $buildref->{$table}--;
+  } else {
+    print "WARNING: buildref for table \"$table\" was already zero\n";
+  }
+}
+
+sub update_build_times {
+  my $self = shift;
+  my ($build_time, $buildref) = @_;
+
+  my $udb = $self->udb;
+
+  foreach my $table (keys %$buildref) {
+    if ($buildref->{$table} == 0) {
+      my $table = $udb->resultset('BuildLog')->find($table);
+      $table->last_build($build_time);
+      $table->update;
+    }
+  } 
+}
+
+sub get_keytab {
+  my $self = shift;
+  my ($krbadmin, $keytab) = @_;
+
+  if (! -x '/usr/sbin/kadmin') {
+    print "ERROR: can't execute /usr/sbin/kadmin\n";
+    exit 1;
+  }
+
+  system("/usr/sbin/kadmin -q \"ktadd -q -k $keytab $krbadmin\" 2> /dev/null");
+  print "\n";
+
+  if (! -e $keytab) {
+    print "ERROR: unable to extract keytab file, did you enter your correct password?\n";
+    exit 1;
+  }
+}
+
 sub maybe_system {
   my $self = shift;
   my $udb = $self->udb;
@@ -162,14 +244,13 @@ sub add_to_group {
   } else {
     $netgroups->{$grp} = "(${host},,)";
   }
-
 }
 
 sub build_netgroup {
   my $self = shift;
   my $udb = $self->udb;
 
-  if(not $self->dryrun){BrownCS::udb::Util::okay_kerberos;}
+  if(not $self->dryrun) { BrownCS::udb::Util::okay_kerberos; }
 
   print "Building netgroups... ";
 
@@ -263,10 +344,6 @@ sub build_dhcp {
 
   renew_sudo($self);
 
-  if((not $self->dryrun) && 1){
-    print "Dryun\n";
-  }
-
   print "Building dhcp... ";
 
   my $file = '/maytag/sys0/dhcp/dhcpd.conf';
@@ -294,7 +371,10 @@ sub build_dhcp {
 
   # end of old server cruft
 
-  $self->maybe_system('sudo', 'ssh', '-x', 'dhcp.cs.brown.edu', '/etc/init.d/dhcp3-server restart');
+  $self->maybe_system('sudo', 'ssh', '-x', 'dhcp.cs.brown.edu', '/etc/init.d/dhcp3-server restart', '> /dev/null');
+  if ( (not $self->dryrun) && $? != 0 ) {
+    warn "$0: ERROR: Failed to restart dhcp server\n";
+  }
 
   print "done.\n";
 
@@ -307,7 +387,10 @@ sub build_nagios {
   print "Building nagios files... ";
   $self->build_nagios_hosts;
   $self->build_nagios_services;
-  $self->maybe_system('sudo', 'ssh', '-x', 'storm', '/etc/init.d/nagios3 restart');
+  $self->maybe_system('sudo', 'ssh', '-x', 'storm', '/etc/init.d/nagios3 restart', '> /dev/null');
+  if ( (not $self->dryrun) && $? != 0 ) {
+    warn "$0: ERROR: Failed to restart nagios server\n";
+  }
   print "done.\n";
 }
 
@@ -631,7 +714,7 @@ sub build_dns {
         warn "$0: ERROR: Failed to copy DNS files to $host\n";
       }
   
-      $self->maybe_system('sudo', 'ssh', '-x', $host, '/usr/sbin/rndc reload');
+      $self->maybe_system('sudo', 'ssh', '-x', $host, '/usr/sbin/rndc reload', '> /dev/null');
       if ( (not $self->dryrun) && $? != 0 ) {
         warn "$0: ERROR: Failed to send DNS reload command on $host\n";
       }
@@ -656,6 +739,186 @@ sub build_finger_data {
   $self->tt->process('finger_data.tt2', $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
   $self->commit_local($PATH_TMPFILE, $file);
   print "done.\n";
+}
+
+sub staged_additions {
+  my $self = shift;
+  my ($krbadmin, $keytab, $buildref) = @_;
+
+  my $udb = $self->udb;
+  my $ret;
+
+  if(not $self->dryrun) { BrownCS::udb::Util::okay_kerberos; }
+
+  print "Building staged additions... ";
+
+  # get list of devices that have been changed since last build
+  my $device_log = $udb->resultset('BuildLog')->find('devices');
+  unless ($device_log) { die "ERROR: can't find build log for devices table\n" };
+  
+  my $timestamp = $device_log->last_build;
+
+  # select hosts that need ldap entries
+  my $devices_rs = $udb->resultset('Devices')->search({
+    'last_updated' => { '>=' => $timestamp },
+  });
+
+  while (my $device = $devices_rs->next) {
+    # stage any additions that won't be caught by staged_modifications
+  }
+
+  print "done.\n";
+}
+
+sub staged_deletions {
+  my $self = shift;
+  my ($krbadmin, $keytab, $buildref) = @_;
+
+  my $udb = $self->udb;
+  my $ret;
+
+  if(not $self->dryrun) { BrownCS::udb::Util::okay_kerberos; }
+
+  print "Building staged deletions... ";
+
+  # get list of devices that have been changed since last build
+  my $device_log = $udb->resultset('BuildLog')->find('devices');
+  unless ($device_log) { die "ERROR: can't find build log for devices table\n" };
+  
+  my $timestamp = $device_log->last_build;
+
+  # select devices for which we need to delete ldap entries
+  my $devices_rs = $udb->resultset('Devices')->search({
+    'last_updated' => { '>=' => $timestamp },
+    'status' => 'deleted',
+  });
+
+  while (my $device = $devices_rs->next) {
+    if ($device->computer) {
+      $self->add_build_ref($buildref, 'computers');
+      $ret = delete_ldap_host($self, $device->device_name);
+      if ($ret) {
+        next;
+      } else {
+        $self->del_build_ref($buildref, 'computers');
+      }
+    }
+
+    $self->add_build_ref($buildref, 'devices');
+    $ret = delete_kerberos_host($self, $krbadmin, $keytab, $device->device_name);
+    if ($ret) {
+      next;
+    } else {
+      $self->del_build_ref($buildref, 'devices');
+    }
+
+    $device->delete;
+  }
+
+  print "done.\n";
+}
+
+sub staged_modifications {
+  my $self = shift;
+  my ($krbadmin, $keytab, $buildref) = @_;
+
+  my $udb = $self->udb;
+  my $ret;
+  my $timestamp;
+
+  if(not $self->dryrun) { BrownCS::udb::Util::okay_kerberos; }
+
+  print "Building staged modifications... ";
+
+  # get list of devices that have changed since last build log
+  my $device_log = $udb->resultset('BuildLog')->find('devices');
+  unless ($device_log) { die "ERROR: can't find build log for computers table\n" };
+
+  $timestamp = $device_log->last_build;
+
+  my $devices_rs = $udb->resultset('Devices')->search({
+    'last_updated' => { '>=', $timestamp },
+  });
+
+  while (my $device = $devices_rs->next) {
+    if ($device->computer && host_is_trusted($device->computer)) {
+      $self->add_build_ref($buildref, 'devices');
+      $ret = add_kerberos_host($self, $krbadmin, $keytab, $device->device_name);
+      if (! $ret) {
+        $self->del_build_ref($buildref, 'devices');
+      }
+    } else {
+      $self->add_build_ref($buildref, 'devices');
+      $ret = delete_kerberos_host($self, $krbadmin, $keytab, $device->device_name);
+      if (! $ret) {
+        $self->del_build_ref($buildref, 'devices');
+      }
+    }
+  }
+
+  # get list of computers that have changed since last build
+  my $computer_log = $udb->resultset('BuildLog')->find('computers');
+  unless ($computer_log) { die "ERROR: can't find build log for computers table\n" };
+
+  $timestamp = $computer_log->last_build;
+
+  my $computers_rs = $udb->resultset('Computers')->search({
+    'last_updated' => { '>=', $timestamp },
+  });
+
+  while (my $computer = $computers_rs->next) {
+    if (host_is_trusted($computer) && $computer->os_type && $computer->os_type->os_type =~ /^win/ ) {
+      $self->add_build_ref($buildref, 'computers');
+      $ret = add_ldap_host($self, $computer->device_name);
+      if (! $ret) {
+        $self->del_build_ref($buildref, 'computers');
+      }
+    } else {
+      $self->add_build_ref($buildref, 'computers');
+      $ret = delete_ldap_host($self, $computer->device_name);
+      if (! $ret) {
+        $self->del_build_ref($buildref, 'computers');
+      }
+    }
+  }
+
+  print "done.\n";
+}
+
+sub add_kerberos_host {
+  my ($self, $krbadmin, $keytab, $name) = @_;
+
+  if ($self->verbose) { print "adding host \"$name\" to Kerberos\n"; }
+  my $ret = $self->maybe_system("/tstaff/bin/krb-host-admin -c $krbadmin -k $keytab add $name.cs.brown.edu");
+  
+  return $ret;
+}
+
+sub delete_kerberos_host {
+  my ($self, $krbadmin, $keytab, $name) = @_;
+
+  if ($self->verbose) { print "deleting host \"$name\" from Kerberos\n"; }
+  my $ret = $self->maybe_system("/tstaff/bin/krb-host-admin -c $krbadmin -k $keytab delete $name.cs.brown.edu");
+  
+  return $ret;
+}
+
+sub add_ldap_host {
+  my ($self, $name) = @_;
+
+  if ($self->verbose) { print "adding host \"$name\" to LDAP\n"; }
+  my $ret = $self->maybe_system("/tstaff/bin/ldap-host add $name 2>/dev/null >/dev/null");
+
+  return $ret; 
+}
+
+sub delete_ldap_host {
+  my ($self, $name) = @_;
+
+  if ($self->verbose) { print "deleting host \"$name\" from LDAP\n"; }
+  my $ret = $self->maybe_system("/tstaff/bin/ldap-host delete $name 2>/dev/null >/dev/null");
+
+  return $ret;
 }
 
 no Moose;
