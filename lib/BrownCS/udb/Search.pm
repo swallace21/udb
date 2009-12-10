@@ -4,6 +4,7 @@ use 5.010000;
 use strict;
 use warnings;
 
+use Switch;
 use BrownCS::udb::Console qw(:all);
 
 use Exporter qw(import);
@@ -16,6 +17,7 @@ our @EXPORT_OK = qw(
   search_device
   search_dns
   search_ethernet
+  search_os_type
   search_po
   search_room
   search_serial
@@ -26,74 +28,72 @@ our @EXPORT_OK = qw(
 
 our %EXPORT_TAGS = ("all" => [@EXPORT_OK]);
 
-sub fuzzy_device_search {
+sub fuzzy_search {
   my $udb = shift;
   my ($table, $key, $value, $verbose) = @_;
 
-  my $devices_rs = $udb->resultset($table)->search({
+  my $rs = $udb->resultset($table)->search({
     $key => $value,
   });
 
-  if (!$devices_rs->count) {
+  if (!$rs->count) {
     if ($verbose) {
       print "No exact match, trying fuzzy search...\n";
     }
-    $devices_rs = $udb->resultset($table)->search({
+    $rs = $udb->resultset($table)->search({
       $key => { '~*' => $value },
     });
   }
 
   my @results;
-  while (my $device = $devices_rs->next) { 
-    my $device_name = $device->device_name;
-    if (! grep(/$device_name/,@results)) {
-      my $additional_info = "";
-      if ($device->device_name ne $device->$key) {
-        $additional_info = " (" . $device->$key . ")";
+
+  # sort out relevant items to return, based on table name
+  switch($table) {
+    case 'Devices' { 
+      while (my $device = $rs->next) { 
+        my $device_name = $device->device_name;
+        if (! grep(/$device_name/,@results)) {
+          my $additional_info = "";
+          if ($device->device_name ne $device->$key) {
+            $additional_info = " (" . $device->$key . ")";
+          }
+          push @results, $device->device_name . $additional_info;
+        }
       }
-      push @results, $device->device_name . $additional_info;
+    }
+
+    case 'Computers' {
+      while (my $comp = $rs->next) {
+        my $name = $comp->device_name;
+        if (! grep(/$name/, @results)) {
+          my $additional_info = "";
+          if ($comp->os_type) {
+            $additional_info = " (" . $comp->os_type->os_type . ")";
+          }
+          push @results, $comp->device_name . $additional_info;
+        }
+      }
+    }
+
+    case 'NetDnsEntries' {
+      while (my $net_dns_entry = $rs->next) {
+        my $device_name;
+        if ($net_dns_entry->net_address->net_interfaces->single) {
+          $device_name = $net_dns_entry->net_address->net_interfaces->single->device->device_name;
+          if (! grep(/$device_name/, @results)) {
+            push @results, $net_dns_entry->net_address->net_interfaces->single->device->device_name;
+          }
+        } else {
+          $device_name = $net_dns_entry->dns_name;
+          if (! grep(/$device_name/, @results)) {
+            push @results, $net_dns_entry->dns_name;
+          }
+        }
+      }
     }
   }      
 
   return(@results);
-}
-
-sub fuzzy_dns_search {
-  my $udb = shift;
-  my ($key, $value, $verbose) = @_;
-
-  my $net_dns_rs = $udb->resultset('NetDnsEntries')->search({
-    $key => $value,
-  });
-
-  if (!$net_dns_rs->count) {
-    if ($verbose) {
-      print "No exact match, trying fuzzy search...\n";
-    }
-    $net_dns_rs = $udb->resultset('NetDnsEntries')->search({
-      $key => { '~*' => $value },
-    });
-  }
-
-  my @results;
-  if ($net_dns_rs->count) {
-    while (my $net_dns_entry = $net_dns_rs->next) {
-      my $device_name;
-      if ($net_dns_entry->net_address->net_interfaces->single) {
-        $device_name = $net_dns_entry->net_address->net_interfaces->single->device->device_name;
-        if (! grep(/$device_name/, @results)) {
-          push @results, $net_dns_entry->net_address->net_interfaces->single->device->device_name;
-        }
-      } else {
-        $device_name = $net_dns_entry->dns_name;
-        if (! grep(/$device_name/, @results)) {
-          push @results, $net_dns_entry->dns_name;
-        }
-      }
-    }
-  }
-
-  return (@results);
 }
 
 sub search_class {
@@ -123,10 +123,10 @@ sub search_brown_id {
   return sub {
     my ($id, $surplus, $verbose) = @_;
 
-    my @results = fuzzy_device_search($udb, 'Devices', 'brown_inv_num', $id, $verbose);
+    my @results = fuzzy_search($udb, 'Devices', 'brown_inv_num', $id, $verbose);
 
     if ($surplus) {
-      push @results, fuzzy_device_search($udb, 'SurplusDevices', 'brown_inv_num', $id, $verbose);
+      push @results, fuzzy_search($udb, 'SurplusDevices', 'brown_inv_num', $id, $verbose);
     }
 
     if (@results) {
@@ -142,10 +142,10 @@ sub search_comment {
   return sub {
     my ($comment, $surplus, $verbose) = @_;
 
-    my @results = fuzzy_device_search($udb, 'Devices', 'comments', $comment, $verbose);
+    my @results = fuzzy_search($udb, 'Devices', 'comments', $comment, $verbose);
 
     if ($surplus) {
-      push @results, fuzzy_device_search($udb, 'SurplusDevices', 'comments', $comment, $verbose);
+      push @results, fuzzy_search($udb, 'SurplusDevices', 'comments', $comment, $verbose);
     }
 
     if (@results) {
@@ -161,7 +161,7 @@ sub search_contact {
   return sub {
     my ($contact, $verbose) = @_;
 
-    my @results = fuzzy_device_search($udb, 'Devices', 'contact', $contact, $verbose);
+    my @results = fuzzy_search($udb, 'Devices', 'contact', $contact, $verbose);
 
     if (@results) {
       return (1, @results);
@@ -176,10 +176,10 @@ sub search_device {
   return sub {
     my ($name, $surplus, $verbose) = @_;
 
-    my @results = fuzzy_device_search($udb, 'Devices', 'device_name', $name, $verbose);
+    my @results = fuzzy_search($udb, 'Devices', 'device_name', $name, $verbose);
 
     if ($surplus) {
-      push @results, fuzzy_device_search($udb, 'SurplusDevices', 'device_name', $name, $verbose);
+      push @results, fuzzy_search($udb, 'SurplusDevices', 'device_name', $name, $verbose);
     }
 
     if (@results) {
@@ -195,8 +195,23 @@ sub search_dns {
   return sub {
     my ($name, $verbose) = @_;
 
-    my @results = fuzzy_dns_search($udb, 'dns_name', $name, $verbose);
+    my @results = fuzzy_search($udb, 'NetDnsEntries', 'dns_name', $name, $verbose);
 
+    if (@results) {
+      return (1, @results);
+    } else {
+      return (0, undef);
+    }
+  };
+}
+
+sub search_os_type {
+  my $udb = shift;
+  return sub {
+    my ($os_type, $verbose) = @_;
+
+    my @results = fuzzy_search($udb, 'Computers', 'os_type', $os_type, $verbose);
+    
     if (@results) {
       return (1, @results);
     } else {
@@ -210,10 +225,10 @@ sub search_po {
   return sub {
     my ($po, $surplus, $verbose) = @_;
 
-    my @results = fuzzy_device_search($udb, 'Devices', 'po_num', $po, $verbose);
+    my @results = fuzzy_search($udb, 'Devices', 'po_num', $po, $verbose);
 
     if ($surplus) {
-      push @results, fuzzy_device_search($udb, 'SurplusDevices', 'po_num', $po, $verbose);
+      push @results, fuzzy_search($udb, 'SurplusDevices', 'po_num', $po, $verbose);
     }
 
     if (@results) {
@@ -257,10 +272,10 @@ sub search_serial {
   return sub {
     my ($serial, $surplus, $verbose) = @_;
 
-    my @results = fuzzy_device_search($udb, 'Devices', 'serial_num', $serial, $verbose);
+    my @results = fuzzy_search($udb, 'Devices', 'serial_num', $serial, $verbose);
 
     if ($surplus) {
-      push @results, fuzzy_device_search($udb, 'SurplusDevices', 'serial_num', $serial, $verbose);
+      push @results, fuzzy_search($udb, 'SurplusDevices', 'serial_num', $serial, $verbose);
     }
 
     if (@results) {

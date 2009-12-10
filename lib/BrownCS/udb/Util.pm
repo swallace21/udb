@@ -25,6 +25,7 @@ our @EXPORT_OK = qw(
   verify_hostname
   verify_nonempty
   verify_unprotected
+  verify_username
 );
 
 our %EXPORT_TAGS = ("all" => [@EXPORT_OK]);
@@ -204,6 +205,19 @@ sub verify_unprotected {
     }
     return 1;
   }  
+}
+
+sub verify_username {
+  my ($input_username) = @_;
+  if (not $input_username) {
+    return (0, undef);
+  }
+  my $retval = system("getent passwd $input_username > /dev/null 2> /dev/null");
+  if ($retval == 0) {
+    return (1, $input_username);
+  } else {
+    return (0, undef);
+  }
 }
 
 sub verify_nonempty {
