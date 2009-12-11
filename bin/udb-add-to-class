@@ -3,6 +3,7 @@
 use strict;
 use warnings;
 
+use Date::Format;
 use Getopt::Long;
 use Pod::Usage;
 
@@ -11,6 +12,7 @@ use lib "$RealBin/../lib";
 use BrownCS::udb::Schema;
 use BrownCS::udb::Util qw(:all);
 use BrownCS::udb::Console qw(:all);
+
 
 # Print a simple help message.
 sub usage {
@@ -21,6 +23,8 @@ sub usage {
 my $help = 0;
 my $verbose = 0;
 my $dryrun = 0;
+
+my $now = time2str("%Y-%L-%d %T", time);
 
 sub vprint {
   my ($msg) = @_;
@@ -79,6 +83,9 @@ foreach my $hostname (@hostnames) {
     vprint("adding computer $hostname to class $classname");
     $comp->add_to_comp_classes($class);
   }
+
+  $comp->last_updated($now);
+  $comp->update;
 }
 
 __END__

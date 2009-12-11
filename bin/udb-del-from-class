@@ -3,9 +3,9 @@
 use strict;
 use warnings;
 
+use Date::Format;
 use Getopt::Long;
 use Pod::Usage;
-use Data::Dumper;
 
 use FindBin qw($RealBin);
 use lib "$RealBin/../lib";
@@ -22,6 +22,8 @@ sub usage {
 my $help = 0;
 my $verbose = 0;
 my $dryrun = 0;
+
+my $now = time2str("%Y-%L-%d %T", time);
 
 sub vprint {
   my ($msg) = @_;
@@ -89,6 +91,9 @@ foreach my $hostname (@hostnames) {
     vprint("removing empty class $classname on OS " . $comp->os_type);
     $class->delete;
   }
+
+  $comp->last_updated($now);
+  $comp->update;
 }
 
 __END__
@@ -125,7 +130,8 @@ Print lots of text about what is going on.
 
 =head1 AUTHORS
 
-Aleks Bromfield.
+Aleks Bromfield
+Mark Dieterich
 
 =head1 SEE ALSO
 
