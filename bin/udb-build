@@ -8,7 +8,6 @@ use Getopt::Std;
 use Pod::Usage;
 use Data::Dumper;
 use Date::Format;
-use DateTime::Format::Pg;
 use File::Temp;
 
 use FindBin qw($RealBin);

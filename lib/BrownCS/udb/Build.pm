@@ -866,8 +866,13 @@ sub staged_modifications {
     'last_updated' => { '>=', $timestamp },
   });
 
+  # get a pointer to the samba fileserver class
+  my $samba_fs_class = $udb->resultset('CompClasses')->find({name => "samba.server.fs"});
+
   while (my $computer = $computers_rs->next) {
-    if (host_is_trusted($computer) && $computer->os_type && $computer->os_type->os_type =~ /^win/ ) {
+    if (host_is_trusted($computer) && (
+        ($computer->os_type && $computer->os_type->os_type =~ /^win/) || 
+        $samba_fs_class->computers()->find($computer->device_name))) {
       $self->add_build_ref($buildref, 'computers');
       $ret = add_ldap_host($self, $computer->device_name);
       if (! $ret) {
@@ -889,7 +894,7 @@ sub add_kerberos_host {
   my ($self, $krbadmin, $keytab, $name) = @_;
 
   if ($self->verbose) { print "adding host \"$name\" to Kerberos\n"; }
-  my $ret = $self->maybe_system("/tstaff/bin/krb-host-admin -c $krbadmin -k $keytab add $name.cs.brown.edu");
+  my $ret = $self->maybe_system("/tstaff/bin/krb-host-admin -c $krbadmin -k $keytab add $name.cs.brown.edu > /dev/null");
   
   return $ret;
 }
@@ -898,7 +903,7 @@ sub delete_kerberos_host {
   my ($self, $krbadmin, $keytab, $name) = @_;
 
   if ($self->verbose) { print "deleting host \"$name\" from Kerberos\n"; }
-  my $ret = $self->maybe_system("/tstaff/bin/krb-host-admin -c $krbadmin -k $keytab delete $name.cs.brown.edu");
+  my $ret = $self->maybe_system("/tstaff/bin/krb-host-admin -c $krbadmin -k $keytab delete $name.cs.brown.edu > /dev/null");
   
   return $ret;
 }
