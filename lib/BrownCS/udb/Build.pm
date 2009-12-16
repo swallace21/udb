@@ -201,7 +201,7 @@ sub build_tftpboot {
 
     my $bootimage;
 
-    if (defined $comp->pxelink) {
+    if ($comp->pxelink && $comp->pxelink !~ //) {
       $bootimage = $comp->pxelink;
     } elsif ($os->os_type eq 'debian') {
       $bootimage = "fai-workstation-i386";
@@ -226,7 +226,7 @@ sub build_tftpboot {
       printf "link %s (%s) -> %s\n", $comp->device_name, $hex_ip, $bootimage;
     }
     if (not $self->dryrun) {
-      $self->maybe_system("sudo rm $tftpboot_path/$hex_ip");
+      $self->maybe_system("sudo rm -f $tftpboot_path/$hex_ip");
       $self->maybe_system("sudo ln -s $bootimage $tftpboot_path/$hex_ip");
     }
   }
