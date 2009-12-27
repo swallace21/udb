@@ -34,7 +34,6 @@ GetOptions (
 usage(0) if $help;
 
 my $udb = BrownCS::udb::Schema->connect;
-my $uc = new BrownCS::udb::Console(udb => $udb);
 my $udh = new BrownCS::udb::DeviceHash(udb => $udb);
 
 if (@ARGV < 1 || @ARGV > 2) {
@@ -156,43 +155,43 @@ switch($type) {
 }
 
 if ($success) {
-  if (!$batch) {
-    print "Found the following matching devices:\n\n";
-  }
-  foreach my $result (@results) {
     if ($batch) {
-      print "$result\n";
+	# In batch, just print the records
+	print "$_\n" for @results;
     } else {
-      my ($name, $junk) = split(/ /, $result);
+	# Init and print a header
+	my $uc = new BrownCS::udb::Console(udb => $udb);
+	print "Found the following matching devices:\n\n";
+	# Print each record
+	foreach my $result (@results) {
+	    my ($name, $junk) = split(/ /, $result);
 
-      # display any results for non-surplused machines
-      my $device = $udb->resultset('Devices')->find($name);
-      if ($device) {
-        $uc->print_record('', $udh->format_device($device));
-      }
+	    # display any results for non-surplused machines
+	    my $device = $udb->resultset('Devices')->find($name);
+	    if ($device) {
+	      $uc->print_record('', $udh->format_device($device));
+	    }
 
-      # dispaly surplused machine results
-      my $device_rs = $udb->resultset('SurplusDevices')->search({
-        device_name => $name
-      });
-      if ($device_rs) {
-        while ($device = $device_rs->next) {
-          $uc->print_record('', $udh->format_device($device));
-        }
-      }
+	    # dispaly surplused machine results
+	    my $device_rs = $udb->resultset('SurplusDevices')->search({
+	      device_name => $name
+	    });
+	    if ($device_rs) {
+	      while ($device = $device_rs->next) {
+		$uc->print_record('', $udh->format_device($device));
+	      }
+	    }
+	    print "\n";
+	}
     }
-  }
-  if (!$batch) {
-    print "\n";
-  }
-  exit 0;
-
+    # Success: exit 0
+    exit 0;
 } else {
-  if (!$batch) {
-    print "No matching results found\n";
-  }
-
-  exit 1;
+    # Failure: print error if an actual user, and exit 1
+    if (!$batch) {
+	print "No matching results found\n";
+    }
+    exit 1;
 }
 
 __END__
