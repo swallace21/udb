@@ -211,6 +211,8 @@ sub build_tftpboot {
       $bootimage = "centos-workstation-i386";
     } elsif ($os->os_type eq 'centos64') {
       $bootimage = "centos-workstation-x86_64";
+    } elsif ($os->os_type eq 'windows7') {
+      $bootimage = "fai-windows";
     }
 
     next if not defined($bootimage);
@@ -914,6 +916,10 @@ sub add_ldap_host {
   if ($self->verbose) { print "adding host \"$name\" to LDAP\n"; }
   my $ret = $self->maybe_system("/tstaff/bin/ldap-host add $name 2>/dev/null >/dev/null");
 
+  if ($ret) {
+    print "\n  WARNING: unable to add \"$name\" to ldap\n";
+  }
+
   return $ret; 
 }
 
@@ -922,6 +928,10 @@ sub delete_ldap_host {
 
   if ($self->verbose) { print "deleting host \"$name\" from LDAP\n"; }
   my $ret = $self->maybe_system("/tstaff/bin/ldap-host delete $name 2>/dev/null >/dev/null");
+
+  if ($ret) {
+    print "\n  WARNING: unable to delete \"$name\" from ldap\n";
+  }
 
   return $ret;
 }
