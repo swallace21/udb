@@ -66,8 +66,6 @@ eval {
       die "Device is marked for deletion, please run udb build and retry addition\n";
     }
 
-    $device->contact($uc->get_contact($device->contact));
-
     # if this a device tstaff tracks, then gather pertinent information
     if ($device->usage->tracked) {
       $device->serial_num($uc->get_serial_num($device->serial_num));
