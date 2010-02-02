@@ -77,10 +77,6 @@ my %udb_commands = (
     'desc' => "disable (make a device spare)",
     'common' => 1,
   },
-  'edit' => {
-    'desc' => "modify a device record in a text editor",
-    'common' => 0,
-  },
   'enable' => {
     'desc' => "enable (deploy a device)",
     'common' => 1,
