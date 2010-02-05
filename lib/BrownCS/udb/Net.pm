@@ -183,21 +183,36 @@ sub verify_dns_alias {
     }
 
     # warn user if this name is already in use and confirm they want to setup a DNS round robin
+    my $adding_to_existing_round_robin = 0;
     if ($net_dns_entries_rs->count) {
-      # walk through the existing entries and make sure they are all authoritative, i.e. A records
+      # walk through the existing entries check for conflicts
       while (my $net_dns_entry = $net_dns_entries_rs->next) {
+        # all existing entries must be authoritative
         if (! $net_dns_entry->authoritative) {
           print "\nERROR: You are trying to create an A record, with a name that is already used\n";
           print "as a CNAME.  You must choose a different DNS alias name\n";   
           return (0, undef, undef, undef);
         }
+
+        # if the region is all and any of the existing entries aren't all
+        if ($region =~ /all/ && $net_dns_entry->dns_region->dns_region !~ /all/) {
+          print "\nERROR: One or more of these entries has a DNS region specified.  You are trying\n";
+          print "to place this entry in all regions which will conflict.\n";
+          return(0, undef, undef, undef);
+        }
+
+        # if another entry exists in the same DNS region, warn user this will create a DNS round robin
+        if ($net_dns_entry->dns_region->dns_region =~ /$region/) {
+          $adding_to_existing_round_robin = 1;
+        }
       }
 
-      print "Adding this alias will create a DNS round robin\n";
-      if (! $uc->confirm("\nAre you sure you want to enter another DNS alias (y/N)?",'n')) {
-        return (0, undef, undef, undef, undef);
+      if ($adding_to_existing_round_robin) {
+        print "Adding this alias will create a DNS round robin\n";
+        if (! $uc->confirm("\nAre you sure you want to enter another DNS alias (y/N)?",'n')) {
+          return (0, undef, undef, undef);
+        }
       }
-
     }
 
     return (1, $alias, $domain, $authoritative);
