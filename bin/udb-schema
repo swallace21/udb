@@ -2,6 +2,11 @@
 #Uses sqlt-graph to make a graph of udb. 
 #Quick-n-Dirty
 
+schema='/tstaff/projects/udb/schema/schema.sql'
+if [ -f ../schema/schema.sql ]; then
+  schema='../schema/schema.sql'
+fi
+
 awk '
 BEGIN {flag=0; check=0}
 check>0 && /\(/ {
@@ -16,11 +21,12 @@ check>0 && /\)/ {
 }
 /}}}/ {flag=0}
 flag==0 && /tables --/ {flag=1}
-' ../schema/schema.sql | \
+' $schema | \
 sed -e 's/dns_safe_text/text/g' | \
 sed -e :a -e '$!N;s/\n)/)/;ta' -e 'P;D' | \
 sed -e 's/,)/)/g' > \
 /tmp/schema.sql
 sqlt-graph -f PostgreSQL -o schema.svg -t svg /tmp/schema.sql
+rm /tmp/schema.sql
 
 exit 0
