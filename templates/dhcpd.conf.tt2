@@ -61,7 +61,7 @@ option netbios-node-type 2;
 # Fully Automated Install (FAI) - debian unattended install options
 #
 option fai_config_src code 170 = text;
-option fai_config_src "dmznfs.cs.brown.edu:/vol/fai/config";
+option fai_config_src "nfs.cs.brown.edu:/gpfs/main/sys/services/fai/config";
 option fai_install_server code 171 = text;
 option fai_install_server "install.cs.brown.edu";
 option fai_install_options code 172 = text;
