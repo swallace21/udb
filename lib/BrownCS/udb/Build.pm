@@ -605,7 +605,9 @@ sub build_dns_map_reverse {
   my ($serial_num, $region, $subnet) = @_;
   my $zone = $subnet->prefix;
 
-  my $file = "/maytag/sysvol/DNS/db.$zone$region";
+  $zone =~ s/\.$//;
+
+  my $file = "/maytag/sysvol/DNS/db.$zone.$region";
   chomp($file);
 
   my $PATH_TMPFILE = $self->TMPDIR . basename($file);
@@ -652,16 +654,12 @@ sub build_dns {
   );
 
   my %private_subnets = ();
-  my @all_subnets = ();
+  my @subnets = ();
 
   while (my $subnet = $subnets_rs->next) {
     $private_subnets{new NetAddr::IP($subnet->network)} = $subnet->private;
-    push @all_subnets, (new NetAddr::IP($subnet->network));
+    push @subnets, (new NetAddr::IP($subnet->network));
   }
-
-  my $classC = Coalesce(24, 1, @all_subnets);
-  my $classB = Coalesce(16, 1, grep {$_->masklen < 24} @all_subnets);
-  my @subnets = uniq( @{$classC}, @{$classB} );
 
   my @files = ();
 
@@ -670,7 +668,6 @@ sub build_dns {
   my @regions = qw(internal external);
   foreach my $region (@regions) {
     foreach my $subnet (@subnets) {
-      next if ($region =~ /external/ && $private_subnets{$subnet});
       my $file = $self->build_dns_map_reverse($serial_num, $region, $subnet);
       push @files, $file;
     }
@@ -783,15 +780,8 @@ sub staged_deletions {
 
   print "Building staged deletions... ";
 
-  # get list of devices that have been changed since last build
-  my $device_log = $udb->resultset('BuildLog')->find('devices');
-  unless ($device_log) { die "ERROR: can't find build log for devices table\n" };
-  
-  my $timestamp = $device_log->last_build;
-
   # select devices for which we need to delete ldap entries
   my $devices_rs = $udb->resultset('Devices')->search({
-    'last_updated' => { '>=' => $timestamp },
     'status' => 'deleted',
   });
 
