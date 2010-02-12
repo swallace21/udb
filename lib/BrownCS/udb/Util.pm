@@ -7,6 +7,7 @@ use warnings;
 use Exporter qw(import);
 use Net::MAC;
 use NetAddr::IP;
+use Time::ParseDate;
 
 our @EXPORT_OK = qw(
   bool2str
@@ -305,10 +306,34 @@ sub okay_adminhost {
 sub okay_kerberos {
   my $self = shift;
 
-  if(system("klist -5 2> /dev/null | grep '/admin' -q")) {
-       print "Warning: You do not have Kerberos admin credentials.\n";
-       return 0;
+  my $now = time;
+
+  my $credentials = 0;
+  open(KLIST, "/usr/bin/klist -5 |") || die "ERROR: can't run klist\n";
+  
+  my $expiration;
+  while(<KLIST>) {
+    if (/Default principal:.*\/admin\@CS\.BROWN\.EDU/) {
+      $credentials = 1;
+    }
+    if (/krbtgt\/CS\.BROWN\.EDU\@CS\.BROWN\.EDU/) {
+      ($expiration) = /\d+\/\d+\/\d+\s+\d+:\d+:\d+\s+(\d+\/\d+\/\d+\s+\d+:\d+:\d+)\s+krbtgt.*/;
+    }
   }
+  $expiration = parsedate($expiration);
+
+  if (! $credentials) {
+    print "ERROR: You do not have Kerberos admin credentials.\n";
+    print "Please run kinit to get new admin credentials.\n";
+    return 0;
+  }
+
+  if ($now > $expiration) {
+    print "ERROR: Your Kerberos admin credentials are expired.\n";
+    print "Please run kinit to get new admin credentials.\n";
+    return 0;
+  }
+
   return 1;
 }
 
