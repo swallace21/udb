@@ -37,8 +37,20 @@ GetOptions (
 ) or usage(2);
 usage(1) if $help;
 
+my @services = ('tftp','netgroup','dhcp','nagios','wpkg','dns','finger');
+
+my %build;
 if (@ARGV > 0) {
-  usage(2);
+  foreach my $arg (@ARGV) {
+    if (! grep(/$arg/, @services)) {
+      print "\nError: unknown service type \"$arg\"\n\n";
+      usage(2);
+    } else {
+      $build{$arg} = 1;
+    }
+  }
+} else {
+  $build{'all'} = 1;
 }
 
 my $ub = new BrownCS::udb::Build(udb => $udb, verbose => $verbose, dryrun => $dryrun);
@@ -64,7 +76,7 @@ my $rs;
 eval {
   $rs = $udb->txn_do(sub {
     my $build_start = time2str("%Y-%L-%d %T", time);
-    my %builds;
+    my %build_counts;
   
     $ub->build_lock;
   
@@ -73,29 +85,49 @@ eval {
     $ub->get_keytab($krbadmin, $keytab);
 
     # delete anything marked for deletion since last successful build
-    $ub->staged_deletions($krbadmin, $keytab, \%builds);
+    $ub->staged_deletions($krbadmin, $keytab, \%build_counts);
   
     # add anything staged for addition since last successful build
-    $ub->staged_additions($krbadmin, $keytab, \%builds);
+    $ub->staged_additions($krbadmin, $keytab, \%build_counts);
 
     # add anything staged for modification since last successful build
-    $ub->staged_modifications($krbadmin, $keytab, \%builds);
+    $ub->staged_modifications($krbadmin, $keytab, \%build_counts);
 
     # build service and data files
-    $ub->build_tftpboot;
-    $ub->build_netgroup;
-    $ub->build_dhcp;
-    $ub->build_nagios;
-    $ub->build_wpkg_hosts;
-    $ub->build_dns;
-    $ub->build_finger_data;
+    if($build{'tftp'} || $build{'all'}) {
+      $ub->build_tftpboot;
+    }
+
+    if ($build{'netgroup'} || $build{'all'}) {
+      $ub->build_netgroup;
+    }
+
+    if ($build{'dhcp'} || $build{'all'}) {
+      $ub->build_dhcp;
+    }
+
+    if ($build{'nagios'} || $build{'all'}) {
+      $ub->build_nagios;
+    }
+
+    if ($build{'wpkg'} || $build{'all'}) {
+      $ub->build_wpkg_hosts;
+    }
+
+    if ($build{'dns'} || $build{'all'}) {
+      $ub->build_dns;
+    }
+
+    if ($build{'finger'} || $build{'all'}) {
+      $ub->build_finger_data;
+    }
 
     my $count = unlink $keytab;
     if ($count != 1) {
       print "WARNING: unable to unlink keytab file \"$keytab\", please delete by hand\n";
     }
 
-    $ub->update_build_times($build_start, \%builds);
+    $ub->update_build_times($build_start, \%build_counts);
 
     $ub->build_unlock;
   });
@@ -116,7 +148,7 @@ build - build system databases/config files from udb
 
 =head1 SYNOPSIS
 
-build
+build [-hnv] [service]
 
 =head1 DESCRIPTION
 
@@ -125,6 +157,26 @@ builds stuff
 =head1 OPTIONS
 
 =over
+
+=item B<Services>:
+
+=over
+
+=item B<tftp> - Build tftp boot data
+
+=item B<netgroup> - Build netgroup data
+
+=item B<dhcp> - Build and distribute dhcp configurations
+
+=item B<nagios> - Build nagios monitoring configurations
+
+=item B<wpkg> - Build wpkg configurations
+
+=item B<dns> - Build and distribute DNS data
+
+=item B<finger> - Build finger data
+
+=back
 
 =item B<-h>, B<--help>
 

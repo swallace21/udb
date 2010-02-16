@@ -653,17 +653,22 @@ sub build_dns {
     }
   );
 
-  my %private_subnets = ();
-  my @subnets = ();
+  my @all_subnets = ();
 
+  # bind doesn't play well with anything that isn't a "FULL" subnet, i.e. class A, B, or C subnet.
+  # as such, we need to play some games with our subnets here, to make sure they come out as 
+  # intended and bind will serve them properly.
   while (my $subnet = $subnets_rs->next) {
-    $private_subnets{new NetAddr::IP($subnet->network)} = $subnet->private;
-    push @subnets, (new NetAddr::IP($subnet->network));
+    push @all_subnets, (new NetAddr::IP($subnet->network));
   }
+
+  my $classC = Coalesce(24, 1, grep {$_->masklen >= 24} @all_subnets);
+  my $classB = Coalesce(16, 1, grep {$_->masklen < 24} @all_subnets);
+  my @subnets = uniq( @{$classC}, @{$classB} );
 
   my @files = ();
 
-  # Build reverse maps.  Don't add entries to external maps for private
+  # Build reverse maps, split the data based in internal and external regions
   # subnets.
   my @regions = qw(internal external);
   foreach my $region (@regions) {
