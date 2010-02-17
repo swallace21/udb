@@ -148,33 +148,37 @@ build - build system databases/config files from udb
 
 =head1 SYNOPSIS
 
-build [-hnv] [service]
+build [-hnv] [service[,...]]
 
 =head1 DESCRIPTION
 
-builds stuff
+Propogate database changes to servers and file systems.  When necessary,
+restart services so new configuration changes used.
 
 =head1 OPTIONS
 
 =over
 
-=item B<Services>:
+=item B<services>
+
+One or more optional services you would like to build.  The available
+services include:
 
 =over
 
-=item B<tftp> - Build tftp boot data
+B<tftp> - Build tftp boot data
 
-=item B<netgroup> - Build netgroup data
+B<netgroup> - Build netgroup data
 
-=item B<dhcp> - Build and distribute dhcp configurations
+B<dhcp> - Build and distribute dhcp configurations
 
-=item B<nagios> - Build nagios monitoring configurations
+B<nagios> - Build nagios monitoring configurations
 
-=item B<wpkg> - Build wpkg configurations
+B<wpkg> - Build wpkg configurations
 
-=item B<dns> - Build and distribute DNS data
+B<dns> - Build and distribute DNS data
 
-=item B<finger> - Build finger data
+B<finger> - Build finger data
 
 =back
 
