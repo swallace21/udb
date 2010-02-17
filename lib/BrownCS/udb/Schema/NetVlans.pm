@@ -60,6 +60,13 @@ __PACKAGE__->add_columns(
     is_nullable => 0,
     size => 1,
   },
+  "install_server",
+  {
+    data_type => "text",
+    default_value => undef,
+    is_nullable => 1,
+    size => undef,
+  },
 );
 __PACKAGE__->set_primary_key("vlan_num");
 __PACKAGE__->add_unique_constraint("net_vlans_pkey", ["vlan_num"]);

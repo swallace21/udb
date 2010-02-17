@@ -221,6 +221,12 @@ sub build_tftpboot {
       $bootimage =~ s/workstation/server/g;
     }
 
+    # determine whether this will use an internal or DMZS install server
+    my $install_server = $udb->resultset('NetVlans')->find($addr->vlan_num)->install_server;
+    if ($install_server) {
+      $bootimage .= ".$install_server";
+    }
+
     next if not defined $addr->ipaddr;
     my $hex_ip = ipv4_n2x($addr->ipaddr);
 

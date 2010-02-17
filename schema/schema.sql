@@ -322,7 +322,8 @@ create table net_vlans (
   dhcp                      boolean not null default true,
   last_updated              timestamp not null default now(),
   dynamic_dhcp_start        inet,
-  dynamic_dhcp_end          inet
+  dynamic_dhcp_end          inet,
+  install_server            text
 ) ;
 
 drop table if exists net_addresses cascade;
