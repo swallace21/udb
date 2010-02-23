@@ -82,146 +82,146 @@ define service{
 }
 
 define service{
- name imap_template 
- use service_template
- service_description IMAP
- check_command check-simap
- register 0
+  name imap_template 
+  use service_template
+  service_description IMAP
+  check_command check-simap
+  register 0
 }
 
 define service{
- name pop_template 
- use service_template
- service_description POP3
- check_command check-spop
- register 0
+  name pop_template 
+  use service_template
+  service_description POP3
+  check_command check-spop
+  register 0
 }
 
 define service{
- name dns_template
- use service_template
- service_description DNS
- check_command check-dns
- register 0
+  name dns_template
+  use service_template
+  service_description DNS
+  check_command check-dns
+  register 0
 }
 
 define service{
- name dns_internal_template
- use service_template
- service_description DNS_INT
- check_command check_internal_dns
- register 0
+  name dns_internal_template
+  use service_template
+  service_description DNS_INT
+  check_command check_internal_dns
+  register 0
 }
 
 define service{
- name dhcp_template
- use service_template
- service_description DHCP
- check_command check-dhcp
- register 0
+  name dhcp_template
+  use service_template
+  service_description DHCP
+  check_command check-dhcp
+  register 0
 }
  
 define service{
- name telnet_template
- use service_template
- service_description TELNET
- check_command check-telnet
- register 0
+  name telnet_template
+  use service_template
+  service_description TELNET
+  check_command check-telnet
+  register 0
 }
  
 define service{
- name nis_template
- use service_template
- service_description NIS
- check_command check_nis
- register 0
+  name nis_template
+  use service_template
+  service_description NIS
+  check_command check_nis
+  register 0
 }
 
 define service{
- name liebert_template
- use service_template
- service_description LIEBERT
- check_command check_liebert
- register 0
+  name liebert_template
+  use service_template
+  service_description LIEBERT
+  check_command check_liebert
+  register 0
 }
 
 define service{
- name liebert_alarms_template
- use service_template
- service_description LIEBERT_ALARM
- check_command check_liebert_alarms
- register 0
+  name liebert_alarms_template
+  use service_template
+  service_description LIEBERT_ALARM
+  check_command check_liebert_alarms
+  register 0
 }
 
 define service{
- name thermo_template
- use service_template
- service_description THERMO
- check_command check_thermo
- register 0
+  name thermo_template
+  use service_template
+  service_description THERMO
+  check_command check_thermo
+  register 0
 }
 
 define service{
- name tapes_template
- use service_template
- service_description TAPES
- check_command check-tapes
- register 0
+  name tapes_template
+  use service_template
+  service_description TAPES
+  check_command check-tapes
+  register 0
 }
  
 define service{
- name pgsql_template
- use service_template
- service_description PGSQL
- check_command check-pgsql!-w 10
- notification_interval 120
- register 0
+  name pgsql_template
+  use service_template
+  service_description PGSQL
+  check_command check-pgsql!-w 10
+  notification_interval 120
+  register 0
 }
 
 define service{
- name netapp_template
- use service_template
- service_description NETAPP
- check_command check_netapp
- register 0
+  name netapp_template
+  use service_template
+  service_description NETAPP
+  check_command check_netapp
+  register 0
 }
 
 define service{
- name ntp_template
- use service_template
- service_description NTP
- check_command check-ntp
- register 0
+  name ntp_template
+  use service_template
+  service_description NTP
+  check_command check-ntp
+  register 0
 }
 
 define service{
- name ssh_template
- use service_template
- service_description SSH
- check_command check-ssh
- register 0
+  name ssh_template
+  use service_template
+  service_description SSH
+  check_command check-ssh
+  register 0
 }
 
 define service{
- name spamd_template
- use service_template
- service_description SPAMD
- check_command check-spamd
- register 0
+  name spamd_template
+  use service_template
+  service_description SPAMD
+  check_command check-spamd
+  register 0
 }
 
 define service{
- name ypbind_template
- use service_template
- service_description YPBIND
- check_command check-ypbind
- register 0
+  name ypbind_template
+  use service_template
+  service_description YPBIND
+  check_command check-ypbind
+  register 0
 }
 
 define service{
- name diskusage_template
- use service_template
- register 0
+  name diskusage_template
+  use service_template
+  register 0
 }
 
 define service{
@@ -266,13 +266,46 @@ define service{
 define service{
   name mailq_template
   use service_template
-  service_description mailq
+  service_description MAILQ
   check_command check-mailq
+  register 0
+}
+
+define service{
+  name gpfs_template
+  use service_template
+  service_description GPFS
+  check_command check-gpfs
+  register 0
+}
+
+define service{
+  name gpfs_quota_template
+  use service_template
+  service_description GPFS_QUOTAS
+  check_command check-gpfs-quotas
   register 0
 }
 
 [% FOREACH host IN DBI.query("select na.ipaddr, fqdn_brown(nde.dns_name, nde.domain) as hostname, ns.net_service from net_addresses na, net_services ns, net_addresses_net_services nans, net_dns_entries nde where nans.net_address_id = na.net_address_id and nans.net_service = ns.net_service and na.monitored and na.enabled and nde.authoritative and nde.net_address_id = na.net_address_id order by ns.net_service, hostname") -%]
 [% SWITCH host.net_service %]
+[%  CASE 'ftp' %]
+define service{
+  use          ftp_template
+  host_name    [% host.hostname %]
+}
+
+[% CASE 'gpfs' %]
+define service{
+  use           gpfs_template
+  host_name     [% host.hostname %]
+}
+
+define service{
+  use           gpfs_quota_template
+  host_name     [% host.hostname %]
+}
+
 [%  CASE 'printer' %]
 define service{
         use                             printer_template
@@ -284,6 +317,7 @@ define service{
         host_name                       [% host.hostname %]
         check_command                   check-queuing![% host.hostname %]
 }
+
 [%  CASE 'smtp' %]
 define service{
         use                             smtp_template
@@ -294,16 +328,13 @@ define service{
         use                             mailq_template
         host_name                       [% host.hostname %]
 }
-[%  CASE 'ftp' %]
-define service{
-        use                             ftp_template
-        host_name                       [% host.hostname %]
-}
+
 [%  CASE 'http' %]
 define service{
         use                             http_template
         host_name                       [% host.hostname %]
 }
+
 [%  CASE 'imap' %]
 define service{
         use                             imap_template
