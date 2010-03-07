@@ -121,6 +121,9 @@ mkd                                 IN          A               198.7.242.36
 ; for cs190
 *.boa.cs.brown.edu.                 IN          A               128.148.32.191
 
+; for weenix
+redmine.weenix.cs.brown.edu.	    IN		CNAME weenix.cs.brown.edu.
+
 ; cave machines
 cavefs                              IN          A               10.117.4.1
 cs-front                            IN          A               10.117.4.100
