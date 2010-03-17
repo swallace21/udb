@@ -500,6 +500,10 @@ sub build_wpkg_hosts {
         push @wpkg_profiles, "maya";
       }
 
+      if (/^astaff$/) {
+        push @wpkg_profiles, "astaff";
+      }
+
       if (/^tstaff$/) {
         push @wpkg_profiles, "tstaff";
       }
