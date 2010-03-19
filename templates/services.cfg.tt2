@@ -274,8 +274,8 @@ define service{
 define service{
   name gpfs_template
   use service_template
-  service_description GPFS
-  check_command check-gpfs
+  service_description GPFS_FS
+  check_command check-gpfs-fs
   register 0
 }
 
