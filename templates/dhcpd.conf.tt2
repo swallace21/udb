@@ -24,7 +24,7 @@ ddns-domainname "smn.cs.brown.edu";
 
 # Communication zone
 zone smn.cs.brown.edu. {
-  primary 128.148.38.200;
+  primary 128.148.31.200;
   key rndc-key;
 }
 
@@ -98,7 +98,7 @@ subnet [% subnet.network %] netmask [% subnet.netmask %] {
     option domain-name-servers 128.148.32.121, 128.148.32.119, 128.148.32.123;
     option ntp-servers 128.148.128.11;
     [%-   CASE DEFAULT %]
-    option domain-name-servers 128.148.38.200, 128.148.38.54, 128.148.38.62;
+    option domain-name-servers 128.148.31.200, 128.148.31.36, 128.148.31.60;
     option ntp-servers 128.148.38.148, 128.148.33.79;
     [%- END %]
     option broadcast-address [% subnet.broadcast %];
@@ -109,12 +109,12 @@ subnet [% subnet.network %] netmask [% subnet.netmask %] {
     max-lease-time 10800;
     [%-   CASE '4007' %]
     zone smn.cs.brown.edu. {
-      primary 128.148.38.200;
+      primary 128.148.31.200;
       key "rndc-key";
     }
 
     zone 70.116.10.in-addr.arpa. {
-      primary 128.148.39.9;
+      primary 128.148.38.9;
       key "rndc-key";
     }
 
