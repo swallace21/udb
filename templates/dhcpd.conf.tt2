@@ -44,6 +44,11 @@ default-lease-time 3600;
 #
 max-lease-time 86400;
 
+# If a client claims they're going to define their own DNS name,
+# ignore them. We want every live machine to have the name given them
+# by udb.
+ignore client-updates;
+
 #
 # WINS Server information
 #
@@ -114,12 +119,21 @@ subnet [% subnet.network %] netmask [% subnet.netmask %] {
     }
 
     zone 70.116.10.in-addr.arpa. {
-      primary 128.148.38.9;
+      primary 128.148.31.200;
       key "rndc-key";
     }
 
     default-lease-time 3600;
     max-lease-time 10800;
+    
+    # Update every time we hear from a client. This assures that any
+    # oddities in DNS eventually go away.
+    update-optimization off;
+
+    # The ddns-host-name defaults to what the client sends us as his
+    # hostname.  Override this so it matches what udb sets in our
+    # "host xyz { ... }" declarations
+    if known { ddns-host-name = host-decl-name; } 
     [%-   CASE DEFAULT %]
     default-lease-time 86400;
     max-lease-time 86400;
