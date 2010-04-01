@@ -137,6 +137,9 @@ eval {
       my $is_networked = $uc->confirm("\nIs this a networked device? (Y/n)", "y");
       if ($is_networked) {
 
+        # get ip address and mac address information from the user
+        my ($ipaddr, $vlan) = $uc->get_ip_and_vlan(1);
+
         # check to see if there are existing network interfaces for this device.  This
         # should only happen if the device was set to be spare.
         my $iface = $device->net_interfaces->single;
@@ -146,10 +149,10 @@ eval {
           exit 1;
         }
 
-        # get ip address and mac address information from the user
-        my ($ipaddr, $vlan) = $uc->get_ip_and_vlan(1);
-        
-        my $mac_addr = $uc->get_mac($iface);
+        my $mac_addr;
+        if (! virtual_device($device)) {
+          my $mac_addr = $uc->get_mac($iface);
+        } 
 
         # if necessary, create an interface associated with this mac address
         if (! $iface) {
@@ -178,29 +181,29 @@ eval {
             primary_address => $addr,
         });
 
-        # once we have dynamic DNS updates on the dynamic subnets, we
-        # should remove the $ipaddr check below.  It will always be
-        # the case that the $ipaddr is empty.  Right now, we are "sharing"
-        # the 36 subnet for dynamic and user static addresses.
-        if(! dynamic_vlan($udb, $vlan->vlan_num) || $ipaddr) {
-          # get port information from the user
-          my $port;
-          ($port,$iface) = $uc->get_port($iface);
-  
-          # it's possible, if there was a conflict, that the addr could have changed
-          # make sure we are still referencing the correct addr
-          $addr = $udb->resultset('NetAddresses')->find($iface->primary_address_id);
-
-          # associate port information with interface
-          if ($port) {
-            $iface->net_port($port);
-            $iface->update;
-          } 
-
+        # If the host has an IP address then it should have a DNS entry
+        if($ipaddr) {
           dns_insert($udb, $name, 'cs.brown.edu', $addr, 1);
 
-          if ($port and (! grep { $_ = $vlan } $port->net_vlans)) {
-            $port->add_to_net_vlans($vlan);
+          # If the device is not virtual, then it must be associated with a switch port
+          if (! virtual_device($device)) {
+            # get port information from the user
+            my $port;
+            ($port,$iface) = $uc->get_port($iface);
+  
+            # it's possible, if there was a conflict, that the addr could have changed
+            # make sure we are still referencing the correct addr
+            $addr = $udb->resultset('NetAddresses')->find($iface->primary_address_id);
+  
+            # associate port information with interface
+            if ($port) {
+              $iface->net_port($port);
+              $iface->update;
+            } 
+
+            if ($port and (! grep { $_ = $vlan } $port->net_vlans)) {
+             $port->add_to_net_vlans($vlan);
+            }
           }
         }
       }
@@ -209,7 +212,7 @@ eval {
       # computer-specific
       #
 
-      if ($device->usage->tracked) {
+      if ($device->usage->tracked || virtual_device($device)) {
         my $is_comp = 0;
         if ($device->computer) {
           $is_comp = 1;

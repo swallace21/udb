@@ -27,6 +27,7 @@ our @EXPORT_OK = qw(
   verify_nonempty
   verify_unprotected
   verify_username
+  virtual_device
 );
 
 our %EXPORT_TAGS = ("all" => [@EXPORT_OK]);
@@ -288,6 +289,16 @@ sub verify_hostname {
 
   	return (1, $hostname);
 	};
+}
+
+sub virtual_device {
+  my ($device) = @_;
+
+  if ($device->usage && $device->usage->equip_usage_type =~ /virtual/) {
+    return 1;
+  } else {
+    return 0;
+  }
 }
 
 sub okay_adminhost {
