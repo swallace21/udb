@@ -52,9 +52,12 @@ eval {
     # get information about current device interfaces
     my $iface_rs = $device->net_interfaces;
     
-    my $mac_addr = $uc->get_mac();
+    my $mac_addr;
+    if (! virtual_device($device)) {
+      $mac_addr = $uc->get_mac();
+    }
 
-    if (!$iface_rs->count || $uc->confirm("Do you want to associate a new IP address with this interface (y/n)?")) {
+    if (! $iface_rs->count || $uc->confirm("Do you want to associate a new IP address with this interface (y/n)?")) {
       my $iface = $device->add_to_net_interfaces({
         device => $device,
         ethernet => $mac_addr,
@@ -70,7 +73,7 @@ eval {
       });
 
       $addr->add_to_net_interfaces($iface);
- 
+
       # if this device doesn't have a primary interface defined, then 
       # assume this will be the devices primary interface
       my $primary_iface_rs = $udb->resultset('NetInterfaces')->search({
@@ -78,21 +81,24 @@ eval {
         primary_address_id => { '!=' => undef },
       });
 
-      if (!$primary_iface_rs) {
+      if (! $primary_iface_rs->count) {
         $iface->update({
           primary_address => $addr,
         });
       }
 
-      if (! dynamic_vlan($udb, $vlan->vlan_num)) {
-        my $port;
-        ($port,$iface) = $uc->get_port($iface);
-        if ($port) {
-          $iface->net_port($port);
-          $iface->update;
-        }
-
+      if ($ipaddr) { 
         dns_insert($udb, $name, 'cs.brown.edu', $addr, 1);
+
+        # If the device is not virtual, then it must be associated with a switch port
+        if (! virtual_device($device)) {
+          my $port;
+          ($port,$iface) = $uc->get_port($iface);
+          if ($port) {
+            $iface->net_port($port);
+            $iface->update;
+          }
+        }
       }
     } else {
       print "\n----------------------- WARNING ---------------------------\n";
