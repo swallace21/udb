@@ -274,6 +274,14 @@ define service{
 define service{
   name gpfs_template
   use service_template
+  service_description GPFS
+  check_command check-gpfs
+  register 0
+}
+
+define service{
+  name gpfs_fs_template
+  use service_template
   service_description GPFS_FS
   check_command check-gpfs-fs
   register 0
@@ -298,6 +306,11 @@ define service{
 [% CASE 'gpfs' %]
 define service{
   use           gpfs_template
+  host_name     [% host.hostname %]
+}
+
+define service{
+  use           gpfs_fs_template
   host_name     [% host.hostname %]
 }
 
