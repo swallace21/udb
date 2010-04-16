@@ -10,6 +10,7 @@ use BrownCS::udb::Util qw(:all);
 use Exporter qw(import);
 
 our @EXPORT_OK = qw(
+  add_network_interface
   dynamic_vlan
   dns_insert
   dns_update
@@ -27,6 +28,122 @@ our @EXPORT_OK = qw(
 );
 
 our %EXPORT_TAGS = ("all" => [@EXPORT_OK]);
+
+sub add_network_interface {
+  my $udb = shift;
+  my ($device) = @_;
+
+  my $uc = new BrownCS::udb::Console(udb => $udb);
+
+  # check to see if there are existing network interfaces for this device.  This
+  # should only happen if the device was set to be spare.
+  my $iface_rs = $$device->net_interfaces;
+ 
+  my $mac_addr; 
+  if (! virtual_device($$device)) {
+    if ($$device->status->equip_status_type eq "spare") {
+      $mac_addr = $uc->get_mac($iface_rs->single);
+    } else {
+      $mac_addr = $uc->get_mac();
+    }
+  }
+
+  if (! $iface_rs->count || $uc->confirm("Do you want to associate a new IP address with this interface (y/n)?")) {
+    my $iface = $$device->add_to_net_interfaces({
+      device => $$device,
+      ethernet => $mac_addr,
+    });
+
+    my ($ipaddr, $vlan) = $uc->get_ip_and_vlan(1);
+
+    my $monitored = 0;
+    if (monitored_vlan($udb, $vlan->vlan_num)) {
+      $monitored = 1;
+    }
+
+    # associate the ip address and vlan with the interface
+    my $addr = $udb->resultset('NetAddresses')->create({
+      vlan => $vlan,
+      ipaddr => $ipaddr,
+      monitored => $monitored,
+      notification => 0,
+    });
+
+    $addr->add_to_net_interfaces($iface);
+
+    # if this device doesn't have a primary interface defined, then 
+    # assume this will be the device's primary interface
+    my $primary_iface_rs = $udb->resultset('NetInterfaces')->search({
+      device_name => $$device->device_name,
+      primary_address_id => { '!=' => undef },
+    });
+
+    if (! $primary_iface_rs->count) {
+      $iface->update({
+        primary_address => $addr,
+      });
+    }
+
+    if ($ipaddr) {
+      dns_insert($udb, $$device->device_name, 'cs.brown.edu', $addr, 1);
+
+      # If the device is not virtual, then it must be associated with a switch port
+      if (! virtual_device($$device)) {
+        # get port information from the user
+        my $port;
+        ($port,$iface) = $uc->get_port($iface);
+
+        # it's possible, if there was a conflict, that the addr could have changed
+        # make sure we are still referencing the correct addr
+        $addr = $udb->resultset('NetAddresses')->find($iface->primary_address_id);
+
+        # associate port information with interface
+        if ($port) {
+          $iface->net_port($port);
+          $iface->update;
+        }
+
+        if ($port and (! grep { $_ = $vlan } $port->net_vlans)) {
+          $port->add_to_net_vlans($vlan);
+        }
+      }
+    }
+  } else {
+    print "\n----------------------- WARNING ---------------------------\n";
+    print "This requires that the switch and device be configured to support\n";
+    print "bonded interfaces.  At the moment, udb does not take care of\n";
+    print "configuring the network switch, so this must be configured in advance\n";
+    print "Please talk with someone in the software group if you aren't sure what\n";
+    print "this means before continuing.\n";
+    print "------------------------------------------------------------\n";
+    if (!$uc->confirm("Are you sure you want to continue? (y/N)", "no")) {
+      exit (0);
+    }
+
+    my $existing_iface = $uc->choose_interface($$device->device_name);
+
+    # create the new interface
+    my $iface = $$device->add_to_net_interfaces({
+      device => $$device,
+      ethernet => $mac_addr,
+    });
+
+    
+    # associate network port with this interface
+    my $port;
+    ($port,$iface) = $uc->get_port($iface);
+    if ($port) {
+      $iface->net_port($port);
+      $iface->update;
+    }
+
+    # associate existing ip addresses with this new network interface
+    my $addrs_rs = $existing_iface->net_addresses;
+    while (my $addr = $addrs_rs->next) {
+      $addr->add_to_net_interfaces($iface);
+    }
+  }
+}
 
 sub dynamic_vlan {
   my $udb = shift;

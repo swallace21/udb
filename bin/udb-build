@@ -37,7 +37,7 @@ GetOptions (
 ) or usage(2);
 usage(1) if $help;
 
-my @services = ('tftp','netgroup','dhcp','nagios','wpkg','dns','finger');
+my @services = ('staging', 'tftp','netgroup','dhcp','nagios','wpkg','dns','finger');
 
 my %build;
 if (@ARGV > 0) {

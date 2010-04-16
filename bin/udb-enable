@@ -136,76 +136,7 @@ eval {
 
       my $is_networked = $uc->confirm("\nIs this a networked device? (Y/n)", "y");
       if ($is_networked) {
-
-        # get ip address and mac address information from the user
-        my ($ipaddr, $vlan) = $uc->get_ip_and_vlan(1);
-
-        # check to see if there are existing network interfaces for this device.  This
-        # should only happen if the device was set to be spare.
-        my $iface = $device->net_interfaces->single;
-        if ($iface && $device->status->equip_status_type ne "spare") {
-          print "Error: an active device interface already exists and shouldn't, contact";
-          print "someone from the software group\n";
-          exit 1;
-        }
-
-        my $mac_addr;
-        if (! virtual_device($device)) {
-          my $mac_addr = $uc->get_mac($iface);
-        } 
-
-        # if necessary, create an interface associated with this mac address
-        if (! $iface) {
-          $iface = $device->add_to_net_interfaces({
-            device => $device,
-            ethernet => $mac_addr,
-          });
-        }
-
-        my $monitored = 0;
-        if (monitored_vlan($udb, $vlan->vlan_num)) {
-          $monitored = 1;
-        }
-
-        # associate the ip address and vlan with the interface
-        my $addr = $udb->resultset('NetAddresses')->create({
-            vlan => $vlan,
-            ipaddr => $ipaddr,
-            monitored => $monitored,
-            notification => 0,
-          });
-
-        $addr->add_to_net_interfaces($iface);
-
-        $iface->update({
-            primary_address => $addr,
-        });
-
-        # If the host has an IP address then it should have a DNS entry
-        if($ipaddr) {
-          dns_insert($udb, $name, 'cs.brown.edu', $addr, 1);
-
-          # If the device is not virtual, then it must be associated with a switch port
-          if (! virtual_device($device)) {
-            # get port information from the user
-            my $port;
-            ($port,$iface) = $uc->get_port($iface);
-  
-            # it's possible, if there was a conflict, that the addr could have changed
-            # make sure we are still referencing the correct addr
-            $addr = $udb->resultset('NetAddresses')->find($iface->primary_address_id);
-  
-            # associate port information with interface
-            if ($port) {
-              $iface->net_port($port);
-              $iface->update;
-            } 
-
-            if ($port and (! grep { $_ = $vlan } $port->net_vlans)) {
-             $port->add_to_net_vlans($vlan);
-            }
-          }
-        }
+        add_network_interface($udb, \$device);
       }
 
       #

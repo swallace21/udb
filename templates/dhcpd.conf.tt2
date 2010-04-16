@@ -109,9 +109,6 @@ subnet [% subnet.network %] netmask [% subnet.netmask %] {
     option broadcast-address [% subnet.broadcast %];
 
     [%- SWITCH subnet.vlan_num %]
-    [%-   CASE '36' %]
-    default-lease-time 3600;
-    max-lease-time 10800;
     [%-   CASE '4007' %]
     zone smn.cs.brown.edu. {
       primary 128.148.31.200;
