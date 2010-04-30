@@ -340,6 +340,22 @@ sub search_ssh_known_hosts {
         }
       }
     }
+
+    my $dns_entries_rs = $udb->resultset('NetDnsEntries');
+
+    while (my $dns_entry = $dns_entries_rs->next) {
+      if ($dns_entry->net_address->monitored) {
+        my $host = $dns_entry->dns_name;
+        if (! grep(/$host/, @results)) {
+          my $device = $udb->resultset('Devices')->find($host);
+          if (!$device || ($device && $device->computer && $device->computer->os_type && (
+            $device->computer->os_type->os_type =~ /debian/ ||
+            $device->computer->os_type->os_type =~ /centos/))) {
+            push @results, $dns_entry->dns_name;
+          }
+        }
+      }
+    }
     
     if (@results) {
       return (1, @results);
