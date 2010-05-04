@@ -299,142 +299,153 @@ define service{
 [% SWITCH host.net_service %]
 [%  CASE 'ftp' %]
 define service{
-  use          ftp_template
-  host_name    [% host.hostname %]
+  use             ftp_template
+  host_name       [% host.hostname %]
 }
 
 [% CASE 'gpfs' %]
 define service{
-  use           gpfs_template
-  host_name     [% host.hostname %]
+  use             gpfs_template
+  host_name       [% host.hostname %]
+  contact_groups  emergency_group
 }
 
 define service{
-  use           gpfs_fs_template
-  host_name     [% host.hostname %]
+  use             gpfs_fs_template
+  host_name       [% host.hostname %]
+  contact_groups  urgent_group
 }
 
 define service{
-  use           gpfs_quota_template
-  host_name     [% host.hostname %]
+  use             gpfs_quota_template
+  host_name       [% host.hostname %]
+  contact_groups  escalation_group
 }
 
 [%  CASE 'printer' %]
 define service{
-        use                             printer_template
-        host_name                       [% host.hostname %]
+  use             printer_template
+  host_name       [% host.hostname %]
 }
 
 define service{
-        use                             queuing_template
-        host_name                       [% host.hostname %]
-        check_command                   check-queuing![% host.hostname %]
+  use             queuing_template
+  host_name       [% host.hostname %]
+  check_command   check-queuing![% host.hostname %]
 }
 
 [%  CASE 'smtp' %]
 define service{
-        use                             smtp_template
-        host_name                       [% host.hostname %]
+  use             smtp_template
+  host_name       [% host.hostname %]
+  contact_groups  urgent_group
 }
 
 define service{
-        use                             mailq_template
-        host_name                       [% host.hostname %]
+  use             mailq_template
+  host_name       [% host.hostname %]
+  contact_groups  urgent_group
 }
 
 [%  CASE 'http' %]
 define service{
-        use                             http_template
-        host_name                       [% host.hostname %]
+  use             http_template
+  host_name       [% host.hostname %]
+  contact_groups  urgent_group
 }
 
 [%  CASE 'imap' %]
 define service{
-        use                             imap_template
-        host_name                       [% host.hostname %]
+  use             imap_template
+  host_name       [% host.hostname %]
+  contact_groups  urgent_group
 }
 
 define service{
-        use                             pop_template
-        host_name                       [% host.hostname %]
+  use             pop_template
+  host_name       [% host.hostname %]
 }
 [%  CASE 'dns' %]
 define service{
-        use                             dns_template
-        host_name                       [% host.hostname %]
+  use             dns_template
+  host_name       [% host.hostname %]
 }
 
 define service{
-        use                             dns_internal_template
-        host_name                       [% host.hostname %]
+  use             dns_internal_template
+  host_name       [% host.hostname %]
 }
 [%  CASE 'dhcp' %]
 define service{
-        use                             dhcp_template
-        host_name                       [% host.hostname %]
+  use             dhcp_template
+  host_name       [% host.hostname %]
+  contact_groups  urgent_group
 }
 [%  CASE 'telnet' %]
 define service{
-        use                             telnet_template
-        host_name                       [% host.hostname %]
+  use             telnet_template
+  host_name       [% host.hostname %]
 }
 [%  CASE 'liebert' %]
 define service{
-        use                             liebert_template
-        host_name                       [% host.hostname %]
-        contact_groups                  spoc_group,default_group
+  use             liebert_template
+  host_name       [% host.hostname %]
+  contact_groups  spoc_group,default_group
 }
 
 define service{
-        use                             liebert_alarms_template
-        host_name                       [% host.hostname %]
-        contact_groups                  spoc_group,default_group
+  use             liebert_alarms_template
+  host_name       [% host.hostname %]
+  contact_groups  spoc_group,default_group
 }
 [%  CASE 'thermo' %]
 define service{
-        use                             thermo_template
-        host_name                       [% host.hostname %]
-        contact_groups                  emergency_group,spoc_group,default_group
+  use             thermo_template
+  host_name       [% host.hostname %]
+  contact_groups  emergency_group
 }
 [%  CASE 'pgsql' %]
 define service{
-        use                             pgsql_template
-        host_name                       [% host.hostname %]
+  use             pgsql_template
+  host_name       [% host.hostname %]
+  contact_groups  urgent_group
 }
 [%  CASE 'netapp' %]
 define service{
-        use                             netapp_template
-        host_name                       [% host.hostname %]
+  use             netapp_template
+  host_name       [% host.hostname %]
 }
 [%  CASE 'ntp' %]
 define service{
-        use                             ntp_template
-        host_name                       [% host.hostname %]
+  use             ntp_template
+  host_name       [% host.hostname %]
 }
 [%  CASE 'ssh' %]
 define service{
-        use                             ssh_template
-        host_name                       [% host.hostname %]
+  use             ssh_template
+  host_name       [% host.hostname %]
 }
 [%  CASE 'sge' %]
 define service{
-        use                             sge_template
-        host_name                       [% host.hostname %]
+  use             sge_template
+  host_name       [% host.hostname %]
 }
 [%  CASE 'ldap' %]
 define service{
-        use                             ldap_template
-        host_name                       [% host.hostname %]
+  use             ldap_template
+  host_name       [% host.hostname %]
+  contact_groups  urgent_group
 }
 [%  CASE 'drbd' %]
 define service{
-        use                             drbd_template
-        host_name                       [% host.hostname %]
+  use             drbd_template
+  host_name       [% host.hostname %]
 }
 [%  CASE 'krb' %]
 define service{
-        use                             krb_template
-        host_name                       [% host.hostname %]
+  use             krb_template
+  host_name       [% host.hostname %]
+  contact_groups  urgent_group
 }
 
 [% END -%]
