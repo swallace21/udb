@@ -29,7 +29,7 @@ define service{
   max_check_attempts 3
   normal_check_interval 5
   retry_check_interval 1
-  contact_groups tstaff_group
+  contact_groups default_group
   notification_interval 1440
   notification_period 24x7
   notification_options w,u,c,r,f
@@ -382,19 +382,19 @@ define service{
 define service{
         use                             liebert_template
         host_name                       [% host.hostname %]
-        contact_groups                  spoc_group,tstaff_group
+        contact_groups                  spoc_group,default_group
 }
 
 define service{
         use                             liebert_alarms_template
         host_name                       [% host.hostname %]
-        contact_groups                  spoc_group,tstaff_group
+        contact_groups                  spoc_group,default_group
 }
 [%  CASE 'thermo' %]
 define service{
         use                             thermo_template
         host_name                       [% host.hostname %]
-        contact_groups                  emergency_group,spoc_group,tstaff_group
+        contact_groups                  emergency_group,spoc_group,default_group
 }
 [%  CASE 'pgsql' %]
 define service{

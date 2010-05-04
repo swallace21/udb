@@ -17,7 +17,7 @@ define host{
         flap_detection_enabled          1
         retain_status_information       1
         retain_nonstatus_information    1
-        contact_groups                  tstaff_group
+        contact_groups                  default_group
         name                            host_notification_template
         register                        0
 }
