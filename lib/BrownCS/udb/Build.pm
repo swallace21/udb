@@ -213,7 +213,10 @@ sub build_tftpboot {
       $bootimage = "centos-workstation-x86_64";
     } elsif ($os->os_type eq 'windows7') {
       $bootimage = "fai-windows";
+    } elsif ($os->os_type eq 'windows764') {
+      $bootimage = "fai-windows";
     }
+
 
     next if not defined($bootimage);
 
@@ -488,36 +491,35 @@ sub build_wpkg_hosts {
     for (@classes) {
 
       if (/^desktop$/) {
-        push @wpkg_profiles, "desktop";
+        push @wpkg_profiles, "$os_type-desktop";
         push @wpkg_profiles, "$os_type-dept";
       }
 
       if (/^classroom$/) {
-        push @wpkg_profiles, "classroom";
+        push @wpkg_profiles, "$os_type-classroom";
       }
 
       if (/^maya$/) {
-        push @wpkg_profiles, "maya";
+        push @wpkg_profiles, "$os_type-maya";
       }
 
       if (/^astaff$/) {
-        push @wpkg_profiles, "astaff";
+        push @wpkg_profiles, "$os_type-astaff";
       }
 
       if (/^tstaff$/) {
-        push @wpkg_profiles, "tstaff";
+        push @wpkg_profiles, "$os_type-tstaff";
       }
 
       if (/^afs$/) {
-        push @wpkg_profiles, "afs";
+        push @wpkg_profiles, "$os_type-afs";
       }
 
       if (/^fun$/) {
-        push @wpkg_profiles, "ugrad";
+        push @wpkg_profiles, "$os_type-ugrad";
       }
 
       if (/^research$/) {
-        push @wpkg_profiles, "research";
         push @wpkg_profiles, "$os_type-research";
       }
 
@@ -526,8 +528,7 @@ sub build_wpkg_hosts {
       }
 
       if (/^remote$/) {
-        push @wpkg_profiles, "desktop";
-        push @wpkg_profiles, "remote";
+        push @wpkg_profiles, "$os_type-desktop";
         push @wpkg_profiles, "$os_type-remote";
       }
 
@@ -546,21 +547,21 @@ sub build_wpkg_hosts {
       }
 
       if (/^acrobat9$/) {
-        push @wpkg_profiles, "acrobat9";
+        push @wpkg_profiles, "$os_type-acrobat9";
       }
 
       # licensed software
 
       if (/^adobe-ae-pp$/) {
-        push @wpkg_profiles, "adobe-ae-pp";
+        push @wpkg_profiles, "$os_type-adobe-ae-pp";
       }
 
       if (/^framemaker$/) {
-        push @wpkg_profiles, "framemaker";
+        push @wpkg_profiles, "$os_type-framemaker";
       }
 
       if (/^powerdvd$/) {
-        push @wpkg_profiles, "powerdvd";
+        push @wpkg_profiles, "$os_type-powerdvd";
       }
 
     }
