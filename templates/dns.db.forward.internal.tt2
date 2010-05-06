@@ -73,11 +73,6 @@ sa                                  IN          MX              10 sa.cs.brown.e
 mail                                IN          CNAME           sa.cs.brown.edu.
 smtp                                IN          CNAME           sa.cs.brown.edu.
 
-; ntp round robin
-ntp-int         60                  IN          A               128.148.31.195
-ntp-int         60                  IN          A               128.148.31.180
-ntp-int                             IN          MX              10 mx.cs.brown.edu.
-
 ; ldap entries
 ;ldap           60                  IN          A               128.148.31.62
 ;ldap           60                  IN          A               128.148.31.124
