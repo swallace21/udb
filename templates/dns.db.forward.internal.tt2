@@ -73,16 +73,6 @@ sa                                  IN          MX              10 sa.cs.brown.e
 mail                                IN          CNAME           sa.cs.brown.edu.
 smtp                                IN          CNAME           sa.cs.brown.edu.
 
-; ldap entries
-;ldap           60                  IN          A               128.148.31.62
-;ldap           60                  IN          A               128.148.31.124
-;ldap           60                  IN          A               128.148.31.180
-;ldap           60                  IN          A               128.148.31.195
-;ldap                               IN          MX              10 mx.cs.brown.edu.
-
-; Entries for the webserver
-www                                 IN          CNAME           tux.cs.brown.edu.
-
 ; debian mirror entries
 debian          60                  IN          A               128.148.33.94
 debian          60                  IN          A               128.148.33.24
