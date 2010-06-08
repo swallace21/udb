@@ -101,14 +101,17 @@ sub search_class {
   return sub {
     my ($class, $verbose) = @_;
 
-    my $comp_classes_computers_rs = $udb->resultset('CompClasses')->search({
+    my $comp_classes_rs = $udb->resultset('CompClasses')->search({
       name => $class,
-    })->single->comp_classes_computers;
+    });
 
     my @results = (); 
-    while (my $comp_classes_computers = $comp_classes_computers_rs->next) {
-      push @results, $comp_classes_computers->device_name;
-    } 
+    while (my $comp_classes = $comp_classes_rs->next) {
+      my $comp_classes_computers_rs = $comp_classes->comp_classes_computers;
+      while (my $comp_classes_computers = $comp_classes_computers_rs->next) {
+        push @results, $comp_classes_computers->device_name;
+      } 
+    }
     
     if (@results) {
       return (1, @results);
