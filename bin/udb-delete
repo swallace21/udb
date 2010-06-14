@@ -57,12 +57,24 @@ if ($device->protected) {
 } else {
   my $rs;
 
-if ($dryrun) {
-  print "Dry run finished...\n";
-  exit;
-}
+  if ($dryrun) {
+    print "Dry run finished...\n";
+    exit;
+  }
 
   eval {
+    if ($device->brown_inv_num) {
+      print "ERROR: A device with a Brown inventory number must be surplused.\n";
+      print "Please see Kathy\n";
+      exit(1);
+    }
+
+    if ($device->serial_num || $device->po_num) {
+      print "ERROR: Equipment with a serial number(s) or a PO number(s) should be surplused\n";
+      print "rather than deleted.\n";
+      exit(1);
+    }
+
     $rs = $udb->txn_do(sub {
         $device->status('deleted');
         $device->update;
