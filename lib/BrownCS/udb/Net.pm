@@ -48,99 +48,113 @@ sub add_network_interface {
     }
   }
 
-  if (! $iface_rs->count || $uc->confirm("Do you want to associate a new IP address with this interface (y/n)?")) {
+  if (! $iface_rs->count) {
     my $iface = $$device->add_to_net_interfaces({
       device => $$device,
       ethernet => $mac_addr,
     });
+    $$device->update;
+  }
 
-    my ($ipaddr, $vlan) = $uc->get_ip_and_vlan(1);
+  # every device should have at least one interface at this point
+  $iface_rs = $$device->net_interfaces;
 
-    my $monitored = 0;
-    if (monitored_vlan($udb, $vlan->vlan_num)) {
-      $monitored = 1;
+  while (my $iface = $iface_rs->next) {
+    my $mac;
+    if ($iface_rs->count > 1) {
+      $mac = "[" . $iface->ethernet . "] ";
+    } else {
+      $mac = "";
     }
+    if ($uc->confirm("Do you want to associate a new IP address with this interface $mac(y/n)?")) {
+      my ($ipaddr, $vlan) = $uc->get_ip_and_vlan(1);
 
-    # associate the ip address and vlan with the interface
-    my $addr = $udb->resultset('NetAddresses')->create({
-      vlan => $vlan,
-      ipaddr => $ipaddr,
-      monitored => $monitored,
-      notification => 0,
-    });
+      my $monitored = 0;
+      if (monitored_vlan($udb, $vlan->vlan_num)) {
+        $monitored = 1;
+      }
 
-    $addr->add_to_net_interfaces($iface);
-
-    # if this device doesn't have a primary interface defined, then 
-    # assume this will be the device's primary interface
-    my $primary_iface_rs = $udb->resultset('NetInterfaces')->search({
-      device_name => $$device->device_name,
-      primary_address_id => { '!=' => undef },
-    });
-
-    if (! $primary_iface_rs->count) {
-      $iface->update({
-        primary_address => $addr,
+      # associate the ip address and vlan with the interface
+      my $addr = $udb->resultset('NetAddresses')->create({
+        vlan => $vlan,
+        ipaddr => $ipaddr,
+        monitored => $monitored,
+        notification => 0,
       });
-    }
 
-    if ($ipaddr) {
-      dns_insert($udb, $$device->device_name, 'cs.brown.edu', $addr, 1);
+      $addr->add_to_net_interfaces($iface);
 
-      # If the device is not virtual, then it must be associated with a switch port
-      if (! virtual_device($$device)) {
-        # get port information from the user
-        my $port;
-        ($port,$iface) = $uc->get_port($iface);
+      # if this device doesn't have a primary interface defined, then 
+      # assume this will be the device's primary interface
+      my $primary_iface_rs = $udb->resultset('NetInterfaces')->search({
+        device_name => $$device->device_name,
+        primary_address_id => { '!=' => undef },
+      });
 
-        # it's possible, if there was a conflict, that the addr could have changed
-        # make sure we are still referencing the correct addr
-        $addr = $udb->resultset('NetAddresses')->find($iface->primary_address_id);
+      if (! $primary_iface_rs->count) {
+        $iface->update({
+          primary_address => $addr,
+        });
+      }
 
-        # associate port information with interface
-        if ($port) {
-          $iface->net_port($port);
-          $iface->update;
-        }
-
-        if ($port and (! grep { $_ = $vlan } $port->net_vlans)) {
-          $port->add_to_net_vlans($vlan);
+      if ($ipaddr) {
+        dns_insert($udb, $$device->device_name, 'cs.brown.edu', $addr, 1);
+  
+        # If the device is not virtual, then it must be associated with a switch port
+        if (! virtual_device($$device)) {
+          # get port information from the user
+          my $port;
+          ($port,$iface) = $uc->get_port($iface);
+  
+          # it's possible, if there was a conflict, that the addr could have changed
+          # make sure we are still referencing the correct addr
+          $addr = $udb->resultset('NetAddresses')->find($iface->primary_address_id);
+  
+          # associate port information with interface
+          if ($port) {
+            $iface->net_port($port);
+            $iface->update;
+          }
+  
+          if ($port and (! grep { $_ = $vlan } $port->net_vlans)) {
+            $port->add_to_net_vlans($vlan);
+          }
         }
       }
-    }
-  } else {
-    print "\n----------------------- WARNING ---------------------------\n";
-    print "This requires that the switch and device be configured to support\n";
-    print "bonded interfaces.  At the moment, udb does not take care of\n";
-    print "configuring the network switch, so this must be configured in advance\n";
-    print "Please talk with someone in the software group if you aren't sure what\n";
-    print "this means before continuing.\n";
-    print "------------------------------------------------------------\n";
-    if (!$uc->confirm("Are you sure you want to continue? (y/N)", "no")) {
-      exit (0);
-    }
+    } else {
+      print "\n----------------------- WARNING ---------------------------\n";
+      print "This requires that the switch and device be configured to support\n";
+      print "bonded interfaces.  At the moment, udb does not take care of\n";
+      print "configuring the network switch, so this must be configured in advance\n";
+      print "Please talk with someone in the software group if you aren't sure what\n";
+      print "this means before continuing.\n";
+      print "------------------------------------------------------------\n";
+      if (!$uc->confirm("Are you sure you want to continue? (y/N)", "no")) {
+        exit (0);
+      }
 
-    my $existing_iface = $uc->choose_interface($$device->device_name);
+      my $existing_iface = $uc->choose_interface($$device->device_name);
 
-    # create the new interface
-    my $iface = $$device->add_to_net_interfaces({
-      device => $$device,
-      ethernet => $mac_addr,
-    });
-
+      # create the new interface
+      my $iface = $$device->add_to_net_interfaces({
+        device => $$device,
+        ethernet => $mac_addr,
+      });
+  
     
-    # associate network port with this interface
-    my $port;
-    ($port,$iface) = $uc->get_port($iface);
-    if ($port) {
-      $iface->net_port($port);
-      $iface->update;
-    }
+      # associate network port with this interface
+      my $port;
+      ($port,$iface) = $uc->get_port($iface);
+      if ($port) {
+        $iface->net_port($port);
+        $iface->update;
+      }
 
-    # associate existing ip addresses with this new network interface
-    my $addrs_rs = $existing_iface->net_addresses;
-    while (my $addr = $addrs_rs->next) {
-      $addr->add_to_net_interfaces($iface);
+      # associate existing ip addresses with this new network interface
+      my $addrs_rs = $existing_iface->net_addresses;
+      while (my $addr = $addrs_rs->next) {
+        $addr->add_to_net_interfaces($iface);
+      }
     }
   }
 }
