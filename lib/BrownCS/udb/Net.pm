@@ -41,8 +41,15 @@ sub add_network_interface {
  
   my $mac_addr; 
   if (! virtual_device($$device)) {
-    if ($$device->status->equip_status_type eq "spare") {
-      $mac_addr = $uc->get_mac($iface_rs->single);
+    if ($iface_rs->count && $$device->status->equip_status_type eq "spare") {
+      print "\nPlease confirm mac address(es) of interfaces associated with this device:\n";
+      while (my $iface = $iface_rs->next) {
+        if (! $iface->master_net_interface_id) {
+          $mac_addr = $uc->get_mac($iface);
+        }
+        $iface->ethernet($mac_addr);
+        $iface->update;
+      }
     } else {
       $mac_addr = $uc->get_mac();
     }
@@ -54,7 +61,7 @@ sub add_network_interface {
       ethernet => $mac_addr,
     });
     $$device->update;
-  }
+  } 
 
   # every device should have at least one interface at this point
   $iface_rs = $$device->net_interfaces;
@@ -66,7 +73,7 @@ sub add_network_interface {
     } else {
       $mac = "";
     }
-    if ($uc->confirm("Do you want to associate a new IP address with this interface $mac(y/n)?")) {
+    if ($uc->confirm("Do you want to associate a new IP address with this interface $mac(Y/n)?", "yes")) {
       my ($ipaddr, $vlan) = $uc->get_ip_and_vlan(1);
 
       my $monitored = 0;

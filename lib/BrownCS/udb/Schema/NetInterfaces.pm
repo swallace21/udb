@@ -29,12 +29,9 @@ __PACKAGE__->add_columns(
   "primary_address_id",
   { data_type => "integer", default_value => undef, is_nullable => 1, size => 4 },
   "last_updated",
-  {
-    data_type => "timestamp without time zone",
-    default_value => "now()",
-    is_nullable => 0,
-    size => 8,
-  },
+  { data_type => "timestamp without time zone", default_value => "now()", is_nullable => 0, size => 8, },
+  "master_net_interface_id",
+  { data_type => "integer", default_value => undef, is_nullable => 1, size => 4 },
 );
 __PACKAGE__->set_primary_key("net_interface_id");
 __PACKAGE__->add_unique_constraint("net_interfaces_ethernet_key", ["ethernet"]);
