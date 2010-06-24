@@ -802,8 +802,10 @@ sub staged_deletions {
   });
 
   while (my $device = $devices_rs->next) {
+    log("staging delete of $device->device_name");
     if ($device->computer) {
       $self->add_build_ref($buildref, 'computers');
+      log("  deleting ldap entry");
       $ret = delete_ldap_host($self, $device->device_name);
       if ($ret) {
         next;
@@ -813,6 +815,7 @@ sub staged_deletions {
     }
 
     $self->add_build_ref($buildref, 'devices');
+    log("  deleting kerberos credentials");
     $ret = delete_kerberos_host($self, $krbadmin, $keytab, $device->device_name);
     if ($ret) {
       next;
@@ -849,14 +852,18 @@ sub staged_modifications {
   });
 
   while (my $device = $devices_rs->next) {
+    my $name = $device->device_name;
+    log("staging modifications of device $name");
     if ($device->computer && host_is_trusted($device->computer)) {
       $self->add_build_ref($buildref, 'devices');
+      log("  adding/checking kerberos host credentials");
       $ret = add_kerberos_host($self, $krbadmin, $keytab, $device->device_name);
       if (! $ret) {
         $self->del_build_ref($buildref, 'devices');
       }
     } else {
       $self->add_build_ref($buildref, 'devices');
+      log ("  deleting kerberos credentials");
       $ret = delete_kerberos_host($self, $krbadmin, $keytab, $device->device_name);
       if (! $ret) {
         $self->del_build_ref($buildref, 'devices');
@@ -874,20 +881,37 @@ sub staged_modifications {
     'last_updated' => { '>=', $timestamp },
   });
 
-  # get a pointer to the samba fileserver class
-  my $samba_fs_class = $udb->resultset('CompClasses')->find({name => "samba.server.fs"});
+  # get a resultset for the various samba classes
+  my $samba_class_rs = $udb->resultset('CompClasses')->search({
+    -or => [
+      name => { '~*' => 'samba'},
+      name => { '~*' => 'gpfs.server.fs'},
+    ],
+  });
 
   while (my $computer = $computers_rs->next) {
+    my $name = $computer->device_name;
+    log("staging modifications of computer $name");
+
+    my $samba_server = 0;
+    while (my $samba_class = $samba_class_rs->next) {
+      if ($samba_class->computers()->find($computer->device_name)) {
+        $samba_server = 1;
+      }
+    }
+
     if (host_is_trusted($computer) && (
         ($computer->os_type && $computer->os_type->os_type =~ /^win/) || 
-        $samba_fs_class->computers()->find($computer->device_name))) {
+        $samba_server)) {
       $self->add_build_ref($buildref, 'computers');
+      log ("  adding/checking ldap host entry");
       $ret = add_ldap_host($self, $computer->device_name);
       if (! $ret) {
         $self->del_build_ref($buildref, 'computers');
       }
     } else {
       $self->add_build_ref($buildref, 'computers');
+      log ("  deleting ldap host entry");
       $ret = delete_ldap_host($self, $computer->device_name);
       if (! $ret) {
         $self->del_build_ref($buildref, 'computers');

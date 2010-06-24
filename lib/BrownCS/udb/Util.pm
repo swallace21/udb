@@ -21,6 +21,7 @@ our @EXPORT_OK = qw(
   get_host_class_map
   host_is_trusted
   ipv4_n2x
+  log
   verify_domainname
   verify_equip_usage_types
   verify_hostname
@@ -189,6 +190,35 @@ sub find_unused_ip {
   }
 
   die "No addresses are available for the $subnet subnet.\n";
+}
+
+sub log {
+  my ($msg) = @_;
+  my $date = get_date;
+  my $logfile = "/tstaff/share/udb/log/$date";
+
+  use File::NFSLock;
+  use Fcntl qw(LOCK_EX LOCK_NB);
+
+  use Date::Format;
+  my $now = time2str("%T", time);
+
+  if (my $lock = new File::NFSLock {
+    file => $logfile,
+    lock_type => LOCK_EX|LOCK_NB,
+    blocking_timeout => 10,
+    stale_lock_timeout => 30 * 60,
+  }) {
+    open(LOGFILE, ">> $logfile") || die "ERROR: can't open log file: $!";
+    $lock->uncache;
+
+    print LOGFILE "$now [$$]: $msg\n";
+
+    close(LOGFILE);
+    $lock->unlock();
+  } else {
+    die "ERROR: unable to lock log file: $!\n";
+  }
 }
 
 sub verify_unprotected {
