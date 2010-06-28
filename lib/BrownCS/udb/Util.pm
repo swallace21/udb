@@ -205,8 +205,8 @@ sub log {
 
   if (my $lock = new File::NFSLock {
     file => $logfile,
-    lock_type => LOCK_EX|LOCK_NB,
-    blocking_timeout => 10,
+    lock_type => LOCK_EX,
+    blocking_timeout => 30,
     stale_lock_timeout => 30 * 60,
   }) {
     open(LOGFILE, ">> $logfile") || die "ERROR: can't open log file: $!";
@@ -215,6 +215,7 @@ sub log {
     print LOGFILE "$now [$$]: $msg\n";
 
     close(LOGFILE);
+    chmod 0660, $logfile;
     $lock->unlock();
   } else {
     die "ERROR: unable to lock log file: $!\n";

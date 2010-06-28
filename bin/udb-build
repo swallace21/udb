@@ -77,12 +77,15 @@ eval {
   $rs = $udb->txn_do(sub {
     my $build_start = time2str("%Y-%L-%d %T", time);
     my %build_counts;
+    my $login = getlogin;
   
     $ub->build_lock;
-  
+
     my $krbadmin = "udbuser/admin";
     my $keytab = tmpnam();
     $ub->get_keytab($krbadmin, $keytab);
+
+    log("Build started by $login");
 
     # delete anything marked for deletion since last successful build
     $ub->staged_deletions($krbadmin, $keytab, \%build_counts);
