@@ -38,21 +38,21 @@ if (not $dryrun) {
   }
 }
 
-if (@ARGV != 0) {
+if (@ARGV <= 0) {
   usage(2);
 }
+
+my $cmd = shift;
 
 my $rs;
 
 eval {
   $rs = $udb->txn_do(sub {
-    if (!$uc->confirm("Are you sure you want to reset the build lock? (y/N)", "no")) {
-      exit(0);
+    if ($cmd =~ /^build-lock$/) {
+      clear_build_lock();
+    } elsif ($cmd =~ /^tracking-info$/) {
+      clear_tracking_info(@ARGV);
     }
-
-    my $build_lock = $udb->resultset('State')->find('build_lock');
-    $build_lock->value(0);
-    $build_lock->update;
   });
 };
 if ($@) {
@@ -64,19 +64,52 @@ Details:
 EOF
 }
 
+sub clear_build_lock {
+  if (!$uc->confirm("Are you sure you want to clear the build lock? (y/N)", "no")) {
+    exit(0);
+  }
+
+  my $build_lock = $udb->resultset('State')->find('build_lock');
+  $build_lock->value(0);
+  $build_lock->update;
+}
+
+sub clear_tracking_info {
+  my @args = @_;
+
+  foreach my $name (@args) {
+    my $device = $udb->resultset('Devices')->find($name);
+    if (! $device) {
+      print "Device $name not found... skipping\n";
+      next;
+    }
+  
+    if (!$uc->confirm("Are you sure you want to clear $name\'s tracking information? (y/N)", "no")) {
+      next;
+    }
+
+    $device->brown_inv_num("");
+    $device->serial_num("");
+    $device->po_num("");
+
+    $device->update;
+  }
+}
+
 __END__
 
 =head1 NAME
 
-udb-reset-build-lock - Resets the udb database build lock
+udb-clear - Clear up various udb related issues
 
 =head1 SYNOPSIS
 
-udb-reset-build-lock
+udb-clear <command> [<arg> ...]
 
 =head1 DESCRIPTION
 
-Reset the udb build lock
+You should only run this if you know what you are doing and you'll have to read the
+code to figure out what that means ;)
 
 =head1 OPTIONS
 
