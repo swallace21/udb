@@ -83,6 +83,7 @@ mx2                                 IN          A               128.148.6.13
 debian          60                  IN          A               128.148.33.94
 debian          60                  IN          A               128.148.33.24
 centos                              IN          CNAME           debian.cs.brown.edu.
+kits                                IN          CNAME           debian.cs.brown.edu.
 pkgs                                IN          CNAME           debian.cs.brown.edu.
 debian                              IN          MX              10 mx.cs.brown.edu.
 
