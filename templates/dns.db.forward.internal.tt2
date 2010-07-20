@@ -131,7 +131,7 @@ cs-top                              IN          A               10.117.4.104
 [% entry.dns_name | format('%-35s') %] IN          MX              10 mx.cs.brown.edu.
 [% END -%]
 
-[% FOREACH entry IN DBI.query("select nde.dns_name, cnames.dns_name as cname from net_dns_entries cnames inner join (net_dns_entries nde inner join net_addresses na using (net_address_id)) using (net_address_id) where ( nde.dns_region = 'internal' or nde.dns_region = 'all' ) and na.ipaddr is not null and na.enabled and nde.domain = '$domain' and not cnames.authoritative and nde.authoritative order by cname") -%]
+[% FOREACH entry IN DBI.query("select nde.dns_name, cnames.dns_name as cname from net_dns_entries cnames inner join (net_dns_entries nde inner join net_addresses na using (net_address_id)) using (net_address_id) where ( ( nde.dns_region = 'internal' or nde.dns_region = 'all' ) and ( cnames.dns_region = 'internal' or cnames.dns_region = 'all' ) ) and na.ipaddr is not null and na.enabled and nde.domain = '$domain' and not cnames.authoritative and nde.authoritative order by cname") -%]
 [% entry.cname | format('%-35s') %] IN          CNAME           [% entry.dns_name %].[% domain %].
 [% END -%]
 
