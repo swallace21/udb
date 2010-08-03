@@ -9,6 +9,7 @@ use NetAddr::IP qw(Coalesce);
 use List::MoreUtils qw(uniq);
 use File::Temp qw(tempfile tempdir);
 use File::Basename;
+use File::Copy;
 
 has 'udb' => ( is => 'ro', isa => 'BrownCS::udb::Schema', required => 1 );
 has 'verbose' => ( is => 'ro', isa => 'Bool', required => 1 );
@@ -216,7 +217,6 @@ sub build_tftpboot {
     } elsif ($os->os_type eq 'windows764') {
       $bootimage = "fai-windows";
     }
-
 
     next if not defined($bootimage);
 
@@ -447,7 +447,7 @@ sub build_wpkg_hosts {
 
   print "Building wpkg hosts file... ";
 
-  my $file = '/u/system/win32/WPKG/hosts/cdb.xml';
+  my $file = '/sysvol/src/windows/system/WPKG/hosts/cdb.xml';
   my $PATH_TMPFILE = $self->TMPDIR . basename($file);
 
   my $vars = {
@@ -581,6 +581,11 @@ sub build_wpkg_hosts {
 
   $self->tt->process('wpkg-hosts.xml.tt2', $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
   $self->commit_local($PATH_TMPFILE, $file);
+  chmod 0664, $file;
+
+  # copy the file over to the old location
+  copy($file, "/u/system/win32/WPKG/hosts/cdb.xml") || die "ERROR: could't copy cdb.xml: $!\n";
+  chmod 0664, "/u/system/win32/WPKG/hosts/cdb.xml";
 
   print "done.\n";
 
