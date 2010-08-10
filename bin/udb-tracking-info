@@ -53,7 +53,7 @@ die "No record for device $name.\n" if not $device;
 if ($device->protected) {
   printf("The device %s is protected!\n", $device->device_name);
   print "Do not modify or delete this entry unless you know what you're doing.\n";
-  if (! $uc->confirm("Are you sure (y/n)?")) {
+  if (! $uc->confirm("Are you sure (y/N)?", "no")) {
     exit(1);
   }
 }
@@ -64,6 +64,16 @@ eval {
 
     if ($device->status && $device->status->equip_status_type eq "deleted") {
       die "Device is marked for deletion, please run udb build and retry addition\n";
+    }
+
+    if (! $device->usage->tracked) {
+      print "Device \"" . $device->device_name . "\" does not appear to be tracked, should it be?\n";
+      if (! $uc->confirm("Are you sure (Y/n)?", "yes")) {
+        exit(1);
+      } else {
+        $device->usage($uc->get_equip_usage_type($device->usage));
+      }
+      $device->update;
     }
 
     # if this a device tstaff tracks, then gather pertinent information
