@@ -458,112 +458,103 @@ sub build_wpkg_hosts {
 
   my $host_classes = get_host_class_map($udb);
 
-  my $hosts = $udb->resultset('Computers')->search(
-    {
-    },
-    {
-      prefetch => [
-      'os_type',
-      {
-        'device' => 'manager',
-      },
-      ],
+  my $hosts = $udb->resultset('Computers')->search( {}, {
+      prefetch => [ 'os_type', { 'device' => 'manager', }, ],
       order_by => [qw(me.device_name)],
     });
 
-
   while (my $host = $hosts->next) {
+    next unless((defined $host->os_type) && ($host->os_type->wpkg));
+    my $os_type = $host->os_type->os_type;
 
-    my $os = ($host->os_type);
-    next unless((defined $os) and ($os->wpkg));
-    my $os_type = $os->os_type;
+    next unless((defined $host->device) && ($host->device->manager->management_type =~ /^tstaff$/));
 
     # generate profile list
-
     my @wpkg_profiles = ();
 
-    my $classes_ref = $host_classes->{$host->device_name};
-    next unless defined $classes_ref;
-    my @classes = @{$classes_ref};
-
+    # all hosts get an os_type profile definition
     push @wpkg_profiles, $os_type;
 
-    for (@classes) {
+    # determine if there are other profiles we should apply
+    my $classes_ref = $host_classes->{$host->device_name};
+    if (defined $classes_ref) {
+      my @classes = @{$classes_ref};
 
-      if (/^desktop$/) {
-        push @wpkg_profiles, "$os_type-desktop";
-        push @wpkg_profiles, "$os_type-dept";
+      for (@classes) {
+        if (/^desktop$/) {
+          push @wpkg_profiles, "$os_type-desktop";
+          push @wpkg_profiles, "$os_type-dept";
+        }
+
+        if (/^classroom$/) {
+          push @wpkg_profiles, "$os_type-classroom";
+        }
+
+        if (/^maya$/) {
+          push @wpkg_profiles, "$os_type-maya";
+        }
+
+        if (/^astaff$/) {
+          push @wpkg_profiles, "$os_type-astaff";
+        }
+
+        if (/^tstaff$/) {
+          push @wpkg_profiles, "$os_type-tstaff";
+        }
+
+        if (/^afs$/) {
+          push @wpkg_profiles, "$os_type-afs";
+        }
+
+        if (/^fun$/) {
+          push @wpkg_profiles, "$os_type-ugrad";
+        }
+
+        if (/^research$/) {
+          push @wpkg_profiles, "$os_type-research";
+        }
+
+        if (/^server$/) {
+          push @wpkg_profiles, "server";
+        }
+
+        if (/^remote$/) {
+          push @wpkg_profiles, "$os_type-desktop";
+          push @wpkg_profiles, "$os_type-remote";
+        }
+
+        if (/^laptop$/) {
+          push @wpkg_profiles, "$os_type-laptop";
+        }
+
+        if (/^laptop.loaner$/) {
+          push @wpkg_profiles, "$os_type-laptop";
+          push @wpkg_profiles, "loaner-laptop";
+        }
+
+        if (/^laptop.x61$/) {
+          push @wpkg_profiles, "$os_type-laptop";
+          push @wpkg_profiles, "x61";
+        }
+
+        if (/^acrobat9$/) {
+          push @wpkg_profiles, "$os_type-acrobat9";
+        }
+
+        # licensed software
+  
+        if (/^adobe-ae-pp$/) {
+          push @wpkg_profiles, "$os_type-adobe-ae-pp";
+        }
+
+        if (/^framemaker$/) {
+          push @wpkg_profiles, "$os_type-framemaker";
+        }
+
+        if (/^powerdvd$/) {
+          push @wpkg_profiles, "$os_type-powerdvd";
+        }
       }
-
-      if (/^classroom$/) {
-        push @wpkg_profiles, "$os_type-classroom";
-      }
-
-      if (/^maya$/) {
-        push @wpkg_profiles, "$os_type-maya";
-      }
-
-      if (/^astaff$/) {
-        push @wpkg_profiles, "$os_type-astaff";
-      }
-
-      if (/^tstaff$/) {
-        push @wpkg_profiles, "$os_type-tstaff";
-      }
-
-      if (/^afs$/) {
-        push @wpkg_profiles, "$os_type-afs";
-      }
-
-      if (/^fun$/) {
-        push @wpkg_profiles, "$os_type-ugrad";
-      }
-
-      if (/^research$/) {
-        push @wpkg_profiles, "$os_type-research";
-      }
-
-      if (/^server$/) {
-        push @wpkg_profiles, "server";
-      }
-
-      if (/^remote$/) {
-        push @wpkg_profiles, "$os_type-desktop";
-        push @wpkg_profiles, "$os_type-remote";
-      }
-
-      if (/^laptop$/) {
-        push @wpkg_profiles, "$os_type-laptop";
-      }
-
-      if (/^laptop.loaner$/) {
-        push @wpkg_profiles, "$os_type-laptop";
-        push @wpkg_profiles, "loaner-laptop";
-      }
-
-      if (/^laptop.x61$/) {
-        push @wpkg_profiles, "$os_type-laptop";
-        push @wpkg_profiles, "x61";
-      }
-
-      if (/^acrobat9$/) {
-        push @wpkg_profiles, "$os_type-acrobat9";
-      }
-
-      # licensed software
-
-      if (/^adobe-ae-pp$/) {
-        push @wpkg_profiles, "$os_type-adobe-ae-pp";
-      }
-
-      if (/^framemaker$/) {
-        push @wpkg_profiles, "$os_type-framemaker";
-      }
-
-      if (/^powerdvd$/) {
-        push @wpkg_profiles, "$os_type-powerdvd";
-      }
-
     }
 
     next unless @wpkg_profiles;
