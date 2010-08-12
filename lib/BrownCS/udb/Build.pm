@@ -475,6 +475,9 @@ sub build_wpkg_hosts {
     # all hosts get an os_type profile definition
     push @wpkg_profiles, $os_type;
 
+    # all machines get a core profile
+    push @wpkg_profiles, "$os_type-core";
+
     # determine if there are other profiles we should apply
     my $classes_ref = $host_classes->{$host->device_name};
     if (defined $classes_ref) {
@@ -500,10 +503,6 @@ sub build_wpkg_hosts {
 
         if (/^tstaff$/) {
           push @wpkg_profiles, "$os_type-tstaff";
-        }
-
-        if (/^afs$/) {
-          push @wpkg_profiles, "$os_type-afs";
         }
 
         if (/^fun$/) {
