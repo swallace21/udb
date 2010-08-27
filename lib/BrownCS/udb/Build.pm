@@ -540,6 +540,10 @@ sub build_wpkg_hosts {
           push @wpkg_profiles, "$os_type-acrobat9";
         }
 
+	if (/^office2010$/) {
+          push @wpkg_profiles, "$os_type-office2010";
+        }
+
         # licensed software
   
         if (/^adobe-ae-pp$/) {
