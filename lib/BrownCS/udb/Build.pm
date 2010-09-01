@@ -357,7 +357,7 @@ sub build_dhcp {
 
   print "Building dhcp... ";
 
-  my $file = '/maytag/sys0/dhcp/dhcpd.conf';
+  my $file = '/sysvol/dhcp/dhcpd.conf';
   my $PATH_TMPFILE = $self->TMPDIR . basename($file);
   my $vars = {filename => $file, date => get_date(), dbh => $udb->storage->dbh};
   $self->tt->process('dhcpd.conf.tt2', $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
@@ -589,7 +589,7 @@ sub build_dns_map_forward {
   my @domain_parts = split(/\./, $domain);
   my $zone = $domain_parts[0];
 
-  my $file = "/maytag/sysvol/DNS/db.$zone.$region";
+  my $file = "/sysvol/dns/db.$zone.$region";
   my $PATH_TMPFILE = $self->TMPDIR . basename($file);
   my $vars = {
     filename => $file,
@@ -613,7 +613,7 @@ sub build_dns_map_reverse {
 
   $zone =~ s/\.$//;
 
-  my $file = "/maytag/sysvol/DNS/db.$zone.$region";
+  my $file = "/sysvol/dns/db.$zone.$region";
   chomp($file);
 
   my $PATH_TMPFILE = $self->TMPDIR . basename($file);
