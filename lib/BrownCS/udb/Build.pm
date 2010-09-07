@@ -239,7 +239,7 @@ sub build_tftpboot {
     if (not $self->dryrun) {
       if (-e "$tftpboot_path/$bootimage") {
         $self->maybe_system("sudo rm -f $tftpboot_path/$hex_ip");
-        $self->maybe_system("sudo ln -s $tftpboot_path/$bootimage $tftpboot_path/$hex_ip");
+        $self->maybe_system("sudo ln -s $bootimage $tftpboot_path/$hex_ip");
       } else {
         print "\n  WARNING: bootimage $bootimage doesn't existing, not touching link for " . $comp->device_name;
       }
