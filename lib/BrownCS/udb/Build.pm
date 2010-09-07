@@ -76,7 +76,7 @@ sub del_build_ref {
     if ($self->verbose) { print "Deleting build reference for \"$table\" table.\n"; }
     $buildref->{$table}--;
   } else {
-    print "WARNING: buildref for table \"$table\" was already zero\n";
+    print "\n  WARNING: buildref for table \"$table\" was already zero";
   }
 }
 
@@ -202,7 +202,7 @@ sub build_tftpboot {
 
     my $bootimage;
 
-    if ($comp->pxelink && $comp->pxelink !~ //) {
+    if ($comp->pxelink) {
       $bootimage = $comp->pxelink;
     } elsif ($os->os_type eq 'debian') {
       $bootimage = "fai-workstation-i386";
@@ -237,8 +237,12 @@ sub build_tftpboot {
       printf "link %s (%s) -> %s\n", $comp->device_name, $hex_ip, $bootimage;
     }
     if (not $self->dryrun) {
-      $self->maybe_system("sudo rm -f $tftpboot_path/$hex_ip");
-      $self->maybe_system("sudo ln -s $bootimage $tftpboot_path/$hex_ip");
+      if (-e "$tftpboot_path/$bootimage") {
+        $self->maybe_system("sudo rm -f $tftpboot_path/$hex_ip");
+        $self->maybe_system("sudo ln -s $tftpboot_path/$bootimage $tftpboot_path/$hex_ip");
+      } else {
+        print "\n  WARNING: bootimage $bootimage doesn't existing, not touching link for " . $comp->device_name;
+      }
     }
   }
 
