@@ -89,7 +89,7 @@ udb-change-manager - change the manager of a device
 
 =head1 SYNOPSIS
 
-udb-change-os <device>
+udb-change-manager <device>
 
 =head1 DESCRIPTION
 
