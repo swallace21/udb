@@ -41,6 +41,10 @@ my %udb_commands = (
     'desc' => "change a networked device's MAC address",
     'common' => 1,
   },
+  'change-manager' => {
+    'desc' => "change manager of a device",
+    'common' => 1,
+  },
   'change-os' => {
     'desc' => "change a computer's software configuration",
     'common' => 1,
