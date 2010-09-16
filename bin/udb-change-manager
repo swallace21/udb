@@ -1,0 +1,125 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+use Pod::Usage;
+
+use FindBin qw($RealBin);
+use lib "$RealBin/../lib";
+use BrownCS::udb::Schema;
+use BrownCS::udb::Util qw(:all);
+use BrownCS::udb::Console;
+use BrownCS::udb::DeviceHash;
+
+# Print a simple help message.
+sub usage {
+  my ($exit_status) = @_;
+  pod2usage({ -exitval => $exit_status, -verbose => 1});
+}
+
+my $help = 0;
+my $verbose = 0;
+my $dryrun = 0;
+
+GetOptions (
+  'help|h|?' => \$help, 
+  'v|verbose' => \$verbose,
+) or usage(1);
+usage(0) if $help;
+
+my $udb = BrownCS::udb::Schema->connect;
+my $uc = new BrownCS::udb::Console(udb => $udb);
+my $udh = new BrownCS::udb::DeviceHash(udb => $udb);
+
+if (not $dryrun) {
+  if (not BrownCS::udb::Util::okay_tstaff){
+    print "Insufficient privileges - check your warnings.\n";
+    exit;
+  }
+}
+
+if (@ARGV != 1) {
+  usage(2);
+}
+
+my $name = shift @ARGV;
+my $device;
+my $comp;
+
+eval {
+  $device = $udb->resultset('Devices')->find($name);
+  $comp = $device->computer;
+};
+if ($@) {
+  die "No record for computer $name.\n";
+}
+
+if ($device->protected) {
+  printf("The device %s is protected!\n", $device->device_name);
+  print "Do not modify or delete this entry unless you know what you're doing.\n";
+  if (! $uc->confirm("Are you sure (y/n)?")) {
+    exit(1);
+  }
+}
+
+my $rs;
+eval {
+  $rs = $udb->txn_do(sub {
+    my $manager = $uc->get_management_type($device->manager);
+    if(!$dryrun) {
+      $device->manager($manager);
+      $device->update_or_insert;
+    }
+  });
+};
+if ($@) {
+  die <<EOF;
+Operation failed. Details:
+  $@
+EOF
+}
+
+__END__
+
+=head1 NAME
+
+udb-change-manager - change the manager of a device
+
+=head1 SYNOPSIS
+
+udb-change-os <device>
+
+=head1 DESCRIPTION
+
+Perform maintenance on an existing device record in UDB.
+
+=head1 OPTIONS
+
+=over
+
+=item B<-h>, B<--help>
+
+Print a help message and exit.
+
+=item B<-n>, B<--dryrun>
+
+Don't make any changes; just print what would be done.
+
+=item B<-v>, B<--verbose>
+
+Print lots of text about what is going on.
+
+=back
+
+=head1 AUTHORS
+
+Mark Dieterich.
+
+=head1 SEE ALSO
+
+B<udb>
+
+=cut
+

@@ -311,7 +311,7 @@ sub build_netgroup {
     my $os = $host->os_type;
     next if not defined $os;
 
-    if (($manager eq 'tstaff') and ($os->trusted_nfs)) {
+    if (host_is_trusted($host)) {
       $self->add_to_group($netgroups, "trusted", $fqdn);
     }
 
