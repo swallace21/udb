@@ -62,6 +62,15 @@ sub fuzzy_search {
       }
     }
 
+    case 'SurplusDevices' {
+      while (my $device = $rs->next) {
+        my $device_name = $device->device_name;
+        if (! grep(/$device_name/,@results)) {
+          push @results, $device->device_name;
+        }
+      }
+    }
+
     case 'Computers' {
       while (my $comp = $rs->next) {
         my $name = $comp->device_name;
