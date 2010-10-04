@@ -441,10 +441,11 @@ sub verify_ip_or_vlan {
       print "ERROR: IP address or VLAN must be specified.  If you are unsure of\n"; 
       print "the VLAN to select, these descriptions might help:\n\n";
       my $net_vlans_rs = $udb->resultset('NetVlans');
-      print "VLAN\tDescription\n";
-      print "----------------------------\n";
+      print "VLAN\t\tNetwork\t\tDescription\n";
+      print "------------------------------------------------\n";
       while (my $vlan = $net_vlans_rs->next) {
-        print $vlan->vlan_num . "\t" . $net_zones{$vlan->zone_name} . "\n";
+        my $network = sprintf("%18s", $vlan->network);
+        print $vlan->vlan_num . "\t" . $network . "\t" . $net_zones{$vlan->zone_name} . "\n";
       }
       print "\n";
       return (0, undef);
