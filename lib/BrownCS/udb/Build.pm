@@ -806,11 +806,6 @@ sub staged_deletions {
 
   while (my $device = $devices_rs->next) {
     log("staging delete of $device->device_name");
-# temporary hack to ensure GPFS servers aren't removed from ldap, while I try to figure out what's causing them to be removed
-if ($device->device_name =~ /dove/ || $device->device_name =~ /ghirardelli/ || $device->device_name =~ /mnm/ || $device->device_name =~ /snowcaps/ || $device->device_name =~ /dewey/ || $device->device_name =~ /louie/) {
-  log("tried to delete $device->device_name");
-  next;
-}
     if ($device->computer) {
       $self->add_build_ref($buildref, 'computers');
       log("  deleting ldap entry");
@@ -902,6 +897,11 @@ sub staged_modifications {
     log("staging modifications of computer $name");
 
     my $samba_server = 0;
+# temporary hack to ensure GPFS servers aren't removed from ldap, while I try to figure out what's causing them to be removed
+if ($name =~ /dove/ || $name =~ /ghirardelli/ || $name =~ /mnm/ || $name =~ /snowcaps/ || $name =~ /dewey/ || $name =~ /louie/) {
+  $samba_server = 1;
+}
+# this search is busted
     while (my $samba_class = $samba_class_rs->next) {
       if ($samba_class->computers()->find($computer->device_name)) {
         $samba_server = 1;
