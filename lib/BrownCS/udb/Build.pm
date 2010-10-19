@@ -216,7 +216,12 @@ sub build_tftpboot {
       $bootimage = "fai-windows";
     } elsif ($os->os_type eq 'windows764') {
       $bootimage = "fai-windows";
+    } elsif ($os->os_type eq 'server2008') {
+      $bootimage = "fai-windows";
+    } elsif ($os->os_type eq 'server200864') {
+      $bootimage = "fai-windows";
     }
+    
 
     next if not defined($bootimage);
 
@@ -561,6 +566,11 @@ sub build_wpkg_hosts {
         if (/^powerdvd$/) {
           push @wpkg_profiles, "$os_type-powerdvd";
         }
+	
+	if (/^filemaker$/) {
+          push @wpkg_profiles, "$os_type-filemaker";
+        }
+
       }
     }
 
