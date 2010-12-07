@@ -553,6 +553,14 @@ sub build_wpkg_hosts {
           push @wpkg_profiles, "$os_type-office2010";
         }
 
+	if (/^testsoft$/) {
+          push @wpkg_profiles, "$os_type-testsoft";
+        }
+
+	if (/^vs2010u$/) {
+          push @wpkg_profiles, "$os_type-vs2010u";
+        }
+
         # licensed software
   
         if (/^adobe-ae-pp$/) {
