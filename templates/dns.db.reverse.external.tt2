@@ -1,14 +1,14 @@
 [%- USE DBI( dbh = dbh ) -%]
 $ttl 1d
 [% IF (matches = zone.match('10\..*')) -%]
-@ IN  SOA ns.ilab.cs.brown.edu. root.ilab.cs.brown.edu. ( [% serial_num %] 10800 3600 604800 86400 )
-  IN  NS  ns1.cs.brown.edu.
-  IN  NS  ns2.cs.brown.edu.
-[% ELSE -%]
-@ IN  SOA ns.cs.brown.edu. root.cs.brown.edu. ( [% serial_num %] 10800 3600 604800 86400 )
-  IN  NS  knot.brown.edu.
-  IN  NS  ns1.ucsb.edu.
+@ IN  SOA dns.cs.brown.edu. root.cs.brown.edu. ( [% serial_num %] 10800 3600 604800 86400 )
   IN  NS  dns.cs.brown.edu.
+[% ELSE -%]
+@ IN  SOA dns.cs.brown.edu. root.cs.brown.edu. ( [% serial_num %] 10800 3600 604800 86400 )
+  IN  NS  dns.cs.brown.edu.
+  IN  NS  bru-ns1.brown.edu.
+  IN  NS  bru-ns2.brown.edu.
+  IN  NS  ns1.ucsb.edu.
 [% END -%]
 
 ;

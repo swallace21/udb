@@ -1,15 +1,10 @@
 [%- USE DBI( dbh = dbh ) -%]
 $ttl 1d
-[% IF domain == 'ilab.cs.brown.edu' -%]
-@ IN  SOA dns-int.cs.brown.edu. root.ilab.cs.brown.edu. ( [% serial_num %] 10800 3600 604800 86400 )
-  IN  NS  dns-int1.cs.brown.edu.
-  IN  NS  dns-int2.cs.brown.edu.
-[% ELSE -%]
 @ IN  SOA dns.cs.brown.edu. root.cs.brown.edu. ( [% serial_num %] 10800 3600 604800 86400 )
-  IN  NS  knot.brown.edu.
-  IN  NS  ns1.ucsb.edu.
   IN  NS  dns.cs.brown.edu.
-[% END -%]
+  IN  NS  bru-ns1.brown.edu.
+  IN  NS  bru-ns2.brown.edu.
+  IN  NS  ns1.ucsb.edu.
 
 ;
 ;  FILE: [% filename %]
@@ -24,13 +19,6 @@ $ttl 1d
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 localhost                           IN          A               127.0.0.1
-
-; NetApp entries
-maytag          60                  IN          A               128.148.38.46
-maytag                              IN          MX              10 mx.cs.brown.edu.
-
-amana           60                  IN          A               128.148.38.151
-amana                               IN          MX              10 mx.cs.brown.edu.
 
 [% SWITCH domain -%]
 [%   CASE 'cs.brown.edu' %]
