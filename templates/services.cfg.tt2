@@ -240,6 +240,30 @@ define service{
 }
 
 define service{
+  name ldaps_template
+  use service_template
+  service_description LDAPS
+  check_command check-ldap!-S!-P 636
+  register 0
+}
+
+define service{
+  name ldapmaster_template
+  use service_template
+  service_description LDAPMASTER
+  check_command check-ldap!-P 3890
+  register 0
+}
+
+define service{
+  name ldapsmaster_template
+  use service_template
+  service_description LDAPSMASTER
+  check_command check-ldap!-S!-P 6360
+  register 0
+}
+
+define service{
   name krb_template
   use service_template
   service_description KRB
@@ -435,6 +459,22 @@ define service{
   use             ldap_template
   host_name       [% host.hostname %]
   contact_groups  urgent_group
+}
+define service{
+  use             ldaps_template
+  host_name       [% host.hostname %]
+  contact_groups  urgent_group
+}
+[%  CASE 'ldapmaster' %]
+define service{
+  use             ldapmaster_template
+  host_name       [% host.hostname %]
+  contact_groups  emergency_group
+}
+define service{
+  use             ldapsmaster_template
+  host_name       [% host.hostname %]
+  contact_groups  emergency_group
 }
 [%  CASE 'drbd' %]
 define service{
