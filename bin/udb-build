@@ -97,16 +97,12 @@ eval {
     $ub->staged_modifications($krbadmin, $keytab, \%build_counts);
 
     # build service and data files
-    if($build{'tftp'} || $build{'all'}) {
-      $ub->build_tftpboot;
+    if ($build{'dns'} || $build{'all'}) {
+      $ub->build_dns;
     }
 
     if ($build{'netgroup'} || $build{'all'}) {
       $ub->build_netgroup;
-    }
-
-    if ($build{'dhcp'} || $build{'all'}) {
-      $ub->build_dhcp;
     }
 
     if ($build{'nagios'} || $build{'all'}) {
@@ -117,12 +113,16 @@ eval {
       $ub->build_wpkg_hosts;
     }
 
-    if ($build{'dns'} || $build{'all'}) {
-      $ub->build_dns;
-    }
-
     if ($build{'finger'} || $build{'all'}) {
       $ub->build_finger_data;
+    }
+
+    if ($build{'dhcp'} || $build{'all'}) {
+      $ub->build_dhcp;
+    }
+
+    if($build{'tftp'} || $build{'all'}) {
+      $ub->build_tftpboot;
     }
 
     my $count = unlink $keytab;
