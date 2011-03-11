@@ -917,7 +917,7 @@ sub staged_modifications {
 
     my $samba_server = 0;
 # temporary hack to ensure GPFS servers aren't removed from ldap, while I try to figure out what's causing them to be removed
-if ($name =~ /dove/ || $name =~ /ghirardelli/ || $name =~ /mnm/ || $name =~ /snowcaps/ || $name =~ /dewey/ || $name =~ /louie/ || $name =~ /peeps/ || $name =~ /andes/ || $name =~ /runts/ || $name =~ /nerds/) {
+if ($name =~ /dewey/ || $name =~ /louie/ || $name =~ /peeps/ || $name =~ /andes/ || $name =~ /runts/ || $name =~ /nerds/ || $name =~ /stride/ || $name =~ /orbit/) {
   $samba_server = 1;
 }
 # this search is busted

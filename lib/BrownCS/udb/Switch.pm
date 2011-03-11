@@ -89,11 +89,11 @@ sub get_port_desc {
 
   my $desc;
   if ($ifaces->count == 0) {
-    $desc = "";
+    $desc = "self managed - " . $room;
   } elsif ($ifaces->count == 1) {
     $desc = $ifaces->single->device_name . " - " . $room;
   } else {
-    $desc = "unmanaged switch " . $room;
+    $desc = "dumb switch - " . $room;
   }
 
   return $desc;
