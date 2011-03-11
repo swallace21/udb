@@ -141,6 +141,13 @@ switch($type) {
     # this only makes sense to return a list of hosts, i.e. batch mode
     $batch=1; 
   }
+  case "usage" {
+    if (! $string) {
+      print "ERROR: you must enter a usage to search for\n\n";
+      usage(2)
+    }
+    ($success, @results) = search_usage($udb)->($string,$verbose);
+  }
   case "walljack" {
     if (! $string) {
       print "ERROR: you must enter walljack to search for\n\n";

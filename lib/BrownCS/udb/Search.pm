@@ -23,6 +23,7 @@ our @EXPORT_OK = qw(
   search_serial
   search_ssh_known_hosts
   search_spare
+  search_usage
   search_walljack
 );
 
@@ -53,11 +54,7 @@ sub fuzzy_search {
       while (my $device = $rs->next) { 
         my $device_name = $device->device_name;
         if (! grep(/$device_name/,@results)) {
-          my $additional_info = "";
-          if ($device->device_name ne $device->$key) {
-            $additional_info = " (" . $device->$key . ")";
-          }
-          push @results, $device->device_name . $additional_info;
+          push @results, $device->device_name;
         }
       }
     }
@@ -369,6 +366,21 @@ sub search_ssh_known_hosts {
       }
     }
     
+    if (@results) {
+      return (1, @results);
+    } else {
+      return (0, undef);
+    }
+  };
+}
+
+sub search_usage {
+  my $udb = shift;
+  return sub {
+    my ($usage, $verbose) = @_;
+
+    my @results = fuzzy_search($udb, 'Devices', 'usage', $usage, $verbose);
+
     if (@results) {
       return (1, @results);
     } else {
