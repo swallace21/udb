@@ -94,7 +94,7 @@ subnet [% subnet.network %] netmask [% subnet.netmask %] {
     option domain-search "ilab.cs.brown.edu","smn.cs.brown.edu";
     [%- END %]
     [%- SWITCH subnet.vlan_num %]
-    [%-   CASE ['32', '892', '4008'] %]
+    [%-   CASE ['32', '36', '892', '4008'] %]
     option domain-name-servers 128.148.32.121, 128.148.32.119, 128.148.32.123;
     option ntp-servers 128.148.128.11;
     [%-   CASE DEFAULT %]
