@@ -78,9 +78,6 @@ mx2                                 IN          A               128.148.6.13
 ; windows entries
 windfs                              IN          CNAME           win.cs.brown.edu.
 
-; CIS entries
-netmon                              IN          A               128.148.10.8
-
 ; jj research machines
 mercury                             IN          A               198.7.242.37
 venus                               IN          A               198.7.242.38
