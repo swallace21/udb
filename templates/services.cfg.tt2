@@ -162,6 +162,14 @@ define service{
 }
 
 define service{
+  name alternate_thermo_template
+  use service_template
+  service_description THERMO
+  check_command alternate_check_thermo
+  register 0
+}
+
+define service{
   name tapes_template
   use service_template
   service_description TAPES
@@ -425,6 +433,11 @@ define service{
 [%  CASE 'thermo' %]
 define service{
   use             thermo_template
+  host_name       [% host.hostname %]
+  contact_groups  emergency_group
+}
+define service{
+  use             alternate_thermo_template
   host_name       [% host.hostname %]
   contact_groups  emergency_group
 }
