@@ -24,7 +24,7 @@ my %udb_commands = (
   'add-port' => {
     'desc' => "add a network port to wall plate mapping",
     'common' => 0,
-  }
+  },
   'add-to-class' => {
     'desc' => "add one or more computers to a class",
     'common' => 0,
@@ -56,7 +56,7 @@ my %udb_commands = (
   'change-port' => {
     'desc' => "change a network port to wall plate mapping",
     'common' => 0,
-  }
+  },
   'change-user' => {
     'desc' => "change a device's primary user or contact",
     'common' => 1,
