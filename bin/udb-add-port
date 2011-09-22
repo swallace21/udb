@@ -58,7 +58,7 @@ udb-add-port
 
 =head1 DESCRIPTION
 
-Add a new port mapping to the UDB database.
+Add or update a port mapping to the UDB database.
 
 =head1 OPTIONS
 
