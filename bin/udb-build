@@ -121,7 +121,7 @@ eval {
       $ub->build_dhcp;
     }
 
-    if($build{'tftp'} || $build{'all'}) {
+    if($build{'tftp'}) {
       $ub->build_tftpboot;
     }
 

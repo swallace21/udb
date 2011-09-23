@@ -169,6 +169,7 @@ sub commit_scp {
 sub build_tftpboot {
   my $self = shift;
   my $udb = $self->udb;
+  my ($host) = @_;
 
   renew_sudo($self);
 
@@ -176,17 +177,25 @@ sub build_tftpboot {
 
   my $tftpboot_path = "/sysvol/tftpboot/pxelinux.cfg";
 
-  my $addrs = $udb->resultset('NetAddresses')->search({},
-    {
-      prefetch => {
-        'primary_interface' => {
-          'device' => {
-            'computer' => 'os_type'
+  my $addrs;
+  if ($host) {
+    $addrs = $udb->resultset('NetAddresses')->search(
+      { 'dns_name' => $host },
+      { join => 'net_dns_entries' }
+    );
+  } else {
+    $addrs = $udb->resultset('NetAddresses')->search({},
+      {
+        prefetch => {
+          'primary_interface' => {
+            'device' => {
+              'computer' => 'os_type'
+            }
           }
-        }
-      },
-      order_by => [qw(ipaddr)],
-    });
+        },
+        order_by => [qw(ipaddr)],
+      });
+  }
 
   my $host_classes = get_host_class_map($udb);
 
@@ -222,7 +231,6 @@ sub build_tftpboot {
       $bootimage = "fai-windows";
     }
     
-
     next if not defined($bootimage);
 
     if (grep /^server$/, @{$host_classes->{$comp->device_name}}) {
@@ -239,7 +247,7 @@ sub build_tftpboot {
     my $hex_ip = ipv4_n2x($addr->ipaddr);
 
     if ($self->verbose) {
-      printf "link %s (%s) -> %s\n", $comp->device_name, $hex_ip, $bootimage;
+      printf "\nlink %s (%s) -> %s\n", $comp->device_name, $hex_ip, $bootimage;
     }
     if (not $self->dryrun) {
       if (-e "$tftpboot_path/$bootimage") {
@@ -875,6 +883,7 @@ sub staged_modifications {
   while (my $device = $devices_rs->next) {
     my $name = $device->device_name;
     log("staging modifications of device $name");
+
     if ($device->computer && host_is_trusted($device->computer)) {
       $self->add_build_ref($buildref, 'devices');
       log("  adding/checking kerberos host credentials");
@@ -915,6 +924,7 @@ sub staged_modifications {
     my $name = $computer->device_name;
     log("staging modifications of computer $name");
 
+    # manage any LDAP host changes
     my $samba_server = 0;
 # temporary hack to ensure GPFS servers aren't removed from ldap, while I try to figure out what's causing them to be removed
 if ($name =~ /dewey/ || $name =~ /louie/ || $name =~ /peeps/ || $name =~ /andes/ || $name =~ /runts/ || $name =~ /nerds/ || $name =~ /stride/ || $name =~ /orbit/) {
@@ -944,6 +954,10 @@ if ($name =~ /dewey/ || $name =~ /louie/ || $name =~ /peeps/ || $name =~ /andes/
         $self->del_build_ref($buildref, 'computers');
       }
     }
+
+    # build any required PXE links
+    print "\n  ";
+    build_tftpboot($self, $name);
   }
 
   print "done.\n";
