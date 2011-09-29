@@ -81,18 +81,23 @@ while (my $iface = $iface_rs->next) {
 $device->usage('spare');
 $device->manager('tstaff');
 
-my $comp_classes_rs = $udb->resultset('Computers')->find($name)->comp_classes_computers;
-while (my $class = $comp_classes_rs->next) {
-	$class->delete;
+my $computer = $udb->resultset('Computers')->find($name);
+if ($computer) {
+  my $comp_classes = $computer->comp_classes_computers;
+  if ($comp_classes) {
+    while (my $class = $comp_classes->next) {
+	    $class->delete;
+    }
+  }
+
+  $device->computer->os_type(undef);
+  $device->computer->pxelink(undef);
 }
 
-$device->computer->os_type(undef);
-$device->computer->pxelink(undef);
 $device->contact(undef);
 $device->comments(undef);
 
-my $spare_status = $udb->resultset('EquipStatusTypes')->find('spare');
-$device->status($spare_status);
+$device->status($udb->resultset('EquipStatusTypes')->find('spare'));
 $device->update;
 
 system("$RealBin/udb-move $name");
