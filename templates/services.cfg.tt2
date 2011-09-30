@@ -37,12 +37,25 @@ define service{
   register 0
 }
 
-# Ping Service for all hosts
+# generic ping service
 define service{ 
   name ping_template
   use service_template
   service_description PING
   check_command check_ping!3000,40%!5000,100%
+  register 0
+}
+
+#
+# Specific service checks
+#
+
+# FTP services
+define service{
+  name ftp_template 
+  use service_template
+  service_description FTP
+  check_command check-ftp
   register 0
 }
 
@@ -57,19 +70,20 @@ define service{
   register 0
 }
 
+# CIFS service check
+define service{
+  name smb_template 
+  use service_template
+  service_description CIFS
+  check_command check-smb
+  register 0
+}
+
 define service{
   name smtp_template
   use service_template
   service_description SMTP
   check_command check-smtp
-  register 0
-}
-
-define service{
-  name ftp_template 
-  use service_template
-  service_description FTP
-  check_command check-ftp
   register 0
 }
 
@@ -130,14 +144,6 @@ define service{
 }
  
 define service{
-  name nis_template
-  use service_template
-  service_description NIS
-  check_command check_nis
-  register 0
-}
-
-define service{
   name liebert_template
   use service_template
   service_description LIEBERT
@@ -150,6 +156,14 @@ define service{
   use service_template
   service_description LIEBERT_ALARM
   check_command check_liebert_alarms
+  register 0
+}
+
+define service{
+  name nis_template
+  use service_template
+  service_description NIS
+  check_command check_nis
   register 0
 }
 
@@ -353,7 +367,12 @@ define service{
   host_name       [% host.hostname %]
   contact_groups  escalation_group
 }
-
+[% CASE 'smb' %]
+define service{
+  use             smb_template
+  host_name       [% host.hostname %]
+  contact_groups  urgent_group
+}
 [%  CASE 'printer' %]
 define service{
   use             printer_template
@@ -365,7 +384,6 @@ define service{
   host_name       [% host.hostname %]
   check_command   check-queuing![% host.hostname %]
 }
-
 [%  CASE 'smtp' %]
 define service{
   use             smtp_template
@@ -378,14 +396,12 @@ define service{
   host_name       [% host.hostname %]
   contact_groups  urgent_group
 }
-
 [%  CASE 'http' %]
 define service{
   use             http_template
   host_name       [% host.hostname %]
   contact_groups  urgent_group
 }
-
 [%  CASE 'imap' %]
 define service{
   use             imap_template
@@ -436,6 +452,7 @@ define service{
   host_name       [% host.hostname %]
   contact_groups  emergency_group
 }
+
 define service{
   use             alternate_thermo_template
   host_name       [% host.hostname %]
