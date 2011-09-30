@@ -414,6 +414,7 @@ sub build_nagios {
   renew_sudo($self);
   print "Building nagios files... ";
   $self->build_nagios_hosts;
+  $self->build_nagios_hostgroups;
   $self->build_nagios_services;
   $self->maybe_system('sudo', 'ssh', '-x', 'storm', '/etc/init.d/nagios3 restart', '> /dev/null');
   if ( (not $self->dryrun) && $? != 0 ) {
@@ -430,6 +431,23 @@ sub build_nagios_hosts {
   my $PATH_TMPFILE = $self->TMPDIR . basename($file);
   my $vars = {filename => $file, date => get_date(), dbh => $udb->storage->dbh};
   $self->tt->process('hosts.cfg.tt2', $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
+
+  # send new config file to each server
+  $self->commit_local($PATH_TMPFILE, $file);
+  $self->commit_scp($file, "storm:/etc/nagios3/conf.d/");
+  if ( (not $self->dryrun) && $? != 0 ) {
+    warn "$0: ERROR: Failed to copy nagios files to storm\n";
+  }
+}
+
+sub build_nagios_hostgroups {
+  my $self = shift;
+  my $udb = $self->udb;
+
+  my $file = '/sysvol/ksroot/files/add/group.debian.server.nagios3/etc/nagios3/conf.d/hostgroups.cfg';
+  my $PATH_TMPFILE = $self->TMPDIR . basename($file);
+  my $vars = {filename => $file, date => get_date(), dbh => $udb->storage->dbh};
+  $self->tt->process('hostgroups.cfg.tt2', $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
 
   # send new config file to each server
   $self->commit_local($PATH_TMPFILE, $file);
