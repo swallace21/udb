@@ -173,7 +173,11 @@ sub build_tftpboot {
 
   renew_sudo($self);
 
-  print "Building tftpboot... ";
+  if ($host) {
+    print "\n  Building tftpboot on $host... ";
+  } else {
+    print "Building tftpboot... ";
+  }
 
   my $tftpboot_path = "/sysvol/tftpboot/pxelinux.cfg";
 
@@ -974,7 +978,6 @@ if ($name =~ /dewey/ || $name =~ /louie/ || $name =~ /peeps/ || $name =~ /andes/
     }
 
     # build any required PXE links
-    print "\n  ";
     build_tftpboot($self, $name);
   }
 
