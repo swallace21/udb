@@ -81,9 +81,6 @@ debian                              IN          CNAME           mirror.cs.brown.
 pkgs                                IN          CNAME           mirror.cs.brown.edu.
 mirror                              IN          MX              10 mx.cs.brown.edu.
 
-; CIS entries
-netmon                              IN          A               128.148.10.8
-
 ; jj research machines
 mercury                             IN          A               198.7.242.37
 venus                               IN          A               198.7.242.38

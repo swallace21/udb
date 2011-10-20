@@ -15,6 +15,13 @@ __PACKAGE__->add_columns(
     is_nullable => 0,
     size => undef,
   },
+  "description",
+  {
+    data_type => "text",
+    default_value => undef,
+    is_nullable => 0,
+    size => undef,
+  },
 );
 __PACKAGE__->set_primary_key("net_service");
 __PACKAGE__->add_unique_constraint("net_services_pkey", ["net_service"]);

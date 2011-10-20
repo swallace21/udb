@@ -35,11 +35,19 @@ if (@ARGV != 1) {
 }
 
 my $name = shift @ARGV;
+my $device;
+my $device_rs;
 
-my $device = $udb->resultset('Devices')->find($name);
-if ($device) {
-  $uc->print_record('', $udh->format_device($device));
-  exit(0);
+$device_rs = $udb->resultset('Devices')->search({
+    device_name => { '=' => $name },
+    status => {'!=' => 'deleted'},
+  });
+if ($device_rs) {
+  $device = $device_rs->next;
+  if ($device) {
+    $uc->print_record('', $udh->format_device($device));
+    exit(0);
+  }
 }
 
 warn "No device matching found matching $name. Trying heuristics.\n";
@@ -48,11 +56,12 @@ my @candidate_devices = ();
 my @candidate_addresses = ();
 
 # device with name LIKE what we're looking for
-my $device_rs = $udb->resultset('Devices')->search({
+$device_rs = $udb->resultset('Devices')->search({
     device_name => { '~*' => $name },
+    status => {'!=' => 'deleted'},
   });
 if ($device_rs) {
-  while ($device = $device_rs->next) {
+  while (my $device = $device_rs->next) {
     push @candidate_devices, $device;
   }
 }
@@ -138,6 +147,7 @@ Print a help message and exit.
 =head1 AUTHORS
 
 Aleks Bromfield.
+Mark Dieterich.
 
 =head1 SEE ALSO
 

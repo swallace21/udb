@@ -468,65 +468,78 @@ EOF
 sub get_port {
   my $self = shift;
   my ($iface) = @_;
-  my $port;
 
-  my $room = $iface->device->place->room;
-
-  while(!$port) {
-
-    my ($switch_name, $blade_num, $port_num, $wall_plate) = "";
-
-    # if this is an existing port, then retrieve current port information
-    if ($iface->net_port_id) {
-      $switch_name = $iface->net_port->switch_name;
-      $blade_num = $iface->net_port->blade_num;
-      $port_num = $iface->net_port->port_num;
-      $wall_plate = $iface->net_port->wall_plate;
-    }
-
-    # FIX ME - this needs to be checked against a db entry
-    if ($room  && ($room =~ /^310$/ || $room =~ /^431A$/ || $room =~ /^531$/)) {
-      $wall_plate = "MR";
-
-      # prompt user for updated port information
-      $switch_name = $self->get_updated_val("Switch",$switch_name, verify_switch($self->udb));
-      my $net_switch = $self->udb->resultset('NetSwitches')->find($switch_name);
-
-      if ($net_switch->num_blades > 0 ) {
-       $blade_num = $self->get_updated_val("Blade Number",$blade_num,verify_blade($self->udb,$switch_name));
-      } else {
-       $blade_num = 0;
-      }
-
-      $port_num = $self->get_updated_val("Port Number",$port_num,verify_port_num($self->udb,$switch_name));
-
-      # get the associated port number
-      $port = $self->udb->resultset('NetPorts')->search({
-          switch_name => $switch_name,
-          blade_num => $blade_num,
-          port_num => $port_num,
-        })->single;
+  my $uc = new BrownCS::udb::Console(udb => $self->udb);
   
-      # if the port doesn't exist, then insert an entry
-      if (!$port) {
-        $port = $self->udb->resultset('NetPorts')->find_or_create({
-          net_switch => $net_switch,
-          port_num => $port_num,
-          blade_num => $blade_num,
-          wall_plate => $wall_plate,
-        });
-      }
-    } else {
-      $wall_plate = $self->get_updated_val("Wall Plate", $wall_plate, verify_wall_plate($self->udb));
-      $port = $self->udb->resultset('NetPorts')->search({
-        wall_plate => $wall_plate,
-      })->single;
+  my $port;
+  my ($switch_name, $blade_num, $port_num) = "";
+  my ($existing_switch_name, $existing_blade_num, $existing_port_num) = "";
+
+  # prompt user for updated port information
+  my $wall_plate = $self->get_updated_val("Wall Plate", "", verify_wall_plate($self->udb));
+    
+  # retrieve the existing port information if one already exists
+  my $existing_port = wall_plate_port($self, $wall_plate);
+
+  if ($existing_port) {
+    # if given an interface and port already exists, we are just adding a device
+    if ($iface) {
+      # make sure it jibes with what is already connected to this port
+      ($port, $iface) = verify_port_iface($self->udb,$existing_port,$iface);
+
+      return ($port, $iface);
     }
 
-    ($port, $iface) = verify_port_iface($self->udb,$port,$iface);
+    $existing_switch_name = $existing_port->switch_name;
+    $existing_blade_num = $existing_port->blade_num;
+    $existing_port_num = $existing_port->port_num;
   }
 
-  return ($port, $iface);
+  $switch_name = $self->get_updated_val("Switch",$existing_switch_name, verify_switch($self->udb));
+  my $net_switch = $self->udb->resultset('NetSwitches')->find($switch_name);
+  
+  if ($net_switch->num_blades > 0 ) {
+    $blade_num = $self->get_updated_val("Blade Number",$existing_blade_num,verify_blade($self->udb,$switch_name));
+  } else {
+    $blade_num = 0;
+  }
+  
+  $port_num = $self->get_updated_val("Port Number",$existing_port_num,verify_port_num($self->udb,$switch_name));
+
+  my $conflicting_port = $self->udb->resultset('NetPorts')->find({
+    net_switch => $net_switch,
+    port_num => $port_num,
+    blade_num => $blade_num,
+  });
+
+  if ($conflicting_port || $existing_port) {
+    if ($conflicting_port) {
+      print "Port is already asosciated with wall plate " . $conflicting_port->wall_plate . ".\n";
+      if (! $uc->confirm("Are you sure you want to continue (y/N)", "no")) {
+        return;
+      }
+
+      $port = $conflicting_port;
+    } else {
+      $port = $existing_port;
+    }
+
+    $port->net_switch($net_switch);
+    $port->port_num($port_num);
+    $port->blade_num($blade_num);
+    $port->wall_plate($wall_plate);
+      
+    $port->update;
+  }else {
+    $port = $self->udb->resultset('NetPorts')->create({
+      net_switch => $net_switch,
+      port_num => $port_num,
+      blade_num => $blade_num,
+      wall_plate => $wall_plate,
+    });
+  }
+  
+  return ($port);
 }
 
 sub get_updated_val {

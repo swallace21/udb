@@ -169,24 +169,37 @@ sub commit_scp {
 sub build_tftpboot {
   my $self = shift;
   my $udb = $self->udb;
+  my ($host) = @_;
 
   renew_sudo($self);
 
-  print "Building tftpboot... ";
+  if ($host) {
+    print "\n  Building tftpboot on $host... ";
+  } else {
+    print "Building tftpboot... ";
+  }
 
   my $tftpboot_path = "/sysvol/tftpboot/pxelinux.cfg";
 
-  my $addrs = $udb->resultset('NetAddresses')->search({},
-    {
-      prefetch => {
-        'primary_interface' => {
-          'device' => {
-            'computer' => 'os_type'
+  my $addrs;
+  if ($host) {
+    $addrs = $udb->resultset('NetAddresses')->search(
+      { 'dns_name' => $host },
+      { join => 'net_dns_entries' }
+    );
+  } else {
+    $addrs = $udb->resultset('NetAddresses')->search({},
+      {
+        prefetch => {
+          'primary_interface' => {
+            'device' => {
+              'computer' => 'os_type'
+            }
           }
-        }
-      },
-      order_by => [qw(ipaddr)],
-    });
+        },
+        order_by => [qw(ipaddr)],
+      });
+  }
 
   my $host_classes = get_host_class_map($udb);
 
@@ -222,7 +235,6 @@ sub build_tftpboot {
       $bootimage = "fai-windows";
     }
     
-
     next if not defined($bootimage);
 
     if (grep /^server$/, @{$host_classes->{$comp->device_name}}) {
@@ -239,7 +251,7 @@ sub build_tftpboot {
     my $hex_ip = ipv4_n2x($addr->ipaddr);
 
     if ($self->verbose) {
-      printf "link %s (%s) -> %s\n", $comp->device_name, $hex_ip, $bootimage;
+      printf "\nlink %s (%s) -> %s\n", $comp->device_name, $hex_ip, $bootimage;
     }
     if (not $self->dryrun) {
       if (-e "$tftpboot_path/$bootimage") {
@@ -406,6 +418,7 @@ sub build_nagios {
   renew_sudo($self);
   print "Building nagios files... ";
   $self->build_nagios_hosts;
+  $self->build_nagios_hostgroups;
   $self->build_nagios_services;
   $self->maybe_system('sudo', 'ssh', '-x', 'storm', '/etc/init.d/nagios3 restart', '> /dev/null');
   if ( (not $self->dryrun) && $? != 0 ) {
@@ -422,6 +435,23 @@ sub build_nagios_hosts {
   my $PATH_TMPFILE = $self->TMPDIR . basename($file);
   my $vars = {filename => $file, date => get_date(), dbh => $udb->storage->dbh};
   $self->tt->process('hosts.cfg.tt2', $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
+
+  # send new config file to each server
+  $self->commit_local($PATH_TMPFILE, $file);
+  $self->commit_scp($file, "storm:/etc/nagios3/conf.d/");
+  if ( (not $self->dryrun) && $? != 0 ) {
+    warn "$0: ERROR: Failed to copy nagios files to storm\n";
+  }
+}
+
+sub build_nagios_hostgroups {
+  my $self = shift;
+  my $udb = $self->udb;
+
+  my $file = '/sysvol/ksroot/files/add/group.debian.server.nagios3/etc/nagios3/conf.d/hostgroups.cfg';
+  my $PATH_TMPFILE = $self->TMPDIR . basename($file);
+  my $vars = {filename => $file, date => get_date(), dbh => $udb->storage->dbh};
+  $self->tt->process('hostgroups.cfg.tt2', $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
 
   # send new config file to each server
   $self->commit_local($PATH_TMPFILE, $file);
@@ -875,6 +905,7 @@ sub staged_modifications {
   while (my $device = $devices_rs->next) {
     my $name = $device->device_name;
     log("staging modifications of device $name");
+
     if ($device->computer && host_is_trusted($device->computer)) {
       $self->add_build_ref($buildref, 'devices');
       log("  adding/checking kerberos host credentials");
@@ -915,6 +946,7 @@ sub staged_modifications {
     my $name = $computer->device_name;
     log("staging modifications of computer $name");
 
+    # manage any LDAP host changes
     my $samba_server = 0;
 # temporary hack to ensure GPFS servers aren't removed from ldap, while I try to figure out what's causing them to be removed
 if ($name =~ /dewey/ || $name =~ /louie/ || $name =~ /peeps/ || $name =~ /andes/ || $name =~ /runts/ || $name =~ /nerds/ || $name =~ /stride/ || $name =~ /orbit/) {
@@ -944,6 +976,9 @@ if ($name =~ /dewey/ || $name =~ /louie/ || $name =~ /peeps/ || $name =~ /andes/
         $self->del_build_ref($buildref, 'computers');
       }
     }
+
+    # build any required PXE links
+    build_tftpboot($self, $name);
   }
 
   print "done.\n";

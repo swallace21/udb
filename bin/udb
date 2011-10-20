@@ -21,6 +21,10 @@ my %udb_commands = (
     'desc' => "add a new network interface to an existing device",
     'common' => 0,
   },
+  'add-port' => {
+    'desc' => "add a network port to wall plate mapping",
+    'common' => 0,
+  },
   'add-to-class' => {
     'desc' => "add one or more computers to a class",
     'common' => 0,
@@ -48,6 +52,10 @@ my %udb_commands = (
   'change-os' => {
     'desc' => "change a computer's software configuration",
     'common' => 1,
+  },
+  'change-port' => {
+    'desc' => "change a network port to wall plate mapping",
+    'common' => 0,
   },
   'change-user' => {
     'desc' => "change a device's primary user or contact",

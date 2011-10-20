@@ -14,6 +14,8 @@ our @EXPORT_OK = qw(
   dynamic_vlan
   dns_insert
   dns_update
+  iface_port
+  wall_plate_port
   monitored_vlan
   verify_dns_alias
   verify_dns_region
@@ -230,6 +232,44 @@ sub dns_update{
   my $udb = shift;
   my ($old_addr, $new_addr) = @_;
 }  
+
+sub iface_port {
+  my $self = shift;
+  my ($iface) = @_;
+  my $port;
+
+  my ($switch_name, $blade_num, $port_num) = "";
+
+  # if this is an existing interface, then try and retrieve current port information
+  if ($iface && $iface->net_port_id) {
+    $switch_name = $iface->net_port->switch_name;
+    $blade_num = $iface->net_port->blade_num;
+    $port_num = $iface->net_port->port_num;
+
+    $port = $self->udb->resultset('NetPorts')->search({
+      switch_name => $switch_name,
+      blade_num => $blade_num,
+      port_num => $port_num,
+     })->single;
+  }
+
+  return $port;
+}
+
+sub wall_plate_port {
+  my $self = shift;
+  my ($wall_plate) = @_;
+  my $port;
+
+  $wall_plate = uc($wall_plate);
+  if ($wall_plate !~ /MR/) {
+    $port = $self->udb->resultset('NetPorts')->search({
+      wall_plate => $wall_plate,
+      })->single;
+  }
+
+  return $port;
+}
 
 sub monitored_vlan {
   my $udb = shift;
@@ -659,14 +699,12 @@ sub verify_port_iface {
 sub verify_wall_plate {
   my $udb = shift;
   return sub {
-    my ($wall_plate_str) = @_;
-    $wall_plate_str = uc($wall_plate_str);
-    my $port = $udb->resultset('NetPorts')->search({
-        wall_plate => $wall_plate_str,
-      })->single;
+    my ($wall_plate) = @_;
+    $wall_plate = uc($wall_plate);
 
-    if($port) {
-      my $wall_plate = $port->wall_plate;
+    if ($wall_plate =~ /^MR$/ ) {
+      return (1, $wall_plate);
+    } elsif ($wall_plate =~ /^\d\d\d\w?(-\d+)?-(D\d|\d\w)$/ ) {
       return (1, $wall_plate);
     }
 

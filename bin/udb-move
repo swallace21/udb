@@ -34,7 +34,7 @@ my $udb = BrownCS::udb::Schema->connect;
 my $uc = new BrownCS::udb::Console(udb => $udb);
 
 if (not $dryrun) {
-  if (not BrownCS::udb::Util::okay_tstaff) {
+  if (!BrownCS::udb::Util::okay_tstaff || !BrownCS::udb::Util::okay_adminhost) {
     print "Insufficient privileges - check your warnings.\n";
     exit;
   }
@@ -61,7 +61,7 @@ eval {
       die "ERROR: Device is marked for deletion, please run udb build\n";
     }
 
-    my ($city, $building, $room,$description) = $uc->get_place($device->place);
+    my ($city, $building, $room, $description) = $uc->get_place($device->place);
 
     my $new_place = $udb->resultset('Places')->find_or_create({
       city => $city,
