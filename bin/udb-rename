@@ -49,14 +49,6 @@ my $new_name = shift @ARGV;
 my $device = $udb->resultset('Devices')->find($old_name);
 die "No record for device $old_name.\n" if not $device;
 
-if ($device->protected) {
-  printf("The device %s is protected!\n", $device->device_name);
-  print "Do not modify or delete this entry unless you know what you're doing.\n";
-  if (! $uc->confirm("Are you sure (y/n)?")) {
-    exit(1);
-  }
-}
-
 if (not $new_name) {
   $new_name = $uc->get_device_name;
 } elsif (not verify_hostname($udb)->($new_name)) {

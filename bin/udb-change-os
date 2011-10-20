@@ -56,14 +56,6 @@ if ($@) {
   die "No record for computer $name.\n";
 }
 
-if ($device->protected) {
-  printf("The device %s is protected!\n", $device->device_name);
-  print "Do not modify or delete this entry unless you know what you're doing.\n";
-  if (! $uc->confirm("Are you sure (y/n)?")) {
-    exit(1);
-  }
-}
-
 my $os = $uc->get_os_type;
 my $classes = $uc->get_comp_classes;
 

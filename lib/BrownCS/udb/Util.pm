@@ -26,7 +26,6 @@ our @EXPORT_OK = qw(
   verify_equip_usage_types
   verify_hostname
   verify_nonempty
-  verify_unprotected
   verify_username
   virtual_device
 );
@@ -91,14 +90,6 @@ sub device_exists {
     return 0;
   }
 
-  if ($device->protected) {
-    printf("The device %s is protected!\n", $device->device_name);
-    print "Do not modify or delete this entry unless you know what you're doing.\n";
-    if (! $uc->confirm("Are you sure (y/n)?")) {
-      return 0;
-    }
-  }
- 
   return 1;
 
 }
@@ -220,24 +211,6 @@ sub log {
   } else {
     die "ERROR: unable to lock log file: $!\n";
   }
-}
-
-sub verify_unprotected {
-  my $udb = shift;
-  
-	return sub {
-    my $uc = new BrownCS::udb::Console(udb => $udb);
-    my $device = $udb->device;
-
-    if ($device->protected) {
-      printf("The device %s is protected!\n", $device->device_name);
-      print "Do not modify or delete this entry unless you know what you're doing.\n";
-      if (! $uc->confirm("Are you sure (y/n)?")) {
-        return 0;
-      }
-    }
-    return 1;
-  }  
 }
 
 sub verify_username {

@@ -42,7 +42,6 @@ sub format_device {
     $out->{"Managed by"} = $device->manager->management_type;
     $out->{"Contact"} = $device->contact;
     $out->{"Owner"} = $device->owner;
-    $out->{"Protected"} = bool2str($device->protected);
 
     if ($device->computer) {
       $self->format_computer($out, $device->computer);
@@ -224,7 +223,6 @@ sub update_device {
       po_num => $in->{"Purchase order"},
       contact => $in->{"Contact"},
       owner => $in->{"Owner"},
-      protected => $in->{"Protected"},
       comments => $in->{"Comments"},
     });
 

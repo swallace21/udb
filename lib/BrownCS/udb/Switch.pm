@@ -93,7 +93,7 @@ sub get_port_desc {
   } elsif ($ifaces->count == 1) {
     $desc = $ifaces->single->device_name . " - " . $room;
   } else {
-    $desc = "dumb switch - " . $room;
+    $desc = "switch - " . $room;
   }
 
   return $desc;

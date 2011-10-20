@@ -45,13 +45,6 @@ __PACKAGE__->add_columns(
     is_nullable => 0,
     size => undef,
   },
-  "protected",
-  {
-    data_type => "boolean",
-    default_value => "false",
-    is_nullable => 0,
-    size => 1,
-  },
   "purchased_on",
   { data_type => "date", default_value => "now()", is_nullable => 1, size => 4 },
   "installed_on",

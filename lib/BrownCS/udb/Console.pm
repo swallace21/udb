@@ -559,18 +559,6 @@ sub get_mac {
   return $self->get_updated_val("MAC address", $default, verify_mac($self->udb,$iface));
 }
 
-sub get_protected {
-  my $self = shift;
-  my ($default) = @_;
-  my $msg_tail;
-  if ($default) {
-    $msg_tail = "(Y/n)";
-  } else {
-    $msg_tail = "(y/N)";
-  }
-  return $self->confirm("Should this device entry be protected? ".$msg_tail, $default);
-}
-
 sub get_comments {
   my $self = shift;
   my ($default) = @_;

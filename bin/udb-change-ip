@@ -51,14 +51,6 @@ my $name = shift @ARGV;
 my $device = $udb->resultset('Devices')->find($name);
 die "No record for device $name.\n" if not $device;
 
-if ($device->protected) {
-  printf("The device %s is protected!\n", $device->device_name);
-  print "Do not modify or delete this entry unless you know what you're doing.\n";
-  if (! $uc->confirm("Are you sure (y/n)?")) {
-    exit(1);
-  }
-}
-
 my $chosen_iface;
 
 my $ifaces_rs = $device->net_interfaces;
