@@ -20,6 +20,8 @@ our @EXPORT_OK = qw(
   get_date
   get_host_class_map
   host_is_trusted
+  nfs_host_install
+  trusted_nfs
   ipv4_n2x
   log
   verify_domainname
@@ -113,7 +115,27 @@ sub dns_name_exists {
 sub host_is_trusted {
   my ($host) = @_;
 
-  if (($host->device->manager->management_type eq 'tstaff') || ($host->os_type && $host->os_type->trusted_nfs)) {
+  if ($host->device->manager->management_type eq 'tstaff') {
+    return 1;
+  } else {
+    return 0;
+  }
+}
+
+sub trusted_nfs {
+  my ($host) = @_;
+
+  if ($host->device->manager->management_type eq 'tstaff' && ($host->os_type && $host->os_type->trusted_nfs)) {
+    return 1;
+  } else {
+    return 0;
+  }
+}
+
+sub nfs_host_install {
+  my ($host) = @_;
+
+  if ($host->os_type && $host->os_type->trusted_nfs) {
     return 1;
   } else {
     return 0;

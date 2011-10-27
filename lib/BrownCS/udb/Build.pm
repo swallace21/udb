@@ -328,8 +328,12 @@ sub build_netgroup {
     my $os = $host->os_type;
     next if not defined $os;
 
-    if (host_is_trusted($host)) {
+    if (trusted_nfs($host)) {
       $self->add_to_group($netgroups, "trusted", $fqdn);
+    }
+
+    if (nfs_host_install($host)) {
+      $self->add_to_group($netgroups, "install", $fqdn);
     }
 
     my $classes_ref = $host_classes->{$hostname};
