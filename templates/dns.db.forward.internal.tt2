@@ -61,8 +61,8 @@ _xmpp-client._tcp                   IN          SRV             10 0 5222 im.cs.
 _jabber-client._tcp                 IN          SRV             10 0 5222 im.cs.brown.edu.
 
 ; IPSEC
-ipsec           60                  IN          A               128.148.33.207
-ipsec           60                  IN          MX              10 mx.cs.brown.edu.
+oldipsec           60                  IN          A               128.148.33.207
+oldipsec           60                  IN          MX              10 mx.cs.brown.edu.
 vpn             60                  IN          A               128.148.33.220
 vpn             60                  IN          MX              10 mx.cs.brown.edu.
 
