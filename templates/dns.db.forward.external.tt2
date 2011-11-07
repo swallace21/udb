@@ -53,8 +53,8 @@ _kpasswd._udp.CS.BROWN.EDU.         IN          SRV             0 0 464 kerberos
 ; IPSEC
 oldipsec           60                  IN          A               128.148.33.207
 oldipsec           60                  IN          MX              10 mx.cs.brown.edu.
-vpn             60                  IN          A               128.148.33.220             
-vpn             60                  IN          MX              10 mx.cs.brown.edu.
+oldvpn             60                  IN          A               128.148.33.220             
+oldvpn             60                  IN          MX              10 mx.cs.brown.edu.
 
 ; Jabber (XMPP) entries
 _xmpp-client._tcp                   IN          SRV             10 0 5222 im.cs.brown.edu.

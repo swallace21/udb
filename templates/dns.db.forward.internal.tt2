@@ -19,13 +19,6 @@ $ttl 1d
 
 localhost                           IN          A               127.0.0.1
 
-; NetApp entries
-;maytag          60                  IN          A               128.148.38.46
-;maytag                              IN          MX              10 mx.cs.brown.edu.
-
-;amana           60                  IN          A               128.148.38.151
-;amana                               IN          MX              10 mx.cs.brown.edu.
-
 [% SWITCH domain -%]
 [%   CASE 'cs.brown.edu' %]
 $ORIGIN win.cs.brown.edu.
@@ -63,8 +56,8 @@ _jabber-client._tcp                 IN          SRV             10 0 5222 im.cs.
 ; IPSEC
 oldipsec           60                  IN          A               128.148.33.207
 oldipsec           60                  IN          MX              10 mx.cs.brown.edu.
-vpn             60                  IN          A               128.148.33.220
-vpn             60                  IN          MX              10 mx.cs.brown.edu.
+oldvpn             60                  IN          A               128.148.33.220
+oldvpn             60                  IN          MX              10 mx.cs.brown.edu.
 
 ; mail entries
 sa                                  IN          A               128.148.38.149

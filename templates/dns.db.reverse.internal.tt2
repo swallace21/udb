@@ -18,7 +18,7 @@ $ttl 1d
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 207.33.148.128.IN-ADDR.ARPA.        IN  PTR oldipsec.cs.brown.edu.
-220.33.148.128.IN-ADDR.ARPA.        IN  PTR vpn.cs.brown.edu.
+220.33.148.128.IN-ADDR.ARPA.        IN  PTR oldvpn.cs.brown.edu.
 
 [% FOREACH entry IN DBI.query("select nde.dns_name||'.'||nde.domain as fqdn, na.ipaddr from net_dns_entries nde, net_addresses na where ( nde.dns_region = 'internal' or nde.dns_region = 'all' ) and nde.authoritative and nde.net_address_id = na.net_address_id and na.ipaddr is not null and na.enabled and na.ipaddr << '$cidr' order by na.ipaddr") -%]
 [% entry.ipaddr.to_dns_ptr_record() | format('%-35s') %] IN  PTR [% entry.fqdn %].
