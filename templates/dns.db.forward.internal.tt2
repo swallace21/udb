@@ -94,10 +94,6 @@ mkd                                 IN          A               198.7.242.36
 
 ; temporary DNS entries
 
-; for cs190
-*.boa.cs.brown.edu.                 IN          A               128.148.32.191
-*.boa.cs.brown.edu.                 IN          MX              10 mx.cs.brown.edu.
-
 ; for cs132
 *.cs132.cs.brown.edu.               IN          A               128.148.31.34
 *.cs132.cs.brown.edu.               IN          MX              10 mx.cs.brown.edu.
@@ -107,6 +103,10 @@ redmine.weenix.cs.brown.edu.	    IN		CNAME weenix.cs.brown.edu.
 
 ; for meta tas
 bugs.mta.cs.brown.edu.	            IN		CNAME mta.cs.brown.edu.
+
+; faculty search app (resume)
+belay.resume                        IN          CNAME spindle.cs.brown.edu.
+station.resume                      IN          CNAME spindle.cs.brown.edu.
 
 ; cave machines
 cavefs                              IN          A               10.117.4.1
