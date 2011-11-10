@@ -95,9 +95,9 @@ subnet [% subnet.network %] netmask [% subnet.netmask %] {
     [%- END %]
     [%- SWITCH subnet.vlan_num %]
     [%-   CASE '4007' %]
-    option domain-search "cs.brown.edu","euc.cs.brown.edu","ilab.cs.brown.edu";
+    option domain-search "cs.brown.edu","ilab.cs.brown.edu","euc.cs.brown.edu";
     [%-   CASE DEFAULT %]
-    option domain-search "euc.cs.brown.edu","ilab.cs.brown.edu","smn.cs.brown.edu";
+    option domain-search "ilab.cs.brown.edu","euc.cs.brown.edu","smn.cs.brown.edu";
     [%- END %]
     [%- SWITCH subnet.vlan_num %]
     [%-   CASE ['32', '36', '892', '4008'] %]
