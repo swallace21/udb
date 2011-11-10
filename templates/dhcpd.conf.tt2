@@ -20,10 +20,14 @@ include "/etc/bind/rndc.key";
 # dynamic DNS settings
 ddns-updates on;
 ddns-update-style interim;
-ddns-domainname "smn.cs.brown.edu";
 
-# Communication zone
+# Communication zones for dynamic subnets
 zone smn.cs.brown.edu. {
+  primary 128.148.31.200;
+  key rndc-key;
+}
+
+zone euc.cs.brown.edu. {
   primary 128.148.31.200;
   key rndc-key;
 }
@@ -107,6 +111,10 @@ subnet [% subnet.network %] netmask [% subnet.netmask %] {
 
     [%- SWITCH subnet.vlan_num %]
     [%-   CASE '4006' %]
+    # dynamic DNS options
+    ddns-domainname "euc.cs.brown.edu";
+    update-static-leases on;
+
     zone euc.cs.brown.edu. {
       primary 128.148.31.200;
       key "rndc-key";
@@ -129,6 +137,10 @@ subnet [% subnet.network %] netmask [% subnet.netmask %] {
     # "host xyz { ... }" declarations
     if known { ddns-host-name = host-decl-name; } 
     [%-   CASE '4007' %]
+    # dynamic DNS options
+    ddns-domainname "smn.cs.brown.edu";
+    update-static-leases on;
+
     zone smn.cs.brown.edu. {
       primary 128.148.31.200;
       key "rndc-key";
