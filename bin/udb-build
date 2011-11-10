@@ -69,7 +69,6 @@ if (not $dryrun) {
     print "ERROR: Do not run as root.\n";
     exit;
   }
-  system("sudo -v");
 }
 
 my $rs;

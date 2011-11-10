@@ -393,16 +393,6 @@ sub okay_root_silent {
   return 1;
 }
 
-sub okay_sudo {
-  my $self = shift;
-
-  unless (okay_root_silent && $ENV{'SUID_USER'}){
-    print "WARNING: Please logout and run with sudo.\n";
-    return 0;
-  }
-  return 1;
-}
-
 sub okay_tstaff_user {
   my $self = shift;
 

@@ -23,14 +23,6 @@ sub BUILD {
   $self->{TMPDIR} = File::Temp::tempdir("/tmp/udb-build.XXXX") . "/";
 }
 
-sub renew_sudo {
-  my $self = shift;
-  my $udb = $self->udb;
-  if (not $self->dryrun){
-    system("sudo -v");
-  }
-}
-
 sub build_lock {
   my $self = shift;
 
@@ -136,6 +128,36 @@ sub maybe_rename {
   }
 }
 
+sub commit_chmod {
+  my $self = shift;
+  my $udb = $self->udb;
+  my $dst = $_[-1];
+  if ($self->verbose) {
+    print "Running chmod $dst\n";
+  }
+  if (not $self->dryrun) {
+    # The following line works. Think about it. 
+    if (!system("ksu -e /bin/chmod @_ >/dev/null 2>&1") == 0){
+      die "$0: ERROR: Failed committing $dst: $!\n" ;
+    }
+  }
+}
+
+sub commit_chown {
+  my $self = shift;
+  my $udb = $self->udb;
+  my $dst = $_[-1];
+  if ($self->verbose) {
+    print "Running chown $dst\n";
+  }
+  if (not $self->dryrun) {
+    # The following line works. Think about it. 
+    if (!system("ksu -e /bin/chown @_ >/dev/null 2>&1") == 0){
+      die "$0: ERROR: Failed committing $dst: $!\n" ;
+    }
+  }
+}
+
 sub commit_local {
   my $self = shift;
   my $udb = $self->udb;
@@ -145,7 +167,37 @@ sub commit_local {
   }
   if (not $self->dryrun) {
     # The following line works. Think about it. 
-    if (!system("sudo cp @_") == 0){
+    if (!system("ksu -e /bin/cp @_ >/dev/null 2>&1") == 0){
+      die "$0: ERROR: Failed committing $dst: $!\n" ;
+    }
+  }
+}
+
+sub commit_ln {
+  my $self = shift;
+  my $udb = $self->udb;
+  my $dst = $_[-1];
+  if ($self->verbose) {
+    print "Linking $dst\n";
+  }
+  if (not $self->dryrun) {
+    # The following line works. Think about it. 
+    if (!system("ksu -e /bin/ln -s @_ >/dev/null 2>&1") == 0){
+      die "$0: ERROR: Failed committing $dst: $!\n" ;
+    }
+  }
+}
+
+sub commit_rm {
+  my $self = shift;
+  my $udb = $self->udb;
+  my $dst = $_[-1];
+  if ($self->verbose) {
+    print "Removing $dst\n";
+  }
+  if (not $self->dryrun) {
+    # The following line works. Think about it. 
+    if (!system("ksu -e /bin/rm -f @_ >/dev/null 2>&1") == 0){
       die "$0: ERROR: Failed committing $dst: $!\n" ;
     }
   }
@@ -155,12 +207,29 @@ sub commit_scp {
   my $self = shift;
   my $udb = $self->udb;
   my $dst = $_[-1];
+
   if ($self->verbose) {
     print "Committing $dst via scp\n";
   }
   if (not $self->dryrun) {
     # The following line works. Think about it. 
-    if (!system("sudo scp -pq @_") == 0){
+    if (!system("ksu -e /usr/bin/scp -pq @_ >/dev/null 2>&1") == 0){
+      die "$0: ERROR: Failed committing $dst: $!\n" ;
+    }
+  }
+}
+
+sub commit_ssh {
+  my $self = shift;
+  my $udb = $self->udb;
+  my $dst = $_[-1];
+
+  if ($self->verbose) {
+    print "Committing $dst via ssh\n";
+  }
+  if (not $self->dryrun) {
+    # The following line works. Think about it. 
+    if (!system("ksu -e /usr/bin/ssh -x @_ >/dev/null 2>&1") == 0){
       die "$0: ERROR: Failed committing $dst: $!\n" ;
     }
   }
@@ -170,8 +239,6 @@ sub build_tftpboot {
   my $self = shift;
   my $udb = $self->udb;
   my ($host) = @_;
-
-  renew_sudo($self);
 
   if ($host) {
     print "\n  Building tftpboot on $host... ";
@@ -255,8 +322,8 @@ sub build_tftpboot {
     }
     if (not $self->dryrun) {
       if (-e "$tftpboot_path/$bootimage") {
-        $self->maybe_system("sudo rm -f $tftpboot_path/$hex_ip");
-        $self->maybe_system("sudo ln -s $bootimage $tftpboot_path/$hex_ip");
+        $self->commit_rm("$tftpboot_path/$hex_ip");
+        $self->commit_ln("$bootimage $tftpboot_path/$hex_ip");
       } else {
         print "\n  WARNING: bootimage $bootimage doesn't existing, not touching link for " . $comp->device_name;
       }
@@ -350,7 +417,7 @@ sub build_netgroup {
         $self->add_to_group($netgroups, "graphics", $fqdn);
       } elsif (/^fun$/) {
         $self->add_to_group($netgroups, "ugrad", $fqdn);
-      } elsif (/^ssh\.forward$/) {
+      } elsif (/^'-e', ssh\.forward$/) {
         $self->add_to_group($netgroups, "sunlab", $fqdn);
       } elsif (/^tstaff-netgroup$/) {
         $self->add_to_group($netgroups, "tstaff", $fqdn);
@@ -377,8 +444,6 @@ sub build_netgroup {
 sub build_dhcp {
   my $self = shift;
   my $udb = $self->udb;
-
-  renew_sudo($self);
 
   print "Building dhcp... ";
 
@@ -407,7 +472,7 @@ sub build_dhcp {
 
   # end of old server cruft
 
-  $self->maybe_system('sudo', 'ssh', '-x', 'dhcp.cs.brown.edu', '/etc/init.d/dhcp3-server restart', '> /dev/null');
+  $self->commit_ssh('dhcp.cs.brown.edu','/etc/init.d/dhcp3-server restart');
   if ( (not $self->dryrun) && $? != 0 ) {
     warn "$0: ERROR: Failed to restart dhcp server\n";
   }
@@ -419,12 +484,12 @@ sub build_dhcp {
 sub build_nagios {
   my $self = shift;
   my $udb = $self->udb;
-  renew_sudo($self);
+
   print "Building nagios files... ";
   $self->build_nagios_hosts;
   $self->build_nagios_hostgroups;
   $self->build_nagios_services;
-  $self->maybe_system('sudo', 'ssh', '-x', 'storm', '/etc/init.d/nagios3 restart', '> /dev/null');
+  $self->commit_ssh('storm.cs.brown.edu','/etc/init.d/nagios3 restart');
   if ( (not $self->dryrun) && $? != 0 ) {
     warn "$0: ERROR: Failed to restart nagios server\n";
   }
@@ -485,8 +550,6 @@ sub build_nagios_services {
 sub build_wpkg_hosts {
   my $self = shift;
   my $udb = $self->udb;
-
-  renew_sudo($self);
 
   print "Building wpkg hosts file... ";
 
@@ -695,8 +758,6 @@ sub build_dns {
   my $self = shift;
   my $udb = $self->udb;
 
-  renew_sudo($self);
-
   print "Building dns... ";
 
   $Template::Stash::SCALAR_OPS->{fix_width} = \&fix_width;
@@ -764,8 +825,8 @@ sub build_dns {
     if ((not $self->dryrun)) {
       # fix permissions the file
       my $group = (getgrnam('sys'))[2];
-      $self->maybe_system("sudo chown 0:$group $file");
-      $self->maybe_system("sudo chmod 0444 $file");
+      $self->commit_chown("0:$group $file");
+      $self->commit_chmod("0444 $file");
     }
   }
 
@@ -784,7 +845,7 @@ sub build_dns {
         warn "$0: ERROR: Failed to copy DNS files to $host\n";
       }
   
-      $self->maybe_system('sudo', 'ssh', '-x', $host, '/usr/sbin/rndc reload', '> /dev/null');
+      $self->commit_ssh($host,'/usr/sbin/rndc reload');
       if ( (not $self->dryrun) && $? != 0 ) {
         warn "$0: ERROR: Failed to send DNS reload command on $host\n";
       }
@@ -798,8 +859,6 @@ sub build_dns {
 sub build_finger_data {
   my $self = shift;
   my $udb = $self->udb;
-
-  renew_sudo($self);
 
   print "Building finger data... ";
   #DANGER Looks like no other file called "data" is created...
