@@ -464,7 +464,7 @@ sub build_dhcp {
     @dhcp_servers = (@dhcp_servers, $class->computers->get_column("me.device_name")->all);
   }
   foreach my $host (@dhcp_servers) {
-    $self->commit_scp($file, "$host:/etc/dhcp3");
+    $self->commit_scp($file, "$host.cs.brown.edu:/etc/dhcp3");
     if ($? != 0) {
       warn "$0: ERROR: Failed to copy DHCP files to $host\n";
     }
@@ -507,7 +507,7 @@ sub build_nagios_hosts {
 
   # send new config file to each server
   $self->commit_local($PATH_TMPFILE, $file);
-  $self->commit_scp($file, "storm:/etc/nagios3/conf.d/");
+  $self->commit_scp($file, "storm.cs.brown.edu:/etc/nagios3/conf.d/");
   if ( (not $self->dryrun) && $? != 0 ) {
     warn "$0: ERROR: Failed to copy nagios files to storm\n";
   }
@@ -524,7 +524,7 @@ sub build_nagios_hostgroups {
 
   # send new config file to each server
   $self->commit_local($PATH_TMPFILE, $file);
-  $self->commit_scp($file, "storm:/etc/nagios3/conf.d/");
+  $self->commit_scp($file, "storm.cs.brown.edu:/etc/nagios3/conf.d/");
   if ( (not $self->dryrun) && $? != 0 ) {
     warn "$0: ERROR: Failed to copy nagios files to storm\n";
   }
@@ -541,7 +541,7 @@ sub build_nagios_services {
 
   # send new config file to each server
   $self->commit_local($PATH_TMPFILE, $file);
-  $self->commit_scp($file, "storm:/etc/nagios3/conf.d/");
+  $self->commit_scp($file, "storm.cs.brown.edu:/etc/nagios3/conf.d/");
   if ( (not $self->dryrun) && $? != 0 ) {
     warn "$0: ERROR: Failed to copy nagios files to storm\n";
   }
@@ -840,12 +840,12 @@ sub build_dns {
     foreach my $host (@{$dns_servers{$region}}) {
       my @tosend = grep(/$region/,@files);
       #Be careful, note @tosend != $tosend
-      $self->commit_scp(@tosend, "$host:/var/cache/bind");
+      $self->commit_scp(@tosend, "$host.cs.brown.edu:/var/cache/bind");
       if ( (not $self->dryrun) && $? != 0 ) {
         warn "$0: ERROR: Failed to copy DNS files to $host\n";
       }
   
-      $self->commit_ssh($host,'/usr/sbin/rndc reload');
+      $self->commit_ssh("$host.cs.brown.edu",'/usr/sbin/rndc reload');
       if ( (not $self->dryrun) && $? != 0 ) {
         warn "$0: ERROR: Failed to send DNS reload command on $host\n";
       }
