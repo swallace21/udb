@@ -539,7 +539,7 @@ sub get_port {
     });
   }
   
-  return ($port);
+  return ($port, $iface);
 }
 
 sub get_updated_val {
