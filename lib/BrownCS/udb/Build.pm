@@ -137,7 +137,7 @@ sub commit_chmod {
   }
   if (not $self->dryrun) {
     # The following line works. Think about it. 
-    if (!system("ksu -e /bin/chmod @_ >/dev/null 2>&1") == 0){
+    if (!system("ksu -e /usr/bin/sudo /bin/chmod @_ >/dev/null 2>&1") == 0){
       die "$0: ERROR: Failed committing $dst: $!\n" ;
     }
   }
@@ -152,7 +152,7 @@ sub commit_chown {
   }
   if (not $self->dryrun) {
     # The following line works. Think about it. 
-    if (!system("ksu -e /bin/chown @_ >/dev/null 2>&1") == 0){
+    if (!system("ksu -e /usr/bin/sudo /bin/chown @_ >/dev/null 2>&1") == 0){
       die "$0: ERROR: Failed committing $dst: $!\n" ;
     }
   }
@@ -167,7 +167,7 @@ sub commit_local {
   }
   if (not $self->dryrun) {
     # The following line works. Think about it. 
-    if (!system("ksu -e /bin/cp @_ >/dev/null 2>&1") == 0){
+    if (!system("ksu -e /usr/bin/sudo /bin/cp @_ >/dev/null 2>&1") == 0){
       die "$0: ERROR: Failed committing $dst: $!\n" ;
     }
   }
@@ -182,7 +182,7 @@ sub commit_ln {
   }
   if (not $self->dryrun) {
     # The following line works. Think about it. 
-    if (!system("ksu -e /bin/ln -s @_ >/dev/null 2>&1") == 0){
+    if (!system("ksu -e /usr/bin/sudo /bin/ln -s @_ >/dev/null 2>&1") == 0){
       die "$0: ERROR: Failed committing $dst: $!\n" ;
     }
   }
@@ -197,7 +197,7 @@ sub commit_rm {
   }
   if (not $self->dryrun) {
     # The following line works. Think about it. 
-    if (!system("ksu -e /bin/rm -f @_ >/dev/null 2>&1") == 0){
+    if (!system("ksu -e /usr/bin/sudo /bin/rm -f @_ >/dev/null 2>&1") == 0){
       die "$0: ERROR: Failed committing $dst: $!\n" ;
     }
   }
@@ -213,7 +213,7 @@ sub commit_scp {
   }
   if (not $self->dryrun) {
     # The following line works. Think about it. 
-    if (!system("ksu -e /usr/bin/scp -pq @_ >/dev/null 2>&1") == 0){
+    if (!system("ksu -e /usr/bin/sudo /usr/bin/scp -pq @_ >/dev/null 2>&1") == 0){
       die "$0: ERROR: Failed committing $dst: $!\n" ;
     }
   }
@@ -229,7 +229,7 @@ sub commit_ssh {
   }
   if (not $self->dryrun) {
     # The following line works. Think about it. 
-    if (!system("ksu -e /usr/bin/ssh -x @_ >/dev/null 2>&1") == 0){
+    if (!system("ksu -e /usr/bin/sudo /usr/bin/ssh -x @_ >/dev/null 2>&1") == 0){
       die "$0: ERROR: Failed committing $dst: $!\n" ;
     }
   }
@@ -500,7 +500,7 @@ sub build_nagios_hosts {
   my $self = shift;
   my $udb = $self->udb;
 
-  my $file = '/sysvol/ksroot/files/add/group.debian.server.nagios3/etc/nagios3/conf.d/hosts.cfg';
+  my $file = '/sysvol/nagios/hosts.cfg';
   my $PATH_TMPFILE = $self->TMPDIR . basename($file);
   my $vars = {filename => $file, date => get_date(), dbh => $udb->storage->dbh};
   $self->tt->process('hosts.cfg.tt2', $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
@@ -517,7 +517,7 @@ sub build_nagios_hostgroups {
   my $self = shift;
   my $udb = $self->udb;
 
-  my $file = '/sysvol/ksroot/files/add/group.debian.server.nagios3/etc/nagios3/conf.d/hostgroups.cfg';
+  my $file = '/sysvol/nagios/hostgroups.cfg';
   my $PATH_TMPFILE = $self->TMPDIR . basename($file);
   my $vars = {filename => $file, date => get_date(), dbh => $udb->storage->dbh};
   $self->tt->process('hostgroups.cfg.tt2', $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
@@ -534,7 +534,7 @@ sub build_nagios_services {
   my $self = shift;
   my $udb = $self->udb;
 
-  my $file = '/sysvol/ksroot/files/add/group.debian.server.nagios3/etc/nagios3/conf.d/services.cfg';
+  my $file = '/sysvol/nagios/services.cfg';
   my $PATH_TMPFILE = $self->TMPDIR . basename($file);
   my $vars = {filename => $PATH_TMPFILE, date => get_date(), dbh => $udb->storage->dbh};
   $self->tt->process('services.cfg.tt2', $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
