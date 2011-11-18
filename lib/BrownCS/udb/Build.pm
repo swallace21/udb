@@ -553,7 +553,7 @@ sub build_wpkg_hosts {
 
   print "Building wpkg hosts file... ";
 
-  my $file = '/sysvol/src/windows/system/WPKG/hosts/cdb.xml';
+  my $file = '/sysvol/wpkg/hosts/cdb.xml';
   my $PATH_TMPFILE = $self->TMPDIR . basename($file);
 
   my $vars = {
