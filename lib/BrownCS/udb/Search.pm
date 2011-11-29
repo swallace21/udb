@@ -53,7 +53,7 @@ sub fuzzy_search {
     case 'Devices' { 
       while (my $device = $rs->next) { 
         my $device_name = $device->device_name;
-        if (! grep(/$device_name/,@results)) {
+        if (! grep(/^$device_name$/,@results)) {
           push @results, $device->device_name;
         }
       }
@@ -62,7 +62,7 @@ sub fuzzy_search {
     case 'SurplusDevices' {
       while (my $device = $rs->next) {
         my $device_name = $device->device_name;
-        if (! grep(/$device_name/,@results)) {
+        if (! grep(/^$device_name$/,@results)) {
           push @results, $device->device_name;
         }
       }
@@ -71,7 +71,7 @@ sub fuzzy_search {
     case 'Computers' {
       while (my $comp = $rs->next) {
         my $name = $comp->device_name;
-        if (! grep(/$name/, @results)) {
+        if (! grep(/^$name$/, @results)) {
           my $additional_info = "";
           if ($comp->os_type) {
             $additional_info = " (" . $comp->os_type->os_type . ")";
@@ -86,12 +86,12 @@ sub fuzzy_search {
         my $device_name;
         if ($net_dns_entry->net_address->net_interfaces->single) {
           $device_name = $net_dns_entry->net_address->net_interfaces->single->device->device_name;
-          if (! grep(/$device_name/, @results)) {
+          if (! grep(/^$device_name$/, @results)) {
             push @results, $net_dns_entry->net_address->net_interfaces->single->device->device_name;
           }
         } else {
           $device_name = $net_dns_entry->dns_name;
-          if (! grep(/$device_name/, @results)) {
+          if (! grep(/^$device_name$/, @results)) {
             push @results, $net_dns_entry->dns_name;
           }
         }
