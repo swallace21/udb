@@ -704,7 +704,7 @@ sub verify_wall_plate {
 
     if ($wall_plate =~ /^MR$/ ) {
       return (1, $wall_plate);
-    } elsif ($wall_plate =~ /^\d\d\d\w?(-\d+)?-(D\d|\d\w)$/ ) {
+    } elsif ($wall_plate =~ /^\d\d\d\w?(-\d+)?-(D\d+|\d\w)$/ ) {
       return (1, $wall_plate);
     }
 
