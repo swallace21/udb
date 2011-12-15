@@ -115,7 +115,7 @@ sub dns_name_exists {
 sub host_is_trusted {
   my ($host) = @_;
 
-  if ($host->device->manager->management_type eq 'tstaff') {
+  if ($host->device->manager->management_type eq 'tstaff' || virtual_device($host->device)) {
     return 1;
   } else {
     return 0;
