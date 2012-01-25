@@ -657,6 +657,10 @@ sub build_wpkg_hosts {
 	if (/^vs2010u$/) {
           push @wpkg_profiles, "$os_type-vs2010u";
         }
+        
+        if (/^localProfile$/) {
+          push @wpkg_profiles, "$os_type-localProfile";
+        }
 
         # licensed software
   
@@ -672,7 +676,7 @@ sub build_wpkg_hosts {
           push @wpkg_profiles, "$os_type-powerdvd";
         }
 	
-	if (/^filemaker$/) {
+		  if (/^filemaker$/) {
           push @wpkg_profiles, "$os_type-filemaker";
         }
 
