@@ -464,7 +464,7 @@ sub build_dhcp {
     @dhcp_servers = (@dhcp_servers, $class->computers->get_column("me.device_name")->all);
   }
   foreach my $host (@dhcp_servers) {
-    $self->commit_scp($file, "$host.cs.brown.edu:/etc/dhcp3");
+    $self->commit_scp($file, "$host.cs.brown.edu:/etc/dhcp");
     if ($? != 0) {
       warn "$0: ERROR: Failed to copy DHCP files to $host\n";
     }
@@ -472,7 +472,7 @@ sub build_dhcp {
 
   # end of old server cruft
 
-  $self->commit_ssh('dhcp.cs.brown.edu','/etc/init.d/dhcp3-server restart');
+  $self->commit_ssh('dhcp.cs.brown.edu','/etc/init.d/isc-dhcp-server restart');
   if ( (not $self->dryrun) && $? != 0 ) {
     warn "$0: ERROR: Failed to restart dhcp server\n";
   }
