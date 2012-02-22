@@ -105,6 +105,9 @@ redmine.weenix.cs.brown.edu.	    IN		CNAME weenix.cs.brown.edu.
 belay.resume                        IN          CNAME spindle.cs.brown.edu.
 station.resume                      IN          CNAME spindle.cs.brown.edu.
 
+; continuation of cs32 project (see [CS #212057])
+cella                               IN          CNAME cella.nmws.net.
+
 ; cave machines
 cavefs                              IN          A               10.117.4.1
 cs-front                            IN          A               10.117.4.100
