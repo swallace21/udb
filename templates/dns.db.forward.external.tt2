@@ -58,6 +58,7 @@ oldvpn             60                  IN          MX              10 mx.cs.brow
 
 ; Jabber (XMPP) entries
 _xmpp-client._tcp                   IN          SRV             10 0 5222 im.cs.brown.edu.
+_xmpp-server._tcp                   IN          SRV             10 0 5269 im.cs.brown.edu.
 _jabber-client._tcp                 IN          SRV             10 0 5222 im.cs.brown.edu.
 
 ; mail entries

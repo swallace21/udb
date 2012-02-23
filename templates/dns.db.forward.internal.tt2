@@ -51,6 +51,7 @@ _kpasswd._udp.CS.BROWN.EDU.         IN          SRV             0 0 464 kerberos
 
 ; Jabber (XMPP) entries
 _xmpp-client._tcp                   IN          SRV             10 0 5222 im.cs.brown.edu.
+_xmpp-server._tcp                   IN          SRV             10 0 5269 im.cs.brown.edu.
 _jabber-client._tcp                 IN          SRV             10 0 5222 im.cs.brown.edu.
 
 ; IPSEC
