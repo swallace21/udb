@@ -1,6 +1,7 @@
 #!/usr/bin/perl
 
 use File::Temp qw/ tempfile /;
+use File::Copy;
 use Getopt::Long;
 use Cwd;
 use Pod::Usage;
@@ -123,7 +124,7 @@ if ($svg) {
 }
 
 if ($sql) {
-  rename $filename,"$output_dir/$prefix.sql";
+  move($filename,"$output_dir/$prefix.sql") || die "ERROR: can't rename SQL file\n";
   print "Output SQL to \'$output_dir/$prefix.sql\'.  Done.\n";
 }
 
