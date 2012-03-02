@@ -137,8 +137,16 @@ sub commit_chmod {
   }
   if (not $self->dryrun) {
     # The following line works. Think about it. 
-    if (!system("ksu -e /usr/bin/sudo /bin/chmod @_ >/dev/null 2>&1") == 0){
-      die "$0: ERROR: Failed committing $dst: $!\n" ;
+    open(my $fh, "/usr/bin/ksu -e /usr/bin/sudo /bin/chmod @_ 2>&1 |") || die "$0: ERROR: Failed to chmod $dst: $!\n" ;
+    while(<$fh>) {
+      if ($self->verbose) {
+        print $_;
+      }
+
+      if (/authorization failed/) {
+        print "$0 ERROR: sudo failed to chmod $dst\n";
+        exit 1;
+      }
     }
   }
 }
@@ -152,8 +160,16 @@ sub commit_chown {
   }
   if (not $self->dryrun) {
     # The following line works. Think about it. 
-    if (!system("ksu -e /usr/bin/sudo /bin/chown @_ >/dev/null 2>&1") == 0){
-      die "$0: ERROR: Failed committing $dst: $!\n" ;
+    open(my $fh, "/usr/bin/ksu -e /usr/bin/sudo /bin/chown @_ 2>&1 |") || die "$0: ERROR: Failed to chown $dst: $!\n" ;
+    while(<$fh>) {
+      if ($self->verbose) {
+        print $_;
+      }
+
+      if (/authorization failed/) {
+        print "$0 ERROR: sudo failed to chown $dst\n";
+        exit 1;
+      }
     }
   }
 }
@@ -167,8 +183,16 @@ sub commit_local {
   }
   if (not $self->dryrun) {
     # The following line works. Think about it. 
-    if (!system("ksu -e /usr/bin/sudo /bin/cp @_ >/dev/null 2>&1") == 0){
-      die "$0: ERROR: Failed committing $dst: $!\n" ;
+    open(my $fh, "/usr/bin/ksu -e /usr/bin/sudo /bin/cp @_ 2>&1 |") || die "$0: ERROR: Failed copying $dst: $!\n";
+    while(<$fh>) {
+      if ($self->verbose) {
+        print $_;
+      }
+
+      if (/authorization failed/) {
+        print "$0 ERROR: sudo failed to copy to $dst\n";
+        exit 1;
+      }
     }
   }
 }
@@ -182,8 +206,16 @@ sub commit_ln {
   }
   if (not $self->dryrun) {
     # The following line works. Think about it. 
-    if (!system("ksu -e /usr/bin/sudo /bin/ln -s @_ >/dev/null 2>&1") == 0){
-      die "$0: ERROR: Failed committing $dst: $!\n" ;
+    open(my $fh, "/usr/bin/ksu -e /usr/bin/sudo /bin/ln -s @_ 2>&1 |") || die "$0: ERROR: Failed to ln $dst: $!\n" ;
+    while(<$fh>) {
+      if ($self->verbose) {
+        print $_;
+      }
+
+      if (/authorization failed/) {
+        print "$0 ERROR: sudo failed to ln $dst\n";
+        exit 1;
+      }
     }
   }
 }
@@ -192,13 +224,23 @@ sub commit_rm {
   my $self = shift;
   my $udb = $self->udb;
   my $dst = $_[-1];
+
   if ($self->verbose) {
     print "Removing $dst\n";
   }
+
   if (not $self->dryrun) {
     # The following line works. Think about it. 
-    if (!system("ksu -e /usr/bin/sudo /bin/rm -f @_ >/dev/null 2>&1") == 0){
-      die "$0: ERROR: Failed committing $dst: $!\n" ;
+    open(my $fh, "/usr/bin/ksu -e /usr/bin/sudo /bin/rm -f @_ 2>&1 |") || die "$0: ERROR: Failed to rm $dst: $!\n" ;
+    while(<$fh>) {
+      if ($self->verbose) {
+        print $_;
+      }
+
+      if (/authorization failed/) {
+        print "$0 ERROR: sudo failed to rm $dst\n";
+        exit 1;
+      }
     }
   }
 }
@@ -211,10 +253,19 @@ sub commit_scp {
   if ($self->verbose) {
     print "Committing $dst via scp\n";
   }
+
   if (not $self->dryrun) {
     # The following line works. Think about it. 
-    if (!system("ksu -e /usr/bin/sudo /usr/bin/scp -pq @_ >/dev/null 2>&1") == 0){
-      die "$0: ERROR: Failed committing $dst: $!\n" ;
+    open(my $fh, "/usr/bin/ksu -e /usr/bin/sudo /usr/bin/scp -pq @_ 2>&1 |") || die "$0: ERROR: Failed to scp files to $dst: $!\n";
+    while(<$fh>) {
+      if ($self->verbose) {
+        print $_;
+      }
+
+      if (/authorization failed/) {
+        print "$0 ERROR: sudo failed to scp files to $dst\n";
+        exit 1;
+      }
     }
   }
 }
@@ -229,8 +280,16 @@ sub commit_ssh {
   }
   if (not $self->dryrun) {
     # The following line works. Think about it. 
-    if (!system("ksu -e /usr/bin/sudo /usr/bin/ssh -x @_ >/dev/null 2>&1") == 0){
-      die "$0: ERROR: Failed committing $dst: $!\n" ;
+    open(my $fh, "/usr/bin/ksu -e /usr/bin/sudo /usr/bin/ssh -x @_ 2>&1 |") || die "$0: ERROR: Failed to ssh to $dst: $!\n";
+    while(<$fh>) {
+      if ($self->verbose) {
+        print $_;
+      }
+
+      if (/authorization failed/) {
+        print "$0 ERROR: sudo failed to ssh to $dst\n";
+        exit 1;
+      }
     }
   }
 }
