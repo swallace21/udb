@@ -116,6 +116,11 @@ cs-left                             IN          A               10.117.4.101
 cs-right                            IN          A               10.117.4.102
 cs-floor                            IN          A               10.117.4.103
 cs-top                              IN          A               10.117.4.104
+
+; for cs132-twilio
+*.cs132-twilio.cs.brown.edu.             IN          A               128.148.36.62
+*.cs132-twilio.cs.brown.edu.             IN          MX              10 mx.cs.brown.edu.
+
 [%   CASE 'ilab.cs.brown.edu' -%]
 [% END -%]
 
