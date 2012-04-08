@@ -99,6 +99,10 @@ mkd                                 IN          A               198.7.242.36
 
 ; temporary DNS entries
 
+; for cs132
+*.proj132.cs.brown.edu.             IN          A               10.116.111.38
+*.proj132.cs.brown.edu.             IN          MX              10 mx.cs.brown.edu.
+
 ; for weenix
 redmine.weenix.cs.brown.edu.	    IN		CNAME weenix.cs.brown.edu.
 
