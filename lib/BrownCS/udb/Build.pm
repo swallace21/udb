@@ -682,6 +682,10 @@ sub build_wpkg_hosts {
           push @wpkg_profiles, "server";
         }
 
+        if (/^termserver$/) {
+          push @wpkg_profiles, "termserver";
+        }
+
         if (/^remote$/) {
           push @wpkg_profiles, "$os_type-desktop";
           push @wpkg_profiles, "$os_type-remote";
