@@ -155,13 +155,8 @@ switch($type) {
     }
     ($success, @results) = search_walljack($udb)->($string,$verbose);
 
-    if ($success) {
-      foreach my $result (@results) {
-        print "$result\n";
-      }
-
-      exit;
-    }
+    # this only makes sense return the raw output
+    $batch=1; 
   }
   else {
     print "Unknown search type\n";
