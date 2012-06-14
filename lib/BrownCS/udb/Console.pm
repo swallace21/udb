@@ -477,7 +477,7 @@ sub get_port {
 
   # prompt user for updated port information
   my $wall_plate = $self->get_updated_val("Wall Plate", "", verify_wall_plate($self->udb));
-    
+
   # retrieve the existing port information if one already exists
   my $existing_port = wall_plate_port($self, $wall_plate);
 

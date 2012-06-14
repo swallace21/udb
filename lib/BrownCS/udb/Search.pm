@@ -415,11 +415,17 @@ sub search_walljack {
       my @results;
 
       while (my $net_port = $net_ports_rs->next) {
+        push @results, "Walljack " . $net_port->wall_plate . " is connected to\n";
+        push @results, "  Switch: " . $net_port->switch_name;
+        push @results, "  Blade: " . $net_port->blade_num;
+        push @results, "  Port: " . $net_port->port_num . "\n";
+        push @results, "The following hosts are attached to this port:\n";
+
         my $port_name = $net_port->wall_plate;
         foreach my $iface ($net_port->net_interfaces) {
           my $device_name = $iface->device_name;
           if (! grep(/$device_name/, @results)) {
-            push @results, $iface->device_name . " ($port_name)";
+            push @results, "  " . $iface->device_name;
           }
         }
       }
