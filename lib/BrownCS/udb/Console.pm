@@ -514,9 +514,19 @@ sub get_port {
 
   if ($conflicting_port || $existing_port) {
     if ($conflicting_port) {
-      print "Port is already asosciated with wall plate " . $conflicting_port->wall_plate . ".\n";
+      print "\nPort is already asosciated with wall plate " . $conflicting_port->wall_plate . ".\n";
       if (! $uc->confirm("Are you sure you want to continue (y/N)", "no")) {
         return;
+      }
+
+      # if there is also an existing port, then we need to remove the existing port
+      if ($existing_port) {
+        print "\nThis will remove the existing port entry associated with blade \"" . $existing_port->blade_num . "\", port \"" . $existing_port->port_num . "\" on switch " . $existing_port->switch_name . ".\n";
+        if (! $uc->confirm("Are you sure you want to continue (y/N)", "no")) {
+          return;
+        }
+
+        $existing_port->delete;
       }
 
       $port = $conflicting_port;
