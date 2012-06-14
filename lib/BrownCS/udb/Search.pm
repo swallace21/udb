@@ -429,10 +429,12 @@ sub search_walljack {
           }
         }
       }
+
       if (@results) {
         return (1, @results);
       }
-    } 
+    }
+
     return (0, undef);
   }
 }

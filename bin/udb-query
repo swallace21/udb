@@ -154,6 +154,14 @@ switch($type) {
       usage(2)
     }
     ($success, @results) = search_walljack($udb)->($string,$verbose);
+
+    if ($success) {
+      foreach my $result (@results) {
+        print "$result\n";
+      }
+
+      exit;
+    }
   }
   else {
     print "Unknown search type\n";
@@ -194,14 +202,18 @@ if ($success) {
       }
 	  }
   }
+
   # Success: exit 0
   exit 0;
+
 } else {
-    # Failure: print error if an actual user, and exit 1
-    if (!$batch) {
-	print "No matching results found\n";
-    }
-    exit 1;
+
+  # Failure: print error if an actual user, and exit 1
+  if (!$batch) {
+   print "No matching results found\n";
+  }
+
+  exit 1;
 }
 
 __END__
