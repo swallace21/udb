@@ -187,7 +187,7 @@ group {
     next-server pxe.cs.brown.edu;
     filename "pxelinux.0";
 
-[% FOREACH host IN DBI.query("select ni.ethernet, na.ipaddr, fqdn_brown(nde.dns_name, nde.domain) as hostname from net_dns_entries nde join net_addresses na using (net_address_id) join net_addresses_net_interfaces nani using (net_address_id) join net_interfaces ni using (net_interface_id) left join (computers c left join os_types o using (os_type)) using (device_name) where ni.primary_address_id = na.net_address_id and ni.ethernet is not null and na.ipaddr is not null and na.enabled and nde.authoritative and ( nde.dns_region = 'all' or nde.dns_region = 'internal' ) and o.pxe_boot order by hostname") -%]
+[% FOREACH host IN DBI.query("select ni.ethernet, na.ipaddr, fqdn_brown(nde.dns_name, nde.domain) as hostname from net_dns_entries nde join net_addresses na using (net_address_id) join net_addresses_net_interfaces nani using (net_address_id) join net_interfaces ni using (net_interface_id) left join (computers c left join os_types o using (os_type)) using (device_name) where ni.primary_address_id = na.net_address_id and ni.ethernet is not null and ni.master_net_interface_id is null and na.ipaddr is not null and na.enabled and nde.authoritative and ( nde.dns_region = 'all' or nde.dns_region = 'internal' ) and o.pxe_boot order by hostname") -%]
     host [% host.hostname %] {
         hardware ethernet [% host.ethernet %];
         fixed-address [% host.ipaddr %];
@@ -202,7 +202,7 @@ group {
 group {
     use-host-decl-names on;
 
-[% FOREACH host IN DBI.query("select ni.ethernet, na.ipaddr, fqdn_brown(nde.dns_name, nde.domain) as hostname from net_dns_entries nde join net_addresses na using (net_address_id) join net_addresses_net_interfaces nani using (net_address_id) join net_interfaces ni using (net_interface_id) left join (computers c left join os_types o using (os_type)) using (device_name) where ni.primary_address_id = na.net_address_id and ni.ethernet is not null and na.ipaddr is not null and na.enabled and nde.authoritative and ( nde.dns_region = 'all' or nde.dns_region = 'internal' ) and (not o.pxe_boot or o.pxe_boot is null) order by hostname") -%]
+[% FOREACH host IN DBI.query("select ni.ethernet, na.ipaddr, fqdn_brown(nde.dns_name, nde.domain) as hostname from net_dns_entries nde join net_addresses na using (net_address_id) join net_addresses_net_interfaces nani using (net_address_id) join net_interfaces ni using (net_interface_id) left join (computers c left join os_types o using (os_type)) using (device_name) where ni.primary_address_id = na.net_address_id and ni.ethernet is not null and ni.master_net_interface_id is null and na.ipaddr is not null and na.enabled and nde.authoritative and ( nde.dns_region = 'all' or nde.dns_region = 'internal' ) and (not o.pxe_boot or o.pxe_boot is null) order by hostname") -%]
     host [% host.hostname %] {
         hardware ethernet [% host.ethernet %];
         fixed-address [% host.ipaddr %];
@@ -217,7 +217,7 @@ group {
 group {
     use-host-decl-names on;
 
-[% FOREACH host IN DBI.query("select ethernet, device_name from devices join net_interfaces ni using (device_name) join net_addresses_net_interfaces nani using (net_interface_id) join (net_addresses na join net_zones nz using (zone_name)) using (net_address_id) where na.ipaddr is null and ni.ethernet is not null and nz.dynamic_dhcp order by device_name") -%]
+[% FOREACH host IN DBI.query("select ethernet, device_name from devices join net_interfaces ni using (device_name) join net_addresses_net_interfaces nani using (net_interface_id) join (net_addresses na join net_zones nz using (zone_name)) using (net_address_id) where na.ipaddr is null and ni.ethernet is not null and ni.master_net_interface_id is null and nz.dynamic_dhcp order by device_name") -%]
     host [% host.device_name %] {
         hardware ethernet [% host.ethernet %];
     }

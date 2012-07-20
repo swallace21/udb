@@ -9,6 +9,7 @@ use Pod::Usage;
 use Data::Dumper;
 use Date::Format;
 use File::Temp;
+use File::Path;
 
 use FindBin qw($RealBin);
 use lib "$RealBin/../lib";
@@ -132,6 +133,10 @@ eval {
     $ub->update_build_times($build_start, \%build_counts);
 
     $ub->build_unlock;
+
+    if (not $dryrun) {
+      rmtree($ub->{TMPDIR});
+    }
   });
 };
 if ($@) {
