@@ -38,7 +38,7 @@ define host{
         register                        0
 }
 
-[% FOREACH host IN DBI.query("select na.ipaddr, fqdn_brown(nde.dns_name, nde.domain) as hostname from net_addresses na, net_dns_entries nde where na.monitored and na.notification and na.enabled and nde.authoritative and nde.net_address_id = na.net_address_id order by hostname") -%]
+[% FOREACH host IN DBI.query("select array_to_string(array_agg(na.ipaddr), ',') as ipaddr, fqdn_brown(nde.dns_name, nde.domain) as hostname from net_addresses na, net_dns_entries nde where na.monitored and na.notification and na.enabled and nde.authoritative and nde.net_address_id = na.net_address_id group by hostname") -%]
 define host{
         use                             host_notification_template
         host_name                       [% host.hostname %]
@@ -52,7 +52,7 @@ define service{
 
 [% END -%]
 
-[% FOREACH host IN DBI.query("select na.ipaddr, fqdn_brown(nde.dns_name, nde.domain) as hostname from net_addresses na, net_dns_entries nde where na.monitored and not na.notification and na.enabled and nde.authoritative and nde.net_address_id = na.net_address_id order by hostname") -%]
+[% FOREACH host IN DBI.query("select array_to_string(array_agg(na.ipaddr), ',') as ipaddr, fqdn_brown(nde.dns_name, nde.domain) as hostname from net_addresses na, net_dns_entries nde where na.monitored and not na.notification and na.enabled and nde.authoritative and nde.net_address_id = na.net_address_id group by hostname") -%]
 define host{
         use                             host_monitor_template
         host_name                       [% host.hostname %]
