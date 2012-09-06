@@ -88,7 +88,6 @@ windfs                              IN          CNAME           win.cs.brown.edu
 ; jj research machines
 mercury                             IN          A               198.7.242.37
 venus                               IN          A               198.7.242.38
-anonymous                           IN          A               198.7.242.39
 saturn                              IN          A               198.7.242.40
 jupiter                             IN          A               198.7.242.41
 pluto                               IN          A               198.7.242.42
