@@ -725,6 +725,12 @@ sub build_wpkg_hosts {
           push @wpkg_profiles, "$os_type-localProfile";
         }
 
+	if (/^mslab$/) {
+          push @wpkg_profiles, "mslab";
+        }
+
+
+
         # licensed software
   
         if (/^adobe-ae-pp$/) {
@@ -739,7 +745,7 @@ sub build_wpkg_hosts {
           push @wpkg_profiles, "$os_type-powerdvd";
         }
 	
-		  if (/^filemaker$/) {
+	if (/^filemaker$/) {
           push @wpkg_profiles, "$os_type-filemaker";
         }
 
