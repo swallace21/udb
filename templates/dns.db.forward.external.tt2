@@ -94,9 +94,6 @@ jupiter                             IN          A               198.7.242.41
 pluto                               IN          A               198.7.242.42
 earth                               IN          A               198.7.242.43
 
-; tstaff outside test machine
-mkd                                 IN          A               198.7.242.36
-
 ; temporary DNS entries
 
 ; for cs132
