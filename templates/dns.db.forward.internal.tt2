@@ -88,6 +88,11 @@ jupiter                             IN          A               198.7.242.41
 pluto                               IN          A               198.7.242.42
 $ttl 1d
 
+; remote desktop cluster skor, raisinets, jawbreaker
+rdesktop                            IN          A               10.116.111.52
+rdesktop			    IN          A               10.116.111.4
+rdesktop                            IN          A               10.116.111.5
+
 ; temporary DNS entries
 
 ; for cs132
