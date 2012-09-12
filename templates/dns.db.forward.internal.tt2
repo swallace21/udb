@@ -81,12 +81,6 @@ debian                              IN          CNAME           mirror.cs.brown.
 pkgs                                IN          CNAME           mirror.cs.brown.edu.
 mirror                              IN          MX              10 mx.cs.brown.edu.
 
-; jj research machines
-$ttl 15m
-saturn                              IN          A               198.7.242.40
-pluto                               IN          A               198.7.242.42
-$ttl 1d
-
 ; remote desktop cluster skor, raisinets, jawbreaker
 rdesktop                            IN          A               10.116.111.52
 rdesktop			    IN          A               10.116.111.4

@@ -85,14 +85,6 @@ mx2                                 IN          A               128.148.6.13
 ; windows entries
 windfs                              IN          CNAME           win.cs.brown.edu.
 
-; jj research machines
-$ttl 15m
-saturn                              IN          A               198.7.242.40
-pluto                               IN          A               198.7.242.42
-$ttl 1d
-
-; temporary DNS entries
-
 ; for cs132
 *.proj132.cs.brown.edu.             IN          A               10.116.111.38
 *.proj132.cs.brown.edu.             IN          MX              10 mx.cs.brown.edu.
