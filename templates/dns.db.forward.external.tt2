@@ -53,7 +53,7 @@ _kpasswd._udp.CS.BROWN.EDU.         IN          SRV             0 0 464 kerberos
 ; IPSEC
 oldipsec           60                  IN          A               128.148.33.207
 oldipsec           60                  IN          MX              10 mx.cs.brown.edu.
-oldvpn             60                  IN          A               128.148.33.220             
+oldvpn             60                  IN          A               128.148.33.220
 oldvpn             60                  IN          MX              10 mx.cs.brown.edu.
 
 ; Jabber (XMPP) entries
@@ -70,7 +70,7 @@ sa                                  IN          MX              10 sa.cs.brown.e
 mail                                IN          CNAME           sa.cs.brown.edu.
 smtp                                IN          CNAME           sa.cs.brown.edu.
 ; backup mx
-caramello                           IN          A               128.148.6.13
+caramello       60                  IN          A               128.148.6.13
 caramello                           IN          MX              10 caramello.cs.brown.edu.
 mx2                                 IN          A               128.148.6.13
 
@@ -110,6 +110,7 @@ cs-top                              IN          A               10.117.4.104
 ; for cs132-twilio
 *.cs132-twilio.cs.brown.edu.             IN          A               128.148.36.62
 *.cs132-twilio.cs.brown.edu.             IN          MX              10 mx.cs.brown.edu.
+
 
 [%   CASE 'ilab.cs.brown.edu' -%]
 [% END -%]

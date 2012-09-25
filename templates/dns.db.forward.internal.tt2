@@ -49,16 +49,16 @@ _kerberos-master._udp.CS.BROWN.EDU. IN          SRV             0 0 88 kerberos.
 _kerberos-adm._tcp.CS.BROWN.EDU.    IN          SRV             0 0 749 kerberos.cs.brown.edu.
 _kpasswd._udp.CS.BROWN.EDU.         IN          SRV             0 0 464 kerberos.cs.brown.edu.
 
-; Jabber (XMPP) entries
-_xmpp-client._tcp                   IN          SRV             10 0 5222 im.cs.brown.edu.
-_xmpp-server._tcp                   IN          SRV             10 0 5269 im.cs.brown.edu.
-_jabber-client._tcp                 IN          SRV             10 0 5222 im.cs.brown.edu.
-
 ; IPSEC
 oldipsec           60                  IN          A               128.148.33.207
 oldipsec           60                  IN          MX              10 mx.cs.brown.edu.
 oldvpn             60                  IN          A               128.148.33.220
 oldvpn             60                  IN          MX              10 mx.cs.brown.edu.
+
+; Jabber (XMPP) entries
+_xmpp-client._tcp                   IN          SRV             10 0 5222 im.cs.brown.edu.
+_xmpp-server._tcp                   IN          SRV             10 0 5269 im.cs.brown.edu.
+_jabber-client._tcp                 IN          SRV             10 0 5222 im.cs.brown.edu.
 
 ; mail entries
 sa                                  IN          A               128.148.38.149
