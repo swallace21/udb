@@ -96,6 +96,9 @@ windfs                              IN          CNAME           win.cs.brown.edu
 *.proj132.cs.brown.edu.             IN          A               10.116.111.38
 *.proj132.cs.brown.edu.             IN          MX              10 mx.cs.brown.edu.
 
+; for blog.plt
+blog.plt.cs.brown.edu.	    			IN			CNAME 			static.cs.brown.edu.
+
 ; for weenix
 redmine.weenix.cs.brown.edu.	    IN		CNAME weenix.cs.brown.edu.
 
