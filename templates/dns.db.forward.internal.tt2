@@ -32,11 +32,17 @@ ns3                                 IN          A               128.148.33.173
 
 $ORIGIN cs.brown.edu.
 
-cs.brown.edu.                       IN          A               128.148.32.110
+$ttl 600
+
+cs.brown.edu.                       IN          A               128.148.32.22
 cs.brown.edu.                       IN          MX              10 mx.cs.brown.edu.
 cs.brown.edu.                       IN          MX              20 mx2.cs.brown.edu.
+www                                 IN          CNAME           cs.brown.edu.
 
-localhost                           IN          A               127.0.0.1
+www-new                             IN          A               128.148.32.12
+www-new                             IN          MX              10 mx.cs.brown.edu.
+
+$ttl 1d
 
 ; KRB server entries
 _kerberos._udp.CS.BROWN.EDU.        IN          SRV             0 0 88 crunchie.cs.brown.edu.
