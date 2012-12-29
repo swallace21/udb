@@ -34,12 +34,12 @@ $ORIGIN cs.brown.edu.
 
 $ttl 600
 
-cs.brown.edu.                       IN          A               128.148.32.12
+cs.brown.edu.                       IN          A               128.148.32.22
 cs.brown.edu.                       IN          MX              10 mx.cs.brown.edu.
 cs.brown.edu.                       IN          MX              20 mx2.cs.brown.edu.
 www                                 IN          CNAME           cs.brown.edu.
 
-www-new                             IN          A               128.148.32.22
+www-new                             IN          A               128.148.32.12
 www-new                             IN          MX              10 mx.cs.brown.edu.
 
 $ttl 1d
