@@ -30,8 +30,8 @@ $ttl 1d
 
 [%   CASE '128.148.32'  %]
 $ttl 600
-22.32.148.128.IN-ADDR.ARPA.         IN  PTR cs.brown.edu.
-12.32.148.128.IN-ADDR.ARPA.         IN  PTR www-new.cs.brown.edu.
+12.32.148.128.IN-ADDR.ARPA.         IN  PTR cs.brown.edu.
+22.32.148.128.IN-ADDR.ARPA.         IN  PTR www-new.cs.brown.edu.
 
 $ttl 1d
 
