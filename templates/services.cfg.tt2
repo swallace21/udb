@@ -253,6 +253,14 @@ define service{
   register 0
 }
 
+define service{ 
+   name crm_ldap_template
+   use service_template 
+   service_description CRM_LDAP 
+   check_command check-crm-ldap
+   register 0 
+}
+
 define service{
   name ldap_template
   use service_template
@@ -518,6 +526,12 @@ define service{
   servicegroups   sge
 }
 [%  CASE 'ldap' %]
+define service{
+  use             crm_ldap_template
+  host_name       [% host.hostname %]
+  servicegroups   ldap
+  contact_groups  urgent_group
+}
 define service{
   use             ldap_template
   host_name       [% host.hostname %]
