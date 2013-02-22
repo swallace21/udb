@@ -527,12 +527,6 @@ define service{
 }
 [%  CASE 'ldap' %]
 define service{
-  use             crm_ldap_template
-  host_name       [% host.hostname %]
-  servicegroups   ldap
-  contact_groups  urgent_group
-}
-define service{
   use             ldap_template
   host_name       [% host.hostname %]
   servicegroups   ldap
@@ -556,6 +550,13 @@ define service{
   host_name       [% host.hostname %]
   servicegroups   ldap
   contact_groups  emergency_group
+}
+[%  CASE 'ldapslave' %]
+define service{
+  use             crm_ldap_template
+  host_name       [% host.hostname %]
+  servicegroups   ldap
+  contact_groups  urgent_group
 }
 [%  CASE 'drbd' %]
 define service{
