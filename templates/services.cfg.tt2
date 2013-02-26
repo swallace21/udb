@@ -349,6 +349,14 @@ define service{
   register 0
 }
 
+define service{
+   name pacemaker_template
+   use service_template
+   service_description PACEMAKER
+   check_command check-pacemaker
+   register 0
+}
+
 [% FOREACH servicegroup IN DBI.query("select ns.net_service,ns.description from net_services ns") -%]
 define servicegroup {
   servicegroup_name [% servicegroup.net_service %]
@@ -558,6 +566,15 @@ define service{
   servicegroups   ldap
   contact_groups  urgent_group
 }
+
+[%  CASE 'pacemaker' %]
+define service{
+  use             pacemaker_template
+  host_name       [% host.hostname %]
+  servicegroups   pacemaker
+  contact_groups  urgent_group
+}
+
 [%  CASE 'drbd' %]
 define service{
   use             drbd_template
