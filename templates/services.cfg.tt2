@@ -201,6 +201,15 @@ define service{
 }
 
 define service{
+  name pgproxy_template
+  use service_template
+  service_description PGPROXY
+  check_command check-pg-proxy!-w 10
+  notification_interval 120
+  register 0
+}
+
+define service{
   name netapp_template
   use service_template
   service_description NETAPP
@@ -509,6 +518,15 @@ define service{
   servicegroups   pgsql
   contact_groups  urgent_group
 }
+
+[%  CASE 'pgproxy' %]
+define service{
+  use             pgproxy_template
+  host_name       [% host.hostname %]
+  servicegroups   pgsql
+  contact_groups  urgent_group
+}
+
 [%  CASE 'netapp' %]
 define service{
   use             netapp_template
