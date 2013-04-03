@@ -590,7 +590,7 @@ define service{
   use             pacemaker_template
   host_name       [% host.hostname %]
   servicegroups   pacemaker
-  contact_groups  urgent_group
+  contact_groups  urgent_group,tstaff_sms_group
 }
 
 [%  CASE 'drbd' %]
