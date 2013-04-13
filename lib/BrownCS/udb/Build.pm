@@ -878,12 +878,13 @@ sub build_dns {
     }
   }
 
-  # Build forward maps.  Once the ilab.cs.brown.edu domain is no longer, then
-  # remove the foreach loop and next statement below.
-  my @domains = qw(cs.brown.edu ilab.cs.brown.edu);
+  # Build forward maps.
+  # Right now, we only have the cs.brown.edu domain, but we used to have
+  # ilab.cs.brown.edu. We're keeping this code around in case we get
+  # another subdomain we need to be its own zone in the future.
+  my @domains = qw(cs.brown.edu);
   foreach my $region (@regions) {
     foreach my $domain (@domains) {
-      next if ($region =~ /external/ && $domain =~/ilab.cs.brown.edu/);
       my $file = $self->build_dns_map_forward($serial_num, $region, $domain);
       push @files, $file;
     }
