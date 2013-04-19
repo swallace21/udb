@@ -19,8 +19,6 @@ $ttl 1d
 
 [% SWITCH zone -%]
 [%   CASE '128.148.32'  %]
-$ttl 600
-12.32.148.128.IN-ADDR.ARPA.         IN  PTR cs.brown.edu.
 
 $ttl 1d
 [% END -%]

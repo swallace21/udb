@@ -37,7 +37,6 @@ $ttl 600
 cs.brown.edu.                       IN          A               128.148.32.12
 cs.brown.edu.                       IN          MX              10 mx.cs.brown.edu.
 cs.brown.edu.                       IN          MX              20 mx2.cs.brown.edu.
-www                                 IN          CNAME           cs.brown.edu.
 
 $ttl 1d
 
@@ -80,7 +79,7 @@ mirror                              IN          MX              10 mx.cs.brown.e
 
 ; remote desktop cluster skor, raisinets, jawbreaker
 rdesktop                            IN          A               10.116.111.52
-rdesktop			    IN          A               10.116.111.4
+rdesktop			                      IN          A               10.116.111.4
 rdesktop                            IN          A               10.116.111.5
 
 ; temporary DNS entries
@@ -93,7 +92,7 @@ rdesktop                            IN          A               10.116.111.5
 redmine.weenix.cs.brown.edu.	    	IN				CNAME 			weenix.cs.brown.edu.
 
 ; for blog.plt
-blog.plt.cs.brown.edu.	    			IN				CNAME 			static.cs.brown.edu.
+blog.plt.cs.brown.edu.	    			  IN				CNAME 			static.cs.brown.edu.
 
 ; faculty search app (resume)
 belay.resume                        IN          CNAME 			spindle.cs.brown.edu.
@@ -101,14 +100,6 @@ station.resume                      IN          CNAME 			spindle.cs.brown.edu.
 
 ; continuation of cs32 project (see [CS #212057])
 cella                               IN          CNAME 			cella.nmws.net.
-
-; cave machines
-cavefs                              IN          A               10.117.4.1
-cs-front                            IN          A               10.117.4.100
-cs-left                             IN          A               10.117.4.101
-cs-right                            IN          A               10.117.4.102
-cs-floor                            IN          A               10.117.4.103
-cs-top                              IN          A               10.117.4.104
 
 ; for cs132-twilio
 *.cs132-twilio.cs.brown.edu.             IN          A               128.148.36.62
