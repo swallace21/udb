@@ -716,6 +716,10 @@ sub build_wpkg_hosts {
 	if (/^testsoft$/) {
           push @wpkg_profiles, "$os_type-testsoft";
         }
+   
+   if (/^coeus$/) {
+          push @wpkg_profiles, "$os_type-coeus";
+        }
 
 	if (/^vs2010u$/) {
           push @wpkg_profiles, "$os_type-vs2010u";
