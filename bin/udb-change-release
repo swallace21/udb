@@ -25,12 +25,15 @@ my $verbose = 0;
 my $dryrun = 0;
 my $os = 'debian64'; # set default os to debian64
 my $release = 'wheezy'; # set debian release to wheezy
+my $pxelink = q{}; # set default pxelnk to null
 
 GetOptions (
   'help|h|?' => \$help, 
   'v|verbose' => \$verbose,
+  'n|dryrun' => \$dryrun,
   'o|os:s' => \$os,
   'r|release:s' => \$release,
+  'p|pxelink:s' => \$pxelink,
   
 ) or usage(1);
 usage(0) if $help;
@@ -50,23 +53,35 @@ if (@ARGV != 1) {
   usage(2);
 }
 
+# get device name from @ARGV
 my $name = shift @ARGV;
 my $device;
 my $comp;
 my @classes;
 my @new_classes = ();
 
-# get device's current classes
+# get $device and $comp ref from udb  
 eval {
   $device = $udb->resultset('Devices')->find($name);
   $comp = $device->computer;
-  @classes = $comp->comp_classes->get_column('name')->all;
-  print "current classes: " . join(' ',@classes) . "\n" if $verbose;
-
-
 };
+if ($@) {
+  die "No record for computer $name.\n";
+}
 
-# change to specified release or wheezy by default
+
+# check if device is a computer
+if (! $device->computer) {
+  print "The device " . $device->device_name . " is not a computer,\n";
+  print "therefore, can't change its os, classes, and pxelink.\n";
+  exit(1);
+}
+
+# get computer current classes
+@classes = $comp->comp_classes->get_column('name')->all;
+print "current classes: " . join(' ', sort @classes) . "\n" if $verbose;
+
+# change class to specified release or wheezy by default
 foreach my $class (@classes) {
   if ( $class =~ /lenny|squeeze|wheezy|centos/) {
     push(@new_classes, $release);
@@ -76,35 +91,44 @@ foreach my $class (@classes) {
   }
 
 }
-print "new classes: ". join(' ',@new_classes) . "\n" if $verbose;
-
-
-if ($@) {
-  die "No record for computer $name.\n";
+print "new classes: ". join(' ', sort @new_classes) . "\n" if $verbose;
+ 
+if ($dryrun) {
+  print "Dry run only...\n";
+  print "Name: " . $device->device_name . "\n" ;
+  print "OS: $os\n" ;
+  print "Class: " . join(', ', sort @new_classes) . "\n";
+  if ( $pxelink) { 
+	print "pxelink: $pxelink\n";
+  }
+  else {
+    print "pxelink: default\n";
+  }  
+  print "Dry run finished...\n";
+  exit;
 }
 
-# my $os = 'debian64' ;
-
-# my $classes = $uc->get_comp_classes;
-my $classes = \@new_classes ;
-# print "$classes\n";
-
+# Update device os and classes
+my $class_ref = \@new_classes; # need array ref for udb update
 my $rs;
 eval {
   $rs = $udb->txn_do(sub {
       $comp->update({
           os_type => $os,
         });
-      $udh->update_classes($comp, $classes);
+      $udh->update_classes($comp, $class_ref);
     });
- };
-
+};
 if ($@) {
   die <<EOF;
 Operation failed. Details:
   $@
 EOF
 }
+
+# update device pxelink
+$comp->pxelink($pxelink);
+$device->update;
 
 __END__
 
@@ -138,11 +162,17 @@ Print lots of text about what is going on.
 
 =item B<-o>, B<--os>
 
-Specify which OS (debian, debian64, centos64) default=debian64 
+Specify which OS (debian, debian64, centos64); default=debian64 
 
 =item B<-r>, B<--release>
 
-Specify which OS release (lenny, squeeze, wheezy, cento6.3) default=wheezy 
+Specify which OS release (lenny, squeeze, wheezy, cento6.3); default=wheezy 
+
+=back
+
+=item B<-p>, B<--pxelink>
+
+Specify the pxelink; default is the OS default.
 
 =back
 
