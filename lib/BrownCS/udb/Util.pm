@@ -8,6 +8,7 @@ use Exporter qw(import);
 use Net::MAC;
 use NetAddr::IP;
 use Time::ParseDate;
+use POSIX ();
 
 our @EXPORT_OK = qw(
   bool2str
@@ -37,24 +38,13 @@ our %EXPORT_TAGS = ("all" => [@EXPORT_OK]);
 # get_date :: ???
 # Return current date using nice format
 sub get_date {
-  my(@elems);
-  my($raw);
-
-  chop($raw = localtime(time));
-  @elems = split(/\s+/, $raw);
-  return $elems[2] . $elems[1] . substr($elems[4], -2);
+  return POSIX::strftime('%Y-%m-%d %H:%M:%S', localtime time);
 }
 
 # fmt_time :: ???
 # Return specified time using nice format
 sub fmt_time {
-  my($time) = @_;
-  my($sec, $min, $hour, $mday, $mon, $year) = localtime($time);
-
-  my(@moname) = ( 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec' );
-
-  return "${mday}${moname[$mon]}${year} ${hour}:${min}:${sec}";
+  return POSIX::strftime('%Y-%m-%d %H:%M:%S', localtime time);
 }
 
 sub bool2str {
