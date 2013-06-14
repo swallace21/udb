@@ -1,15 +1,4 @@
 [%- USE DBI( dbh = dbh ) -%]
-$ttl 1d
-[% IF (matches = zone.match('10\..*')) -%]
-@ IN  SOA dns.cs.brown.edu. root.cs.brown.edu. ( [% serial_num %] 10800 3600 604800 86400 )
-  IN  NS  dns.cs.brown.edu.
-[% ELSE -%]
-@ IN  SOA dns.cs.brown.edu. root.cs.brown.edu. ( [% serial_num %] 10800 3600 604800 86400 )
-  IN  NS  dns.cs.brown.edu.
-  IN  NS  bru-ns1.brown.edu.
-  IN  NS  bru-ns2.brown.edu.
-  IN  NS  ns1.ucsb.edu.
-[% END -%]
 
 ;
 ;  FILE: [% filename %]
@@ -23,16 +12,23 @@ $ttl 1d
 ; USE UDB TO MODIFY OR INSERT RECORDS, OR EDIT THE TEMPLATE.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-[% SWITCH zone -%]
-[%   CASE '128.148.33' %]
+$ttl 30m
 
-$ttl 1d
-
-[%   CASE '128.148.32'  %]
-
-$ttl 1d
-
+@ IN  SOA dns.cs.brown.edu. root.cs.brown.edu. (
+				[% serial_num %]
+				10m 10m ; refresh, retry
+				7d      ; expire
+				5m      ; nonexistent TTL
+				)
+[% IF (matches = zone.match('10\..*')) -%]
+  IN  NS  dns.cs.brown.edu.
+[% ELSE -%]
+  IN  NS  dns.cs.brown.edu.
+  IN  NS  bru-ns1.brown.edu.
+  IN  NS  bru-ns2.brown.edu.
+  IN  NS  ns1.ucsb.edu.
 [% END -%]
+
 
 [% FOREACH entry IN DBI.query("select nde.dns_name||'.'||nde.domain as fqdn, na.ipaddr from net_dns_entries nde, net_addresses na where ( nde.dns_region = 'external' or nde.dns_region = 'all' ) and nde.authoritative and nde.net_address_id = na.net_address_id and na.ipaddr is not null and na.enabled and na.ipaddr << '$cidr' order by na.ipaddr") -%]
 [% entry.ipaddr.to_dns_ptr_record() | format('%-35s') %] IN  PTR [% entry.fqdn %].
