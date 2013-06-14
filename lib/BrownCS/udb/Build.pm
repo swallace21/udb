@@ -846,8 +846,16 @@ sub build_dns {
     return "$formatted_ip.IN-ADDR.ARPA.";
   };
 
-  # TODO increment the SOA line
-  my ($serial_num) = $udb->storage->dbh->selectrow_array("select nextval('dns_serial_num_seq')");
+  # For zone serial numbers, use unix time, which is more informative than
+  # a Postgres sequence (and meets all of DNS's requirements, as long as
+  # we build no more frequently than once a second.) :)
+  #
+  # To convert unix time to a string, run a command like this:
+  #    perl -le 'print scalar localtime 1371170209'
+  #
+  # Before we switched to unix time (2013-06-13) we used the
+  # `dns_serial_num_seq` sequence in udb's postgres database.
+  my $serial_num = time;
 
   my $subnets_rs = $udb->resultset("NetVlans")->search(
     {
