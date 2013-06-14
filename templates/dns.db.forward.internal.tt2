@@ -41,10 +41,13 @@ $ttl 1d
 ; KRB server entries
 _kerberos._udp.CS.BROWN.EDU.        IN          SRV             0 0 88 crunchie.cs.brown.edu.
 _kerberos._udp.CS.BROWN.EDU.        IN          SRV             0 0 88 twirl.cs.brown.edu.
+_kerberos._udp.CS.BROWN.EDU.        IN          SRV             0 0 88 flake.cs.brown.edu.
 _kerberos._tcp.CS.BROWN.EDU.        IN          SRV             0 0 88 crunchie.cs.brown.edu.
 _kerberos._tcp.CS.BROWN.EDU.        IN          SRV             0 0 88 twirl.cs.brown.edu.
+_kerberos._tcp.CS.BROWN.EDU.        IN          SRV             0 0 88 flake.cs.brown.edu.
 _kerberos._tls._tcp.CS.BROWN.EDU.   IN          SRV             0 0 88 crunchie.cs.brown.edu.
 _kerberos._tls._tcp.CS.BROWN.EDU.   IN          SRV             0 0 88 twirl.cs.brown.edu.
+_kerberos._tls._tcp.CS.BROWN.EDU.   IN          SRV             0 0 88 flake.cs.brown.edu.
 _kerberos-master._udp.CS.BROWN.EDU. IN          SRV             0 0 88 kerberos.cs.brown.edu.
 _kerberos-adm._tcp.CS.BROWN.EDU.    IN          SRV             0 0 749 kerberos.cs.brown.edu.
 _kpasswd._udp.CS.BROWN.EDU.         IN          SRV             0 0 464 kerberos.cs.brown.edu.
