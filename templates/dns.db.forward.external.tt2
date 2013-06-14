@@ -29,14 +29,6 @@ localhost                           IN          A               127.0.0.1
 
 [% SWITCH domain -%]
 [%   CASE 'cs.brown.edu' %]
-$ORIGIN win.cs.brown.edu.
-@                                   IN          NS              ns1.win.cs.brown.edu.
-                                    IN          NS              ns2.win.cs.brown.edu.
-                                    IN          NS              ns3.win.cs.brown.edu.
-
-ns1                                 IN          A               128.148.33.125
-ns2                                 IN          A               128.148.31.137
-ns3                                 IN          A               128.148.33.173
 
 $ORIGIN cs.brown.edu.
 
@@ -86,8 +78,7 @@ mx2                                 IN          A               128.148.6.13
 pkgs                                IN          CNAME           debian.cs.brown.edu.
 ;debian                              IN          MX              10 mx.cs.brown.edu.
 
-; windows entries
-windfs                              IN          CNAME           win.cs.brown.edu.
+; temporary DNS entries
 
 ; for cs132
 *.proj132.cs.brown.edu.             IN          A               10.116.111.38
