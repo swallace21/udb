@@ -39,6 +39,7 @@ cs.brown.edu.                       IN          MX              20 mx2.cs.brown.
 $ttl 1d
 
 ; KRB server entries
+kerberos                            IN          A               10.116.111.112
 _kerberos._udp.CS.BROWN.EDU.        IN          SRV             0 0 88 crunchie.cs.brown.edu.
 _kerberos._udp.CS.BROWN.EDU.        IN          SRV             0 0 88 twirl.cs.brown.edu.
 _kerberos._udp.CS.BROWN.EDU.        IN          SRV             0 0 88 flake.cs.brown.edu.
