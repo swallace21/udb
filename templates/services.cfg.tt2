@@ -201,6 +201,15 @@ define service{
 }
 
 define service{
+  name mysql_template
+  use service_template
+  service_description MYSQL
+  check_command check-mysql
+  notification_interval 120
+  register 0
+}
+
+define service{
   name pgproxy_template
   use service_template
   service_description PGPROXY
@@ -511,6 +520,7 @@ define service{
   servicegroups   thermo
   contact_groups  emergency_group
 }
+
 [%  CASE 'pgsql' %]
 define service{
   use             pgsql_template
@@ -524,6 +534,14 @@ define service{
   use             pgproxy_template
   host_name       [% host.hostname %]
   servicegroups   pgsql
+  contact_groups  urgent_group
+}
+
+[%  CASE 'mysql' %]
+define service{
+  use             mysql_template
+  host_name       [% host.hostname %]
+  servicegroups   mysql
   contact_groups  urgent_group
 }
 
