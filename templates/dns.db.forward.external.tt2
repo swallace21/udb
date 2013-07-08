@@ -38,8 +38,13 @@ cs.brown.edu.                       IN          MX              20 mx2.cs.brown.
 
 $ttl 1d
 
+; KRB master entries
+kerberos                            IN          CNAME           flake.cs.brown.edu.
+_kerberos-master._udp.CS.BROWN.EDU. IN          SRV             0 0 88 flake.cs.brown.edu.
+_kerberos-adm._tcp.CS.BROWN.EDU.    IN          SRV             0 0 749 flake.cs.brown.edu.
+_kpasswd._udp.CS.BROWN.EDU.         IN          SRV             0 0 464 flake.cs.brown.edu.
+
 ; KRB server entries
-kerberos                            IN          A               128.148.31.110
 _kerberos._udp.CS.BROWN.EDU.        IN          SRV             0 0 88 crunchie.cs.brown.edu.
 _kerberos._udp.CS.BROWN.EDU.        IN          SRV             0 0 88 twirl.cs.brown.edu.
 _kerberos._udp.CS.BROWN.EDU.        IN          SRV             0 0 88 flake.cs.brown.edu.
@@ -49,9 +54,6 @@ _kerberos._tcp.CS.BROWN.EDU.        IN          SRV             0 0 88 flake.cs.
 _kerberos._tls._tcp.CS.BROWN.EDU.   IN          SRV             0 0 88 crunchie.cs.brown.edu.
 _kerberos._tls._tcp.CS.BROWN.EDU.   IN          SRV             0 0 88 twirl.cs.brown.edu.
 _kerberos._tls._tcp.CS.BROWN.EDU.   IN          SRV             0 0 88 flake.cs.brown.edu.
-_kerberos-master._udp.CS.BROWN.EDU. IN          SRV             0 0 88 kerberos.cs.brown.edu.
-_kerberos-adm._tcp.CS.BROWN.EDU.    IN          SRV             0 0 749 kerberos.cs.brown.edu.
-_kpasswd._udp.CS.BROWN.EDU.         IN          SRV             0 0 464 kerberos.cs.brown.edu.
 
 ; Jabber (XMPP) entries
 _xmpp-client._tcp                   IN          SRV             10 0 5222 im.cs.brown.edu.
