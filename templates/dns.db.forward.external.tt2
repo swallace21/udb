@@ -63,8 +63,6 @@ _jabber-client._tcp                 IN          SRV             10 0 5222 im.cs.
 ; mail entries
 sa                                  IN          A               128.148.38.149
 sa                                  IN          A               128.148.38.150
-sa                                  IN          A               128.148.38.72
-sa                                  IN          A               128.148.38.73
 sa                                  IN          MX              10 sa.cs.brown.edu.
 mail                                IN          CNAME           sa.cs.brown.edu.
 smtp                                IN          CNAME           sa.cs.brown.edu.
