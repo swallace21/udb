@@ -342,7 +342,7 @@ sub get_dns_alias_ip {
 
 sub choose_interface {
   my $self = shift;
-  my ($name) = @_;
+  my ($name, $filter_type) = @_;
   my $iface;
 
   my $device = $self->udb->resultset('Devices')->find($name);
@@ -357,15 +357,29 @@ sub choose_interface {
     my $iface_ix = 1;
     my @choices = ();
     while (my $iface = $ifaces_rs->next) {
-      my $ip = $iface->net_addresses->single->ipaddr;
+      my $ip = "";
+      if ($iface->net_addresses->single) {
+        $ip = " (" . $iface->net_addresses->single->ipaddr . ")";
+      }
+
+      # if user only requested primary interfaces, skip anything which references a master interface id
+      if ($filter_type && $filter_type =~ /primary/ && $iface->master_net_interface_id) {
+        next;
+      }
+
+      my $flag = "";
+      if (! $iface->master_net_interface_id) {
+        $flag = "*";
+      }
+
       push @choices, {
         key => $iface_ix++,
         name => $iface,
-        desc => $iface->ethernet . " (" . $ip . ")",
+        desc => $iface->ethernet . $ip . $flag,
       };
     }
 
-    $iface = $self->choose_from_menu("Select an interface", \@choices);
+    $iface = $self->choose_from_menu("Select an interface ('*' indicates primary interface)", \@choices);
   }
 
   return $iface;
@@ -469,15 +483,20 @@ sub get_port {
   my $self = shift;
   my ($iface) = @_;
   my $port;
-
-  my $room = $iface->device->place->room;
+  my $room;
+  
+  if ($iface) {
+    $room = $iface->device->place->room;
+  } else {
+    $self->get_updated_val("Room number");
+  }
 
   while(!$port) {
 
     my ($switch_name, $blade_num, $port_num, $wall_plate) = "";
 
     # if this is an existing port, then retrieve current port information
-    if ($iface->net_port_id) {
+    if ($iface && $iface->net_port_id) {
       $switch_name = $iface->net_port->switch_name;
       $blade_num = $iface->net_port->blade_num;
       $port_num = $iface->net_port->port_num;
@@ -523,7 +542,9 @@ sub get_port {
       })->single;
     }
 
-    ($port, $iface) = verify_port_iface($self->udb,$port,$iface);
+    if ($iface) {
+      ($port, $iface) = verify_port_iface($self->udb,$port,$iface);
+    }
   }
 
   return ($port, $iface);

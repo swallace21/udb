@@ -122,7 +122,7 @@ sub dns_name_exists {
 sub host_is_trusted {
   my ($host) = @_;
 
-  if (($host->device->manager->management_type eq 'tstaff') || ($host->os_type && $host->os_type->trusted_nfs)) {
+  if (($host->device->manager->management_type eq 'tstaff') && ($host->os_type && $host->os_type->trusted_nfs)) {
     return 1;
   } else {
     return 0;

@@ -64,9 +64,12 @@ eval {
       if ($device) {
         my $iface_rs = $device->net_interfaces;
         foreach (my $iface = $iface_rs->next) {
-          my $addr_rs = $iface->net_addresses;
-          foreach (my $addr = $addr_rs->next) {
-            push @addrs, $addr;
+print "address: " . $iface->net_interface_id . "\n";
+          if ($iface->net_addresses) {
+            my $addr_rs = $iface->net_addresses;
+            foreach (my $addr = $addr_rs->next) {
+              push @addrs, $addr;
+            }
           }
         }
       } elsif (my $dns_entry = $udb->resultset('NetDnsEntries')->search({dns_name => $name,})->single) {
@@ -83,6 +86,7 @@ eval {
         exit;
       }
 
+print "addrs: " . @addrs . "\n";
       if (@addrs == 1 && ! $addrs[0]->ipaddr) {
         print "No static IP addresses associated with device or DNS name: $name\n";
         next;
