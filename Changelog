@@ -1,0 +1,5 @@
+v2.0:
+
+  * Added support for configuring host side of bonded network interfaces.
+    The switch side still needs to be configured by hand, but at least
+    the udb database entries can be entered by udb.
