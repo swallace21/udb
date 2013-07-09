@@ -1,0 +1,188 @@
+#!/usr/bin/perl
+# udb-change-release
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+use Pod::Usage;
+
+use FindBin qw($RealBin);
+use lib "$RealBin/../lib";
+use BrownCS::udb::Schema;
+use BrownCS::udb::Util qw(:all);
+use BrownCS::udb::Console;
+use BrownCS::udb::DeviceHash;
+
+# Print a simple help message.
+sub usage {
+  my ($exit_status) = @_;
+  pod2usage({ -exitval => $exit_status, -verbose => 1});
+}
+
+my $help = 0;
+my $verbose = 0;
+my $dryrun = 0;
+my $os = 'debian64'; # set default os to debian64
+my $release = 'wheezy'; # set debian release to wheezy
+my $pxelink = q{}; # set default pxelnk to null
+
+GetOptions (
+  'help|h|?' => \$help, 
+  'v|verbose' => \$verbose,
+  'n|dryrun' => \$dryrun,
+  'o|os:s' => \$os,
+  'r|release:s' => \$release,
+  'p|pxelink:s' => \$pxelink,
+  
+) or usage(1);
+usage(0) if $help;
+
+my $udb = BrownCS::udb::Schema->connect;
+my $uc = new BrownCS::udb::Console(udb => $udb);
+my $udh = new BrownCS::udb::DeviceHash(udb => $udb);
+
+if (not $dryrun) {
+  if (not BrownCS::udb::Util::okay_tstaff){
+    print "Insufficient privileges - check your warnings.\n";
+    exit;
+  }
+}
+
+if (@ARGV != 1) {
+  usage(2);
+}
+
+# get device name from @ARGV
+my $name = shift @ARGV;
+my $device;
+my $comp;
+my @classes;
+my @new_classes = ();
+
+# get $device and $comp ref from udb  
+eval {
+  $device = $udb->resultset('Devices')->find($name);
+  $comp = $device->computer;
+};
+if ($@) {
+  die "No record for computer $name.\n";
+}
+
+
+# check if device is a computer
+if (! $device->computer) {
+  print "The device " . $device->device_name . " is not a computer,\n";
+  print "therefore, can't change its os, classes, and pxelink.\n";
+  exit(1);
+}
+
+# get computer current classes
+@classes = $comp->comp_classes->get_column('name')->all;
+print "current classes: " . join(' ', sort @classes) . "\n" if $verbose;
+
+# change class to specified release or wheezy by default
+foreach my $class (@classes) {
+  if ( $class =~ /lenny|squeeze|wheezy|centos/) {
+    push(@new_classes, $release);
+  }
+  else {
+    push(@new_classes, $class);
+  }
+
+}
+print "new classes: ". join(' ', sort @new_classes) . "\n" if $verbose;
+ 
+if ($dryrun) {
+  print "Dry run only...\n";
+  print "Name: " . $device->device_name . "\n" ;
+  print "OS: $os\n" ;
+  print "Class: " . join(', ', sort @new_classes) . "\n";
+  if ( $pxelink) { 
+	print "pxelink: $pxelink\n";
+  }
+  else {
+    print "pxelink: default\n";
+  }  
+  print "Dry run finished...\n";
+  exit;
+}
+
+# Update device os and classes
+my $class_ref = \@new_classes; # need array ref for udb update
+my $rs;
+eval {
+  $rs = $udb->txn_do(sub {
+      $comp->update({
+          os_type => $os,
+        });
+      $udh->update_classes($comp, $class_ref);
+    });
+};
+if ($@) {
+  die <<EOF;
+Operation failed. Details:
+  $@
+EOF
+}
+
+# update device pxelink
+$comp->pxelink($pxelink);
+$device->update;
+
+__END__
+
+=head1 NAME
+
+udb-change-release - change the OS release of a device
+
+=head1 SYNOPSIS
+
+udb-change-release [options] <device>
+
+=head1 DESCRIPTION
+
+Perform maintenance on an existing device record in UDB.
+
+=head1 OPTIONS
+
+=over
+
+=item B<-h>, B<--help>
+
+Print a help message and exit.
+
+=item B<-n>, B<--dryrun>
+
+Don't make any changes; just print what would be done.
+
+=item B<-v>, B<--verbose>
+
+Print lots of text about what is going on.
+
+=item B<-o>, B<--os>
+
+Specify which OS (debian, debian64, centos64); default=debian64 
+
+=item B<-r>, B<--release>
+
+Specify which OS release (lenny, squeeze, wheezy, cento6.3); default=wheezy 
+
+=back
+
+=item B<-p>, B<--pxelink>
+
+Specify the pxelink; default is the OS default.
+
+=back
+
+=head1 AUTHORS
+
+Phirum Peang.
+
+=head1 SEE ALSO
+
+B<udb>
+
+=cut
+

@@ -63,14 +63,6 @@ foreach my $hostname (@hostnames) {
     next;
   }
 
-  if ($comp->device->protected) {
-    printf("The device %s is protected!\n", $comp->device_name);
-    print "Do not modify or delete this entry unless you know what you're doing.\n";
-    if (! $uc->confirm("Are you sure (y/n)?")) {
-      next;
-    }
-  }
-
   my $class = $udb->resultset('CompClasses')->find({name => $classname, os_type => $comp->os_type});
   if (not $class) {
     vprint("no record for class $classname on OS " . $comp->os_type);

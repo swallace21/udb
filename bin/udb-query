@@ -141,12 +141,22 @@ switch($type) {
     # this only makes sense to return a list of hosts, i.e. batch mode
     $batch=1; 
   }
+  case "usage" {
+    if (! $string) {
+      print "ERROR: you must enter a usage to search for\n\n";
+      usage(2)
+    }
+    ($success, @results) = search_usage($udb)->($string,$verbose);
+  }
   case "walljack" {
     if (! $string) {
       print "ERROR: you must enter walljack to search for\n\n";
       usage(2)
     }
     ($success, @results) = search_walljack($udb)->($string,$verbose);
+
+    # this only makes sense return the raw output
+    $batch=1; 
   }
   else {
     print "Unknown search type\n";
@@ -187,14 +197,18 @@ if ($success) {
       }
 	  }
   }
+
   # Success: exit 0
   exit 0;
+
 } else {
-    # Failure: print error if an actual user, and exit 1
-    if (!$batch) {
-	print "No matching results found\n";
-    }
-    exit 1;
+
+  # Failure: print error if an actual user, and exit 1
+  if (!$batch) {
+   print "No matching results found\n";
+  }
+
+  exit 1;
 }
 
 __END__

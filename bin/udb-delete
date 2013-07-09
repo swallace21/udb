@@ -48,46 +48,38 @@ my $name = shift @ARGV;
 my $device = $udb->resultset('Devices')->find($name);
 die "No record for device $name.\n" if not $device;
 
-if ($device->protected) {
-  printf("The device %s is protected!\n", $device->device_name);
-  print "Do not modify or delete this entry unless you know what you're doing.\n";
-  if (! $uc->confirm("Are you sure (y/n)?")) {
+my $rs;
+
+if ($dryrun) {
+  print "Dry run finished...\n";
+  exit;
+}
+
+eval {
+  if ($device->brown_inv_num) {
+    print "ERROR: A device with a Brown inventory number must be surplused.\n";
+    print "Please see Kathy\n";
     exit(1);
   }
-} else {
-  my $rs;
 
-  if ($dryrun) {
-    print "Dry run finished...\n";
-    exit;
+  if ($device->serial_num || $device->po_num) {
+    print "ERROR: Equipment with a serial number(s) or a PO number(s) should be surplused\n";
+    print "rather than deleted.\n";
+    exit(1);
   }
 
-  eval {
-    if ($device->brown_inv_num) {
-      print "ERROR: A device with a Brown inventory number must be surplused.\n";
-      print "Please see Kathy\n";
-      exit(1);
-    }
-
-    if ($device->serial_num || $device->po_num) {
-      print "ERROR: Equipment with a serial number(s) or a PO number(s) should be surplused\n";
-      print "rather than deleted.\n";
-      exit(1);
-    }
-
-    $rs = $udb->txn_do(sub {
-        $device->status('deleted');
-        $device->update;
-      });
-  };
-  if ($@) {
-    die <<EOF;
+  $rs = $udb->txn_do(sub {
+      $device->status('deleted');
+      $device->update;
+    });
+};
+if ($@) {
+  die <<EOF;
 Failed to delete $name. Try again.
 
 Details:
   $@
 EOF
-  }
 }
 
 __END__

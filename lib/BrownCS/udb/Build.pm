@@ -10,6 +10,7 @@ use List::MoreUtils qw(uniq);
 use File::Temp qw(tempfile tempdir);
 use File::Basename;
 use File::Copy;
+#use Time::localtime;
 
 has 'udb' => ( is => 'ro', isa => 'BrownCS::udb::Schema', required => 1 );
 has 'verbose' => ( is => 'ro', isa => 'Bool', required => 1 );
@@ -21,14 +22,6 @@ sub BUILD {
   my $self = shift;
   $self->{tt} = Template->new({INCLUDE_PATH => "$RealBin/../templates"}) || die "$Template::ERROR\n";
   $self->{TMPDIR} = File::Temp::tempdir("/tmp/udb-build.XXXX") . "/";
-}
-
-sub renew_sudo {
-  my $self = shift;
-  my $udb = $self->udb;
-  if (not $self->dryrun){
-    system("sudo -v");
-  }
 }
 
 sub build_lock {
@@ -136,6 +129,52 @@ sub maybe_rename {
   }
 }
 
+sub commit_chmod {
+  my $self = shift;
+  my $udb = $self->udb;
+  my $dst = $_[-1];
+  if ($self->verbose) {
+    print "Running chmod $dst\n";
+  }
+  if (not $self->dryrun) {
+    # The following line works. Think about it. 
+    open(my $fh, "/usr/bin/ksu -e /usr/bin/sudo /bin/chmod @_ 2>&1 |") || die "$0: ERROR: Failed to chmod $dst: $!\n" ;
+    while(<$fh>) {
+      if ($self->verbose) {
+        print $_;
+      }
+
+      if (/authorization failed/) {
+        print "$0 ERROR: sudo failed to chmod $dst\n";
+        exit 1;
+      }
+    }
+  }
+}
+
+sub commit_chown {
+  my $self = shift;
+  my $udb = $self->udb;
+  my $dst = $_[-1];
+  if ($self->verbose) {
+    print "Running chown $dst\n";
+  }
+  if (not $self->dryrun) {
+    # The following line works. Think about it. 
+    open(my $fh, "/usr/bin/ksu -e /usr/bin/sudo /bin/chown @_ 2>&1 |") || die "$0: ERROR: Failed to chown $dst: $!\n" ;
+    while(<$fh>) {
+      if ($self->verbose) {
+        print $_;
+      }
+
+      if (/authorization failed/) {
+        print "$0 ERROR: sudo failed to chown $dst\n";
+        exit 1;
+      }
+    }
+  }
+}
+
 sub commit_local {
   my $self = shift;
   my $udb = $self->udb;
@@ -145,8 +184,64 @@ sub commit_local {
   }
   if (not $self->dryrun) {
     # The following line works. Think about it. 
-    if (!system("sudo cp @_") == 0){
-      die "$0: ERROR: Failed committing $dst: $!\n" ;
+    open(my $fh, "/usr/bin/ksu -e /usr/bin/sudo /bin/cp @_ 2>&1 |") || die "$0: ERROR: Failed copying $dst: $!\n";
+    while(<$fh>) {
+      if ($self->verbose) {
+        print $_;
+      }
+
+      if (/authorization failed/) {
+        print "$0 ERROR: sudo failed to copy to $dst\n";
+        exit 1;
+      }
+    }
+  }
+}
+
+sub commit_ln {
+  my $self = shift;
+  my $udb = $self->udb;
+  my $dst = $_[-1];
+  if ($self->verbose) {
+    print "Linking $dst\n";
+  }
+  if (not $self->dryrun) {
+    # The following line works. Think about it. 
+    open(my $fh, "/usr/bin/ksu -e /usr/bin/sudo /bin/ln -s @_ 2>&1 |") || die "$0: ERROR: Failed to ln $dst: $!\n" ;
+    while(<$fh>) {
+      if ($self->verbose) {
+        print $_;
+      }
+
+      if (/authorization failed/) {
+        print "$0 ERROR: sudo failed to ln $dst\n";
+        exit 1;
+      }
+    }
+  }
+}
+
+sub commit_rm {
+  my $self = shift;
+  my $udb = $self->udb;
+  my $dst = $_[-1];
+
+  if ($self->verbose) {
+    print "Removing $dst\n";
+  }
+
+  if (not $self->dryrun) {
+    # The following line works. Think about it. 
+    open(my $fh, "/usr/bin/ksu -e /usr/bin/sudo /bin/rm -f @_ 2>&1 |") || die "$0: ERROR: Failed to rm $dst: $!\n" ;
+    while(<$fh>) {
+      if ($self->verbose) {
+        print $_;
+      }
+
+      if (/authorization failed/) {
+        print "$0 ERROR: sudo failed to rm $dst\n";
+        exit 1;
+      }
     }
   }
 }
@@ -155,13 +250,47 @@ sub commit_scp {
   my $self = shift;
   my $udb = $self->udb;
   my $dst = $_[-1];
+
   if ($self->verbose) {
     print "Committing $dst via scp\n";
   }
+
   if (not $self->dryrun) {
     # The following line works. Think about it. 
-    if (!system("sudo scp -pq @_") == 0){
-      die "$0: ERROR: Failed committing $dst: $!\n" ;
+    open(my $fh, "/usr/bin/ksu -e /usr/bin/sudo /usr/bin/scp -pq @_ 2>&1 |") || die "$0: ERROR: Failed to scp files to $dst: $!\n";
+    while(<$fh>) {
+      if ($self->verbose) {
+        print $_;
+      }
+
+      if (/authorization failed/) {
+        print "$0 ERROR: sudo failed to scp files to $dst\n";
+        exit 1;
+      }
+    }
+  }
+}
+
+sub commit_ssh {
+  my $self = shift;
+  my $udb = $self->udb;
+  my $dst = $_[-1];
+
+  if ($self->verbose) {
+    print "Committing $dst via ssh\n";
+  }
+  if (not $self->dryrun) {
+    # The following line works. Think about it. 
+    open(my $fh, "/usr/bin/ksu -e /usr/bin/sudo /usr/bin/ssh -x @_ 2>&1 |") || die "$0: ERROR: Failed to ssh to $dst: $!\n";
+    while(<$fh>) {
+      if ($self->verbose) {
+        print $_;
+      }
+
+      if (/authorization failed/) {
+        print "$0 ERROR: sudo failed to ssh to $dst\n";
+        exit 1;
+      }
     }
   }
 }
@@ -169,24 +298,35 @@ sub commit_scp {
 sub build_tftpboot {
   my $self = shift;
   my $udb = $self->udb;
+  my ($host) = @_;
 
-  renew_sudo($self);
-
-  print "Building tftpboot... ";
+  if ($host) {
+    print "\n  Building tftpboot on $host... ";
+  } else {
+    print "Building tftpboot... ";
+  }
 
   my $tftpboot_path = "/sysvol/tftpboot/pxelinux.cfg";
 
-  my $addrs = $udb->resultset('NetAddresses')->search({},
-    {
-      prefetch => {
-        'primary_interface' => {
-          'device' => {
-            'computer' => 'os_type'
+  my $addrs;
+  if ($host) {
+    $addrs = $udb->resultset('NetAddresses')->search(
+      { 'dns_name' => $host },
+      { join => 'net_dns_entries' }
+    );
+  } else {
+    $addrs = $udb->resultset('NetAddresses')->search({},
+      {
+        prefetch => {
+          'primary_interface' => {
+            'device' => {
+              'computer' => 'os_type'
+            }
           }
-        }
-      },
-      order_by => [qw(ipaddr)],
-    });
+        },
+        order_by => [qw(ipaddr)],
+      });
+  }
 
   my $host_classes = get_host_class_map($udb);
 
@@ -216,8 +356,12 @@ sub build_tftpboot {
       $bootimage = "fai-windows";
     } elsif ($os->os_type eq 'windows764') {
       $bootimage = "fai-windows";
+    } elsif ($os->os_type eq 'server2008') {
+      $bootimage = "fai-windows";
+    } elsif ($os->os_type eq 'server200864') {
+      $bootimage = "fai-windows";
     }
-
+    
     next if not defined($bootimage);
 
     if (grep /^server$/, @{$host_classes->{$comp->device_name}}) {
@@ -234,12 +378,12 @@ sub build_tftpboot {
     my $hex_ip = ipv4_n2x($addr->ipaddr);
 
     if ($self->verbose) {
-      printf "link %s (%s) -> %s\n", $comp->device_name, $hex_ip, $bootimage;
+      printf "\nlink %s (%s) -> %s\n", $comp->device_name, $hex_ip, $bootimage;
     }
     if (not $self->dryrun) {
       if (-e "$tftpboot_path/$bootimage") {
-        $self->maybe_system("sudo rm -f $tftpboot_path/$hex_ip");
-        $self->maybe_system("sudo ln -s $bootimage $tftpboot_path/$hex_ip");
+        $self->commit_rm("$tftpboot_path/$hex_ip");
+        $self->commit_ln("$bootimage $tftpboot_path/$hex_ip");
       } else {
         print "\n  WARNING: bootimage $bootimage doesn't existing, not touching link for " . $comp->device_name;
       }
@@ -311,8 +455,12 @@ sub build_netgroup {
     my $os = $host->os_type;
     next if not defined $os;
 
-    if (host_is_trusted($host)) {
+    if (trusted_nfs($host)) {
       $self->add_to_group($netgroups, "trusted", $fqdn);
+    }
+
+    if (nfs_host_install($host)) {
+      $self->add_to_group($netgroups, "install", $fqdn);
     }
 
     my $classes_ref = $host_classes->{$hostname};
@@ -329,7 +477,7 @@ sub build_netgroup {
         $self->add_to_group($netgroups, "graphics", $fqdn);
       } elsif (/^fun$/) {
         $self->add_to_group($netgroups, "ugrad", $fqdn);
-      } elsif (/^ssh\.forward$/) {
+      } elsif (/^'-e', ssh\.forward$/) {
         $self->add_to_group($netgroups, "sunlab", $fqdn);
       } elsif (/^tstaff-netgroup$/) {
         $self->add_to_group($netgroups, "tstaff", $fqdn);
@@ -357,8 +505,6 @@ sub build_dhcp {
   my $self = shift;
   my $udb = $self->udb;
 
-  renew_sudo($self);
-
   print "Building dhcp... ";
 
   my $file = '/sysvol/dhcp/dhcpd.conf';
@@ -378,7 +524,7 @@ sub build_dhcp {
     @dhcp_servers = (@dhcp_servers, $class->computers->get_column("me.device_name")->all);
   }
   foreach my $host (@dhcp_servers) {
-    $self->commit_scp($file, "$host:/etc/dhcp3");
+    $self->commit_scp($file, "$host.cs.brown.edu:/etc/dhcp");
     if ($? != 0) {
       warn "$0: ERROR: Failed to copy DHCP files to $host\n";
     }
@@ -386,7 +532,7 @@ sub build_dhcp {
 
   # end of old server cruft
 
-  $self->maybe_system('sudo', 'ssh', '-x', 'dhcp.cs.brown.edu', '/etc/init.d/dhcp3-server restart', '> /dev/null');
+  $self->commit_ssh('dhcp.cs.brown.edu','/etc/init.d/isc-dhcp-server restart');
   if ( (not $self->dryrun) && $? != 0 ) {
     warn "$0: ERROR: Failed to restart dhcp server\n";
   }
@@ -398,11 +544,12 @@ sub build_dhcp {
 sub build_nagios {
   my $self = shift;
   my $udb = $self->udb;
-  renew_sudo($self);
+
   print "Building nagios files... ";
   $self->build_nagios_hosts;
+  $self->build_nagios_hostgroups;
   $self->build_nagios_services;
-  $self->maybe_system('sudo', 'ssh', '-x', 'storm', '/etc/init.d/nagios3 restart', '> /dev/null');
+  $self->commit_ssh('storm.cs.brown.edu','/etc/init.d/nagios3 restart');
   if ( (not $self->dryrun) && $? != 0 ) {
     warn "$0: ERROR: Failed to restart nagios server\n";
   }
@@ -413,14 +560,31 @@ sub build_nagios_hosts {
   my $self = shift;
   my $udb = $self->udb;
 
-  my $file = '/maytag/sys0/Linux/files/add/group.debian.server.nagios3/etc/nagios3/conf.d/hosts.cfg';
+  my $file = '/sysvol/nagios/hosts.cfg';
   my $PATH_TMPFILE = $self->TMPDIR . basename($file);
   my $vars = {filename => $file, date => get_date(), dbh => $udb->storage->dbh};
   $self->tt->process('hosts.cfg.tt2', $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
 
   # send new config file to each server
   $self->commit_local($PATH_TMPFILE, $file);
-  $self->commit_scp($file, "storm:/etc/nagios3/conf.d/");
+  $self->commit_scp($file, "storm.cs.brown.edu:/etc/nagios3/conf.d/");
+  if ( (not $self->dryrun) && $? != 0 ) {
+    warn "$0: ERROR: Failed to copy nagios files to storm\n";
+  }
+}
+
+sub build_nagios_hostgroups {
+  my $self = shift;
+  my $udb = $self->udb;
+
+  my $file = '/sysvol/nagios/hostgroups.cfg';
+  my $PATH_TMPFILE = $self->TMPDIR . basename($file);
+  my $vars = {filename => $file, date => get_date(), dbh => $udb->storage->dbh};
+  $self->tt->process('hostgroups.cfg.tt2', $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
+
+  # send new config file to each server
+  $self->commit_local($PATH_TMPFILE, $file);
+  $self->commit_scp($file, "storm.cs.brown.edu:/etc/nagios3/conf.d/");
   if ( (not $self->dryrun) && $? != 0 ) {
     warn "$0: ERROR: Failed to copy nagios files to storm\n";
   }
@@ -430,14 +594,14 @@ sub build_nagios_services {
   my $self = shift;
   my $udb = $self->udb;
 
-  my $file = '/maytag/sys0/Linux/files/add/group.debian.server.nagios3/etc/nagios3/conf.d/services.cfg';
+  my $file = '/sysvol/nagios/services.cfg';
   my $PATH_TMPFILE = $self->TMPDIR . basename($file);
   my $vars = {filename => $PATH_TMPFILE, date => get_date(), dbh => $udb->storage->dbh};
   $self->tt->process('services.cfg.tt2', $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
 
   # send new config file to each server
   $self->commit_local($PATH_TMPFILE, $file);
-  $self->commit_scp($file, "storm:/etc/nagios3/conf.d/");
+  $self->commit_scp($file, "storm.cs.brown.edu:/etc/nagios3/conf.d/");
   if ( (not $self->dryrun) && $? != 0 ) {
     warn "$0: ERROR: Failed to copy nagios files to storm\n";
   }
@@ -447,11 +611,9 @@ sub build_wpkg_hosts {
   my $self = shift;
   my $udb = $self->udb;
 
-  renew_sudo($self);
-
   print "Building wpkg hosts file... ";
 
-  my $file = '/sysvol/src/windows/system/WPKG/hosts/cdb.xml';
+  my $file = '/sysvol/wpkg/hosts/cdb.xml';
   my $PATH_TMPFILE = $self->TMPDIR . basename($file);
 
   my $vars = {
@@ -521,6 +683,10 @@ sub build_wpkg_hosts {
           push @wpkg_profiles, "server";
         }
 
+        if (/^termserver$/) {
+          push @wpkg_profiles, "termserver";
+        }
+
         if (/^remote$/) {
           push @wpkg_profiles, "$os_type-desktop";
           push @wpkg_profiles, "$os_type-remote";
@@ -548,6 +714,28 @@ sub build_wpkg_hosts {
           push @wpkg_profiles, "$os_type-office2010";
         }
 
+	if (/^testsoft$/) {
+          push @wpkg_profiles, "$os_type-testsoft";
+        }
+   
+   if (/^coeus$/) {
+          push @wpkg_profiles, "$os_type-coeus";
+        }
+
+	if (/^vs2010u$/) {
+          push @wpkg_profiles, "$os_type-vs2010u";
+        }
+        
+        if (/^localProfile$/) {
+          push @wpkg_profiles, "$os_type-localProfile";
+        }
+
+	if (/^mslab$/) {
+          push @wpkg_profiles, "mslab";
+        }
+
+
+
         # licensed software
   
         if (/^adobe-ae-pp$/) {
@@ -561,6 +749,11 @@ sub build_wpkg_hosts {
         if (/^powerdvd$/) {
           push @wpkg_profiles, "$os_type-powerdvd";
         }
+	
+	if (/^filemaker$/) {
+          push @wpkg_profiles, "$os_type-filemaker";
+        }
+
       }
     }
 
@@ -643,8 +836,6 @@ sub build_dns {
   my $self = shift;
   my $udb = $self->udb;
 
-  renew_sudo($self);
-
   print "Building dns... ";
 
   $Template::Stash::SCALAR_OPS->{fix_width} = \&fix_width;
@@ -655,8 +846,16 @@ sub build_dns {
     return "$formatted_ip.IN-ADDR.ARPA.";
   };
 
-  # TODO increment the SOA line
-  my ($serial_num) = $udb->storage->dbh->selectrow_array("select nextval('dns_serial_num_seq')");
+  # For zone serial numbers, use unix time, which is more informative than
+  # a Postgres sequence (and meets all of DNS's requirements, as long as
+  # we build no more frequently than once a second.) :)
+  #
+  # To convert unix time to a string, run a command like this:
+  #    perl -le 'print scalar localtime 1371170209'
+  #
+  # Before we switched to unix time (2013-06-13) we used the
+  # `dns_serial_num_seq` sequence in udb's postgres database.
+  my $serial_num = time;
 
   my $subnets_rs = $udb->resultset("NetVlans")->search(
     {
@@ -692,12 +891,13 @@ sub build_dns {
     }
   }
 
-  # Build forward maps.  Once the ilab.cs.brown.edu domain is no longer, then
-  # remove the foreach loop and next statement below.
-  my @domains = qw(cs.brown.edu ilab.cs.brown.edu);
+  # Build forward maps.
+  # Right now, we only have the cs.brown.edu domain, but we used to have
+  # ilab.cs.brown.edu. We're keeping this code around in case we get
+  # another subdomain we need to be its own zone in the future.
+  my @domains = qw(cs.brown.edu);
   foreach my $region (@regions) {
     foreach my $domain (@domains) {
-      next if ($region =~ /external/ && $domain =~/ilab.cs.brown.edu/);
       my $file = $self->build_dns_map_forward($serial_num, $region, $domain);
       push @files, $file;
     }
@@ -712,8 +912,8 @@ sub build_dns {
     if ((not $self->dryrun)) {
       # fix permissions the file
       my $group = (getgrnam('sys'))[2];
-      $self->maybe_system("sudo chown 0:$group $file");
-      $self->maybe_system("sudo chmod 0444 $file");
+      $self->commit_chown("0:$group $file");
+      $self->commit_chmod("0444 $file");
     }
   }
 
@@ -727,12 +927,12 @@ sub build_dns {
     foreach my $host (@{$dns_servers{$region}}) {
       my @tosend = grep(/$region/,@files);
       #Be careful, note @tosend != $tosend
-      $self->commit_scp(@tosend, "$host:/var/cache/bind");
+      $self->commit_scp(@tosend, "$host.cs.brown.edu:/var/cache/bind");
       if ( (not $self->dryrun) && $? != 0 ) {
         warn "$0: ERROR: Failed to copy DNS files to $host\n";
       }
   
-      $self->maybe_system('sudo', 'ssh', '-x', $host, '/usr/sbin/rndc reload', '> /dev/null');
+      $self->commit_ssh("$host.cs.brown.edu",'/usr/sbin/rndc reload');
       if ( (not $self->dryrun) && $? != 0 ) {
         warn "$0: ERROR: Failed to send DNS reload command on $host\n";
       }
@@ -746,8 +946,6 @@ sub build_dns {
 sub build_finger_data {
   my $self = shift;
   my $udb = $self->udb;
-
-  renew_sudo($self);
 
   print "Building finger data... ";
   #DANGER Looks like no other file called "data" is created...
@@ -857,6 +1055,7 @@ sub staged_modifications {
   while (my $device = $devices_rs->next) {
     my $name = $device->device_name;
     log("staging modifications of device $name");
+
     if ($device->computer && host_is_trusted($device->computer)) {
       $self->add_build_ref($buildref, 'devices');
       log("  adding/checking kerberos host credentials");
@@ -889,6 +1088,7 @@ sub staged_modifications {
     -or => [
       name => { '~*' => 'samba'},
       name => { '~*' => 'gpfs.server.fs'},
+      name => { '~*' => 'gpfs.server.cifs'},
     ],
   });
 
@@ -896,12 +1096,15 @@ sub staged_modifications {
     my $name = $computer->device_name;
     log("staging modifications of computer $name");
 
+    # manage any LDAP host changes
     my $samba_server = 0;
-# temporary hack to ensure GPFS servers aren't removed from ldap, while I try to figure out what's causing them to be removed
-if ($name =~ /dove/ || $name =~ /ghirardelli/ || $name =~ /mnm/ || $name =~ /snowcaps/ || $name =~ /dewey/ || $name =~ /louie/) {
-  $samba_server = 1;
-}
-# this search is busted
+
+    # temporary hack to ensure GPFS servers aren't removed from ldap, while I try to figure out what's causing them to be removed
+    if ($name =~ /dewey/ || $name =~ /louie/ || $name =~ /peeps/ || $name =~ /andes/ || $name =~ /runts/ || $name =~ /nerds/ || $name =~ /stride/ || $name =~ /orbit/) {
+      $samba_server = 1;
+    }
+
+    # this search is busted, but is really what we want instead of fixed list above
     while (my $samba_class = $samba_class_rs->next) {
       if ($samba_class->computers()->find($computer->device_name)) {
         $samba_server = 1;
@@ -925,6 +1128,9 @@ if ($name =~ /dove/ || $name =~ /ghirardelli/ || $name =~ /mnm/ || $name =~ /sno
         $self->del_build_ref($buildref, 'computers');
       }
     }
+
+    # build any required PXE links
+    build_tftpboot($self, $name);
   }
 
   print "done.\n";

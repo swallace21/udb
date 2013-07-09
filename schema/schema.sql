@@ -261,7 +261,6 @@ create table devices (
   manager                   text not null references management_types
                               on update cascade
                               on delete restrict,
-  protected                 boolean not null default false,
   last_updated              timestamp not null default now(),
   purchased_on              date default now(),
   installed_on              date default now(),

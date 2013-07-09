@@ -23,6 +23,7 @@ our @EXPORT_OK = qw(
   search_serial
   search_ssh_known_hosts
   search_spare
+  search_usage
   search_walljack
 );
 
@@ -52,12 +53,17 @@ sub fuzzy_search {
     case 'Devices' { 
       while (my $device = $rs->next) { 
         my $device_name = $device->device_name;
-        if (! grep(/$device_name/,@results)) {
-          my $additional_info = "";
-          if ($device->device_name ne $device->$key) {
-            $additional_info = " (" . $device->$key . ")";
-          }
-          push @results, $device->device_name . $additional_info;
+        if (! grep(/^$device_name$/,@results)) {
+          push @results, $device->device_name;
+        }
+      }
+    }
+
+    case 'SurplusDevices' {
+      while (my $device = $rs->next) {
+        my $device_name = $device->device_name;
+        if (! grep(/^$device_name$/,@results)) {
+          push @results, $device->device_name;
         }
       }
     }
@@ -65,7 +71,7 @@ sub fuzzy_search {
     case 'Computers' {
       while (my $comp = $rs->next) {
         my $name = $comp->device_name;
-        if (! grep(/$name/, @results)) {
+        if (! grep(/^$name$/, @results)) {
           my $additional_info = "";
           if ($comp->os_type) {
             $additional_info = " (" . $comp->os_type->os_type . ")";
@@ -80,12 +86,12 @@ sub fuzzy_search {
         my $device_name;
         if ($net_dns_entry->net_address->net_interfaces->single) {
           $device_name = $net_dns_entry->net_address->net_interfaces->single->device->device_name;
-          if (! grep(/$device_name/, @results)) {
+          if (! grep(/^$device_name$/, @results)) {
             push @results, $net_dns_entry->net_address->net_interfaces->single->device->device_name;
           }
         } else {
           $device_name = $net_dns_entry->dns_name;
-          if (! grep(/$device_name/, @results)) {
+          if (! grep(/^$device_name$/, @results)) {
             push @results, $net_dns_entry->dns_name;
           }
         }
@@ -368,6 +374,21 @@ sub search_ssh_known_hosts {
   };
 }
 
+sub search_usage {
+  my $udb = shift;
+  return sub {
+    my ($usage, $verbose) = @_;
+
+    my @results = fuzzy_search($udb, 'Devices', 'usage', $usage, $verbose);
+
+    if (@results) {
+      return (1, @results);
+    } else {
+      return (0, undef);
+    }
+  };
+}
+
 sub search_walljack {
   my $udb = shift;
 
@@ -394,18 +415,26 @@ sub search_walljack {
       my @results;
 
       while (my $net_port = $net_ports_rs->next) {
+        push @results, "Walljack " . $net_port->wall_plate . " is connected to\n";
+        push @results, "  Switch: " . $net_port->switch_name;
+        push @results, "  Blade: " . $net_port->blade_num;
+        push @results, "  Port: " . $net_port->port_num . "\n";
+        push @results, "The following hosts are attached to this port:\n";
+
         my $port_name = $net_port->wall_plate;
         foreach my $iface ($net_port->net_interfaces) {
           my $device_name = $iface->device_name;
           if (! grep(/$device_name/, @results)) {
-            push @results, $iface->device_name . " ($port_name)";
+            push @results, "  " . $iface->device_name;
           }
         }
       }
+
       if (@results) {
         return (1, @results);
       }
-    } 
+    }
+
     return (0, undef);
   }
 }

@@ -5,6 +5,7 @@ use warnings;
 
 use Getopt::Long;
 use Pod::Usage;
+use Switch;
 
 use FindBin qw($RealBin);
 use lib "$RealBin/../lib";
@@ -18,9 +19,11 @@ sub usage {
 }
 
 my $help = 0;
+my $verbose = 0;
 
 GetOptions (
   'help|h|?' => \$help, 
+  'verbose|v' => \$verbose,
 ) or usage(1);
 usage(0) if $help;
 
@@ -33,22 +36,54 @@ if (@ARGV < 1) {
 
 my $run = 0;
 my @comps;
+my @comps2;
+my $table;
+my $field;
+my $value;
+
 foreach my $arg (@ARGV) {
+
   # This describes all valid search terms
   if ($arg =~ /^([a-zA-Z0-9_]*\.)?([^=]+)=(.*)$/) {
-    my $table;
-    if ($1) {$table = substr($1, 0, -1);} #kill the dot
-    if (!$table) {$table = "devices"}
-    my $field = $2;
-    my $value = $3;
+  print "ARGV : $arg\n" if $verbose;
+    if ( $1 ) {     
+      $table = substr($1, 0, -1); #kill the dot
+      print "Found $table in ARGV.\n" if $verbose;
+      if ($table eq "") { # check for empty table after removing the dot
+        print "Empty table, setting table to Devices.\n" if $verbose;
+        $table ="Devices";
+      }
+    }
+    elsif (!$table) { # set default table to devices no match for $table.
+      $table = "Devices";
+      print "No table in ARGV, setting table to Devices.\n" if $verbose;
+    }
+
+    # set field and value from matching back reference
+    $field = $2;
+    $value = $3;
 
     #DEBUG
-    #print "$table;$field;$value\n";
+    print $table . '::'. $field. '=' . $value . "\n" if $verbose;
 
     my $device_rs = $udb->resultset($table)->search({ $field => $value}, undef);
     die "No results.\n" if not $device_rs->count;
-
-    my @comps2 = $device_rs->get_column("me.device_name")->all;
+    
+    if ($table =~ /CompClassesComputers/) {
+      if ($field =~ /comp_class_id/ ) {
+        @comps2 = $device_rs->get_column("me.device_name")->all;
+      }
+      else {
+        @comps2 = $device_rs->get_column("me.comp_class_id")->all;
+      }
+    }
+    elsif ($table =~ /CompClasses/) {
+      @comps2 = $device_rs->get_column("me.comp_class_id")->all;
+      
+    } 
+    else {
+      @comps2 = $device_rs->get_column("me.device_name")->all;
+    }
 
     #store current results 
     if ($run) {
@@ -56,29 +91,93 @@ foreach my $arg (@ARGV) {
       my %union;
       my %isect;
       
-      foreach my $thing (@comps) { $union{$thing} = 1}
+      foreach my $thing (@comps) { 
+        $union{$thing} = 1
+      }
+  
       foreach my $thing (@comps2) { 
-        if ($union{$thing}) {$isect{$thing} = 1}
+        if ($union{$thing}) {
+          $isect{$thing} = 1
+        }
       }
       @comps = keys %isect;
-    } else { @comps = @comps2;} #first time
+    } 
+    else { 
+        @comps = @comps2; # first time or 1st run
+    } 
     $run = 1;
-  } else {
+  } 
+  else {
     die "Invalid search term $arg.\n";
   }
-}
+} # end foreach
 
-print join("\n", sort(@comps)) . "\n";
+switch($table) {
 
+  case 'CompClasses' {
+    print $table . '->' . $field . '  = ' . $value . "\n" if $verbose;
+    print "comp_class_id:\n" if $verbose ; 
+    print join("\n", sort(@comps)) . "\n";
+
+  }
+
+  case 'CompClassesComputers' {
+    print $table . '->' . $field . '  = ' . $value . "\n" if $verbose;
+    if ( $field =~ /device_name/) {
+      print "comp_class_id for $field $value:\n" if $verbose ;
+    }
+    else {
+      print "device_name for $field $value:\n" if $verbose ;
+    }
+    print join("\n", sort(@comps)) . "\n";
+
+  }  
+
+  else {
+    print "Found $field = $value\n" if $verbose ;
+    print join("\n", sort(@comps)) . "\n";
+  }
+
+} # end switch
 __END__
 
 =head1 NAME
 
-udb-query - Query for hosts in udb
+udb-sqlquery - Query for hosts in udb
 
 =head1 SYNOPSIS
 
-udb-query [<field>=<value> ...]
+udb-sqlquery [<object>.<field>=<value> ...]
+
+=over
+
+=item <object> is set to Devices by default or in the command line arguments.
+<object> refers to a table in the UDB database. For example, Devices is
+link to the UDB database table devices.  Look at the BrownCS::udb::Schema for mapping
+between objects and UDB database tables. 
+
+=back
+
+=over
+
+=item <field> is the object property and refers to the column of the table in
+the database.
+
+=back
+=over
+
+=item <value> is what you're looking for.
+
+=back
+
+=for example start
+
+ Example: Search for a device_name=youk:
+          udb-sqlquery Devices.device_name=youk
+          udb-sqlquery device_name=youk
+
+
+=for example end
 
 =head1 DESCRIPTION
 
@@ -94,11 +193,15 @@ Field may optionally have a table before it. The name of the table should be Cam
 
 Print a help message and exit.
 
+=item B<-v>, B<--verbose>
+
+Print debug messages with query.
+
 =back
 
 =head1 AUTHORS
 
-Aleks Bromfield, Paul McCann.
+Aleks Bromfield, Paul McCann, Phirum Peang.
 
 =head1 SEE ALSO
 

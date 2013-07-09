@@ -15,6 +15,8 @@ our @EXPORT_OK = qw(
   dynamic_vlan
   dns_insert
   dns_update
+  iface_port
+  wall_plate_port
   monitored_vlan
   verify_dns_alias
   verify_dns_region
@@ -40,9 +42,6 @@ sub add_network_interface {
   my $iface_rs = $$device->net_interfaces;
  
   my $mac_addr = $uc->get_mac(); 
-
-  # every device should have at least one interface at this point
-#  $iface_rs = $$device->net_interfaces;
 
   if ($iface_rs->count == 0 || $uc->confirm("Do you want to associate a new IP address with this interface $mac_addr (Y/n)?", "yes")) {
 
@@ -81,9 +80,6 @@ sub add_network_interface {
         primary_address => $addr,
       });
     }
-
-print "here\n";
-exit;
 
     if ($ipaddr) {
       dns_insert($udb, $$device->device_name, 'cs.brown.edu', $addr, 1);
@@ -213,6 +209,44 @@ sub dns_update{
   my $udb = shift;
   my ($old_addr, $new_addr) = @_;
 }  
+
+sub iface_port {
+  my $self = shift;
+  my ($iface) = @_;
+  my $port;
+
+  my ($switch_name, $blade_num, $port_num) = "";
+
+  # if this is an existing interface, then try and retrieve current port information
+  if ($iface && $iface->net_port_id) {
+    $switch_name = $iface->net_port->switch_name;
+    $blade_num = $iface->net_port->blade_num;
+    $port_num = $iface->net_port->port_num;
+
+    $port = $self->udb->resultset('NetPorts')->search({
+      switch_name => $switch_name,
+      blade_num => $blade_num,
+      port_num => $port_num,
+     })->single;
+  }
+
+  return $port;
+}
+
+sub wall_plate_port {
+  my $self = shift;
+  my ($wall_plate) = @_;
+  my $port;
+
+  $wall_plate = uc($wall_plate);
+  if ($wall_plate !~ /MR/) {
+    $port = $self->udb->resultset('NetPorts')->search({
+      wall_plate => $wall_plate,
+      })->single;
+  }
+
+  return $port;
+}
 
 sub monitored_vlan {
   my $udb = shift;
@@ -424,10 +458,11 @@ sub verify_ip_or_vlan {
       print "ERROR: IP address or VLAN must be specified.  If you are unsure of\n"; 
       print "the VLAN to select, these descriptions might help:\n\n";
       my $net_vlans_rs = $udb->resultset('NetVlans');
-      print "VLAN\tDescription\n";
-      print "----------------------------\n";
+      print "VLAN\t\tNetwork\t\tDescription\n";
+      print "------------------------------------------------\n";
       while (my $vlan = $net_vlans_rs->next) {
-        print $vlan->vlan_num . "\t" . $net_zones{$vlan->zone_name} . "\n";
+        my $network = sprintf("%18s", $vlan->network);
+        print $vlan->vlan_num . "\t" . $network . "\t" . $net_zones{$vlan->zone_name} . "\n";
       }
       print "\n";
       return (0, undef);
@@ -641,14 +676,12 @@ sub verify_port_iface {
 sub verify_wall_plate {
   my $udb = shift;
   return sub {
-    my ($wall_plate_str) = @_;
-    $wall_plate_str = uc($wall_plate_str);
-    my $port = $udb->resultset('NetPorts')->search({
-        wall_plate => $wall_plate_str,
-      })->single;
+    my ($wall_plate) = @_;
+    $wall_plate = uc($wall_plate);
 
-    if($port) {
-      my $wall_plate = $port->wall_plate;
+    if ($wall_plate =~ /^MR$/ ) {
+      return (1, $wall_plate);
+    } elsif ($wall_plate =~ /^\d\d\d\w?(-\d+)?-(D\d+|\d\w)$/ ) {
       return (1, $wall_plate);
     }
 

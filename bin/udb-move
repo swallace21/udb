@@ -34,7 +34,7 @@ my $udb = BrownCS::udb::Schema->connect;
 my $uc = new BrownCS::udb::Console(udb => $udb);
 
 if (not $dryrun) {
-  if (not BrownCS::udb::Util::okay_tstaff) {
+  if (!BrownCS::udb::Util::okay_tstaff || !BrownCS::udb::Util::okay_adminhost) {
     print "Insufficient privileges - check your warnings.\n";
     exit;
   }
@@ -49,14 +49,6 @@ my $name = shift @ARGV;
 my $device = $udb->resultset('Devices')->find($name);
 die "No record for device $name.\n" if not $device;
 
-if ($device->protected) {
-  printf("The device %s is protected!\n", $device->device_name);
-  print "Do not modify or delete this entry unless you know what you're doing.\n";
-  if (! $uc->confirm("Are you sure (y/n)?")) {
-    exit(1);
-  }
-}
-
 if ($dryrun) {
   print "Dry run finished...\n";
   exit;
@@ -69,7 +61,7 @@ eval {
       die "ERROR: Device is marked for deletion, please run udb build\n";
     }
 
-    my ($city, $building, $room,$description) = $uc->get_place($device->place);
+    my ($city, $building, $room, $description) = $uc->get_place($device->place);
 
     my $new_place = $udb->resultset('Places')->find_or_create({
       city => $city,

@@ -8,6 +8,7 @@ use Exporter qw(import);
 use Net::MAC;
 use NetAddr::IP;
 use Time::ParseDate;
+use POSIX ();
 
 our @EXPORT_OK = qw(
   bool2str
@@ -20,13 +21,14 @@ our @EXPORT_OK = qw(
   get_date
   get_host_class_map
   host_is_trusted
+  nfs_host_install
+  trusted_nfs
   ipv4_n2x
   log
   verify_domainname
   verify_equip_usage_types
   verify_hostname
   verify_nonempty
-  verify_unprotected
   verify_username
   virtual_device
 );
@@ -36,24 +38,13 @@ our %EXPORT_TAGS = ("all" => [@EXPORT_OK]);
 # get_date :: ???
 # Return current date using nice format
 sub get_date {
-  my(@elems);
-  my($raw);
-
-  chop($raw = localtime(time));
-  @elems = split(/\s+/, $raw);
-  return $elems[2] . $elems[1] . substr($elems[4], -2);
+  return POSIX::strftime('%Y-%m-%d %H:%M:%S', localtime time);
 }
 
 # fmt_time :: ???
 # Return specified time using nice format
 sub fmt_time {
-  my($time) = @_;
-  my($sec, $min, $hour, $mday, $mon, $year) = localtime($time);
-
-  my(@moname) = ( 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec' );
-
-  return "${mday}${moname[$mon]}${year} ${hour}:${min}:${sec}";
+  return POSIX::strftime('%Y-%m-%d %H:%M:%S', localtime time);
 }
 
 sub bool2str {
@@ -91,14 +82,6 @@ sub device_exists {
     return 0;
   }
 
-  if ($device->protected) {
-    printf("The device %s is protected!\n", $device->device_name);
-    print "Do not modify or delete this entry unless you know what you're doing.\n";
-    if (! $uc->confirm("Are you sure (y/n)?")) {
-      return 0;
-    }
-  }
- 
   return 1;
 
 }
@@ -122,7 +105,27 @@ sub dns_name_exists {
 sub host_is_trusted {
   my ($host) = @_;
 
-  if (($host->device->manager->management_type eq 'tstaff') && ($host->os_type && $host->os_type->trusted_nfs)) {
+  if ($host->device->manager->management_type eq 'tstaff' || virtual_device($host->device)) {
+    return 1;
+  } else {
+    return 0;
+  }
+}
+
+sub trusted_nfs {
+  my ($host) = @_;
+
+  if ($host->device->manager->management_type eq 'tstaff' && ($host->os_type && $host->os_type->trusted_nfs)) {
+    return 1;
+  } else {
+    return 0;
+  }
+}
+
+sub nfs_host_install {
+  my ($host) = @_;
+
+  if ($host->os_type && $host->os_type->trusted_nfs) {
     return 1;
   } else {
     return 0;
@@ -220,24 +223,6 @@ sub log {
   } else {
     die "ERROR: unable to lock log file: $!\n";
   }
-}
-
-sub verify_unprotected {
-  my $udb = shift;
-  
-	return sub {
-    my $uc = new BrownCS::udb::Console(udb => $udb);
-    my $device = $udb->device;
-
-    if ($device->protected) {
-      printf("The device %s is protected!\n", $device->device_name);
-      print "Do not modify or delete this entry unless you know what you're doing.\n";
-      if (! $uc->confirm("Are you sure (y/n)?")) {
-        return 0;
-      }
-    }
-    return 1;
-  }  
 }
 
 sub verify_username {
@@ -393,16 +378,6 @@ sub okay_root_silent {
   my $self = shift;
 
   if ($> != 0) {
-    return 0;
-  }
-  return 1;
-}
-
-sub okay_sudo {
-  my $self = shift;
-
-  unless (okay_root_silent && $ENV{'SUID_USER'}){
-    print "WARNING: Please logout and run with sudo.\n";
     return 0;
   }
   return 1;

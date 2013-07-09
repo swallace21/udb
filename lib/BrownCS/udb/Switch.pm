@@ -18,10 +18,10 @@ sub connect {
   my $self = shift;
 
   my $connection_type = $self->net_switch->connection_type;
-  my $name = $self->net_switch->device_name;
   my $username = $self->net_switch->username;
   my $password = $self->net_switch->pass;
   my $fqdn = $self->net_switch->fqdn;
+  my ($name) = $fqdn =~ /([^\.]+)\..*/;
   if ($connection_type eq "ssh") {
     $self->{con} = Expect->spawn("ssh -l $username $fqdn");
   } else {
@@ -38,7 +38,7 @@ sub connect {
     # this is not a typo: missing letter can be either p or P
     # ####
     # With regards to the above comment: WHAT?
-    $self->wait_for("assword: ", "Never got a password prompt on $name : $fqdn");
+    $self->wait_for("assword:", "Never got a password prompt on $name : $fqdn");
 
     $self->send("$password\r");
 
@@ -51,7 +51,7 @@ sub connect {
 
 sub DEMOLISH {
   my $self = shift;
-  my $name = $self->net_switch->device_name;
+  my ($name) = $self->net_switch->fqdn =~ /([^\.]+)\..*/;
   my $con = $self->con;
 
   if ($con) {
@@ -89,11 +89,11 @@ sub get_port_desc {
 
   my $desc;
   if ($ifaces->count == 0) {
-    $desc = "";
+    $desc = "self managed - " . $room;
   } elsif ($ifaces->count == 1) {
     $desc = $ifaces->single->device_name . " - " . $room;
   } else {
-    $desc = "unmanaged switch " . $room;
+    $desc = "switch - " . $room;
   }
 
   return $desc;
@@ -171,8 +171,9 @@ sub update_port {
   my $con = $self->con;
   my $ifaces = $port->net_interfaces;
   my $desc = $self->get_port_desc($port);
-  my $name = $self->net_switch->device_name;
+  my ($name) = $self->net_switch->fqdn =~ /([^\.]+)\..*/;
   my $switch_type = $self->net_switch->switch_type;
+  my $vss_num = $self->net_switch->vss_num;
   my $port_num = $port->port_num;
   my $blade_num = $port->blade_num;
 
@@ -187,7 +188,11 @@ sub update_port {
   } elsif ($switch_type eq '3750E') {
     $self->send("int g$blade_num/0/$port_num\r");
   } elsif ($switch_type eq '6500') {
-    $self->send("int g$blade_num/$port_num\r");
+    if ($vss_num) {
+      $self->send("int g$vss_num/$blade_num/$port_num\r");
+    } else {
+      $self->send("int g$blade_num/$port_num\r");
+    }
   } else {
     die "Unknown switch type: $switch_type!\n";
   }
@@ -227,6 +232,9 @@ sub update_port {
     # Set vlans
     $self->send("switchport trunk allowed vlan none\r");
     $self->wait_for("$name\(config-if\)\#", "Wrong response trying to unset vlans");
+
+    # mkd - this needs to be fixed to enter the VLANS one at a time, but can't test until CIS
+    # fixes an authorization problem
     $self->send("switchport trunk allowed vlan $all_vlans\r");
     $self->wait_for("$name\(config-if\)\#", "Wrong response trying to set trunked vlans");
 
