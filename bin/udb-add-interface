@@ -47,7 +47,7 @@ if (! $device) {
 my $rs;
 eval {
   $rs = $udb->txn_do(sub {
-    add_network_interface($udb, \$device);
+    add_network($udb, \$device);
   });
 };
 if ($@) {

@@ -10,8 +10,7 @@ use BrownCS::udb::Util qw(:all);
 use Exporter qw(import);
 
 our @EXPORT_OK = qw(
-  add_network_interface
-  add_network_port
+  add_network
   dynamic_vlan
   dns_insert
   dns_update
@@ -32,7 +31,7 @@ our @EXPORT_OK = qw(
 
 our %EXPORT_TAGS = ("all" => [@EXPORT_OK]);
 
-sub add_network_interface {
+sub add_network {
   my $udb = shift;
   my ($device) = @_;
 
@@ -41,15 +40,20 @@ sub add_network_interface {
   # retrieve any existing interfaces associated with this device
   my $iface_rs = $$device->net_interfaces;
  
-  my $mac_addr = $uc->get_mac(); 
+  if ($iface_rs->count == 0 || virtual_device($$device) || $uc->confirm("Do you want to associate a new IP address with this network connection (Y/n)?", "yes")) {
 
-  if ($iface_rs->count == 0 || $uc->confirm("Do you want to associate a new IP address with this interface $mac_addr (Y/n)?", "yes")) {
+    # if this isn't a virtual device, then we should have physical hardware and an associated mac address
+    my $iface;
+    if (! virtual_device($$device)) {
+      my $mac_addr = $uc->get_mac(); 
 
-    my $iface = $$device->add_to_net_interfaces({
-      device => $$device,
-      ethernet => $mac_addr,
-    });
-    $$device->update;
+      $iface = $$device->add_to_net_interfaces({
+        device => $$device,
+        ethernet => $mac_addr,
+      });
+
+      $$device->update;
+    }
 
     my ($ipaddr, $vlan) = $uc->get_ip_and_vlan(1);
 
@@ -65,27 +69,29 @@ sub add_network_interface {
       monitored => $monitored,
       notification => 0,
     });
+    
+    if ($iface) {
+      $addr->add_to_net_interfaces($iface);
 
-    $addr->add_to_net_interfaces($iface);
-
-    # if this device doesn't have a primary interface defined, then 
-    # assume this will be the device's primary interface
-    my $primary_iface_rs = $udb->resultset('NetInterfaces')->search({
-      device_name => $$device->device_name,
-      primary_address_id => { '!=' => undef },
-    });
-
-    if (! $primary_iface_rs->count) {
-      $iface->update({
-        primary_address => $addr,
+      # if this device doesn't have a primary interface defined, then 
+      # assume this will be the device's primary interface
+      my $primary_iface_rs = $udb->resultset('NetInterfaces')->search({
+        device_name => $$device->device_name,
+        primary_address_id => { '!=' => undef },
       });
+  
+      if (! $primary_iface_rs->count) {
+        $iface->update({
+          primary_address => $addr,
+        });
+      }
     }
 
     if ($ipaddr) {
       dns_insert($udb, $$device->device_name, 'cs.brown.edu', $addr, 1);
   
-      # If the device is not virtual, then it must be associated with a switch port
-      if (! virtual_device($$device)) {
+      # If the device has a physical interface, then it must be associated with a switch port
+      if ($iface) {
         # get port information from the user
         my $port;
         ($port,$iface) = $uc->get_port($iface);
@@ -116,6 +122,8 @@ sub add_network_interface {
     if (!$uc->confirm("Are you sure you want to continue? (y/N)", "no")) {
       exit (0);
     }
+
+    my $mac_addr = $uc->get_mac(); 
 
     my $existing_iface = $uc->choose_interface($$device->device_name, "primary");
 
