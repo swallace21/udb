@@ -195,7 +195,43 @@ define service{
   name pgsql_template
   use service_template
   service_description PGSQL
-  check_command check-pgsql!-w 10
+  check_command check-pgsql!-d template1
+  notification_interval 120
+  register 0
+}
+
+define service{
+  name pgsql_csblog_template
+  use service_template
+  service_description PGSQL_CSBLOG
+  check_command check-pgsql!-d csblog
+  notification_interval 120
+  register 0
+}
+
+define service{
+  name pgsql_csweb_template
+  use service_template
+  service_description PGSQL_CSWEB
+  check_command check-pgsql!-d csweb
+  notification_interval 120
+  register 0
+}
+
+define service{
+  name pgsql_rt_template
+  use service_template
+  service_description PGSQL_RT
+  check_command check-pgsql!-d rt4
+  notification_interval 120
+  register 0
+}
+
+define service{
+  name pgsql_udb_template
+  use service_template
+  service_description PGSQL_UDB
+  check_command check-pgsql!-d udb
   notification_interval 120
   register 0
 }
@@ -204,7 +240,16 @@ define service{
   name mysql_template
   use service_template
   service_description MYSQL
-  check_command check-mysql
+  check_command check-mysql!-d mysql
+  notification_interval 120
+  register 0
+}
+
+define service{
+  name mysql_owncloud_template
+  use service_template
+  service_description MYSQL_OWNCLOUD
+  check_command check-mysql!-d owncloud
   notification_interval 120
   register 0
 }
@@ -506,6 +551,7 @@ define service{
   servicegroups   liebert
   contact_groups  spoc_group,default_group
 }
+
 [%  CASE 'thermo' %]
 define service{
   use             thermo_template
@@ -529,6 +575,35 @@ define service{
   contact_groups  urgent_group
 }
 
+[%  CASE 'pgsql_sysdb' %]
+define service{
+  use             pgsql_csblog_template
+  host_name       [% host.hostname %]
+  servicegroups   pgsql
+  contact_groups  urgent_group
+}
+
+define service{
+  use             pgsql_csweb_template
+  host_name       [% host.hostname %]
+  servicegroups   pgsql
+  contact_groups  urgent_group
+}
+
+define service{
+  use             pgsql_rt_template
+  host_name       [% host.hostname %]
+  servicegroups   pgsql
+  contact_groups  urgent_group
+}
+
+define service{
+  use             pgsql_udb_template
+  host_name       [% host.hostname %]
+  servicegroups   pgsql
+  contact_groups  urgent_group
+}
+
 [%  CASE 'pgproxy' %]
 define service{
   use             pgproxy_template
@@ -540,6 +615,14 @@ define service{
 [%  CASE 'mysql' %]
 define service{
   use             mysql_template
+  host_name       [% host.hostname %]
+  servicegroups   mysql
+  contact_groups  urgent_group
+}
+
+[%  CASE 'mysql_sysdb' %]
+define service{
+  use             mysql_owncloud_template
   host_name       [% host.hostname %]
   servicegroups   mysql
   contact_groups  urgent_group
