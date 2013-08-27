@@ -63,21 +63,27 @@ eval {
       my $device = $udb->resultset('Devices')->find($name);
       if ($device) {
         my $iface_rs = $device->net_interfaces;
-        foreach (my $iface = $iface_rs->next) {
-print "address: " . $iface->net_interface_id . "\n";
+        while (my $iface = $iface_rs->next) {
           if ($iface->net_addresses) {
             my $addr_rs = $iface->net_addresses;
-            foreach (my $addr = $addr_rs->next) {
-              push @addrs, $addr;
+            while (my $addr = $addr_rs->next) {
+              # we can only monitor hosts with static IP addresses
+              if ($addr->ipaddr) {
+                push @addrs, $addr;
+              }
             }
           }
         }
       } elsif (my $dns_entry = $udb->resultset('NetDnsEntries')->search({dns_name => $name,})->single) {
-        push @addrs, $dns_entry->net_address; 
+        my $addr = $dns_entry->net_address;
+        if ($addr->ipaddr) {
+          push @addrs, $dns_entry->net_address; 
+        }
       }
 
       if (! @addrs) {
-        print "No addresses associated with device or DNS name: $name\n";
+        print "No static IP addresses are associated with $name and\n";
+        print "we are unable to monitor dynamic hosts.\n";
         next;
       }
     
@@ -86,35 +92,37 @@ print "address: " . $iface->net_interface_id . "\n";
         exit;
       }
 
-print "addrs: " . @addrs . "\n";
-      if (@addrs == 1 && ! $addrs[0]->ipaddr) {
-        print "No static IP addresses associated with device or DNS name: $name\n";
-        next;
-      }
-    
-      print "The current addresses are associated with $name:\n\n";
-      foreach my $addr (@addrs) {
-        if ($addr->ipaddr) {
-          my $iface = $addr->net_interfaces->single;
-          my $hostname;
-          if ($iface) {
-            $hostname = $iface->device_name;
-          } else {
-            $hostname = $name;
-          }
-          print "$hostname (" . $addr->ipaddr . "):\n";
-          my $monitored = $uc->confirm("Should this interface/DNS name be monitored? (Y/n)", "y");
+      print "Current monitoring configuration for $name:\n";
+      my $to_mod = 1;
+
+      while ($to_mod) {
+        printf "\n%10s%13s%17s\n", "IP address", "Monitored","Notifications\n";
+        my $addr_ix = 1;
+        my @choices;
+        foreach my $addr (@addrs) {
+          printf "%11s%7s%14s\n", $addr->ipaddr, $addr->monitored, $addr->notification;
+          push @choices, {
+            key => $addr_ix++,
+            name => $addr,
+            desc => $addr->ipaddr,
+          };
+        }
+
+        if ($uc->confirm("\nWould you like to make any changes (Y/n)?", "yes")) {
+          my $chosen_addr = $uc->choose_from_menu("\nSelect an address to modify", \@choices);
+          my $ip = $chosen_addr->ipaddr;
+          my $monitored = $uc->confirm("Should $ip be monitored (Y/n)?", "yes");
           my $notification = 0;
           if ($monitored) {
-            $notification = $uc->confirm("Should nagios notify Tstaff? (y/N)", "n");
-          } else {
-            $notification = 0;
+            $notification = $uc->confirm("Should nagios notify Tstaff? (y/N)", "no");
           }
 
-          $addr->update({
+          $chosen_addr->update({
             monitored => $monitored,
             notification => $notification,
           });
+        } else {
+          $to_mod = 0;
         }
       }
     }
