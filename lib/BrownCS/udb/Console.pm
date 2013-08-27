@@ -367,6 +367,17 @@ sub choose_interface {
         next;
       }
 
+      # if user only requested secondary interfaces, skip anything that references a primary address id
+      if ($filter_type && $filter_type =~ /secondary/ && $iface->primary_interface_id) {
+        next;
+      }
+
+      # if user only requested an available interface, skip anything that references either a master interface
+      # id or primary address id
+      if ($filter_type && $filter_type =~ /available/ && ($iface->master_net_interface_id || $iface->primary_interface_id)) {
+        next;
+      }
+
       my $flag = "";
       if (! $iface->master_net_interface_id) {
         $flag = "*";
@@ -589,9 +600,10 @@ sub get_mac {
  
   my $default;
 
+  # if given a particular interface, use it as a default
   if ($iface) {
     $default = $iface->ethernet;
-  }
+  } 
 
   return $self->get_updated_val("MAC address", $default, verify_mac($self->udb,$iface));
 }

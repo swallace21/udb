@@ -39,18 +39,35 @@ sub add_network {
 
   # retrieve any existing interfaces associated with this device
   my $iface_rs = $$device->net_interfaces;
- 
-  if ($iface_rs->count == 0 || virtual_device($$device) || $uc->confirm("Do you want to associate a new IP address with this network connection (Y/n)?", "yes")) {
 
-    # if this isn't a virtual device, then we should have physical hardware and an associated mac address
+  # retreive any existing interfaces, with an assigned mac address, but no IP associated IP address
+  my $avail_iface_rs = $udb->resultset('NetInterfaces')->search({
+      device_name => $$device->device_name,
+      primary_address_id => { '=' => undef },
+      master_net_interface_id => { '=' => undef },
+  });
+
+  if ($iface_rs->count == 0 || $avail_iface_rs->count != 0 || \
+    $uc->confirm("Do you want to associate a new IP address with this network connection (Y/n)?", "yes")) {
+
     my $iface;
-    if (! virtual_device($$device)) {
-      my $mac_addr = $uc->get_mac(); 
 
-      $iface = $$device->add_to_net_interfaces({
-        device => $$device,
-        ethernet => $mac_addr,
-      });
+    my $mac_addr;
+    if ($avail_iface_rs->count > 0) {
+      $iface = $uc->choose_interface($$device->device_name, "available");
+    } else {
+      if (virtual_device($$device)) {
+        $iface = $$device->add_to_net_interfaces({
+          device => $$device,
+        });
+      } else {
+        $mac_addr = $uc->get_mac(); 
+
+        $iface = $$device->add_to_net_interfaces({
+          device => $$device,
+          ethernet => $mac_addr,
+        });
+      }
 
       $$device->update;
     }
@@ -90,8 +107,8 @@ sub add_network {
     if ($ipaddr) {
       dns_insert($udb, $$device->device_name, 'cs.brown.edu', $addr, 1);
   
-      # If the device has a physical interface, then it must be associated with a switch port
-      if ($iface) {
+      # If this is a non-virtual device, then it must be associated with a switch port
+      if ($iface && ! virtual_device($$device)) {
         # get port information from the user
         my $port;
         ($port,$iface) = $uc->get_port($iface);
