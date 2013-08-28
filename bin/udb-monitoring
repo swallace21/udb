@@ -93,14 +93,17 @@ eval {
       }
 
       print "Current monitoring configuration for $name:\n";
-      my $to_mod = 1;
-
-      while ($to_mod) {
-        printf "\n%10s%13s%17s\n", "IP address", "Monitored","Notifications\n";
+      my $continue_mod = 1;
+      my $notifications = 0;
+      while ($continue_mod) {
+        printf "\n%10s%13s\n", "IP address", "Monitored";
         my $addr_ix = 1;
         my @choices;
         foreach my $addr (@addrs) {
-          printf "%11s%7s%14s\n", $addr->ipaddr, $addr->monitored, $addr->notification;
+          printf "%11s%7s\n", $addr->ipaddr, $addr->monitored;
+          if ($addr->notification) {
+            $notifications = 1;
+          }
           push @choices, {
             key => $addr_ix++,
             name => $addr,
@@ -112,17 +115,33 @@ eval {
           my $chosen_addr = $uc->choose_from_menu("\nSelect an address to modify", \@choices);
           my $ip = $chosen_addr->ipaddr;
           my $monitored = $uc->confirm("Should $ip be monitored (Y/n)?", "yes");
-          my $notification = 0;
-          if ($monitored) {
-            $notification = $uc->confirm("Should nagios notify Tstaff? (y/N)", "no");
-          }
 
           $chosen_addr->update({
             monitored => $monitored,
-            notification => $notification,
           });
         } else {
-          $to_mod = 0;
+          $continue_mod = 0;
+        }
+      }
+
+      my $default = "N";
+      my $alternate = "y";
+      print "\nTstaff notifications must be enabled or disabled for all addresses\n";
+      print "on a particular host.  Notifications for this host are currently ";
+      if ($notifications) {
+        print "enabled\n";
+        $default = "Y";
+        $alternate = "n";
+      } else {
+        print "disabled\n";
+      }
+      print "\n";
+      $notifications = $uc->confirm("Do you wish to enable Tstaff notifications for this host ($default/$alternate)?", $default);
+      foreach my $addr (@addrs) {
+        if ($addr->monitored) {
+          $addr->update({
+            notification => $notifications,
+          });
         }
       }
     }
