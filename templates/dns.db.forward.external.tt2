@@ -92,21 +92,24 @@ rdesktop                            IN          A               10.116.111.5
 *.proj132.cs.brown.edu.             IN          MX             10 mx.cs.brown.edu.
 
 ; for blog.plt
-blog.plt.cs.brown.edu.	    			  IN				CNAME 			static.cs.brown.edu.
+blog.plt.cs.brown.edu.	    			  IN				CNAME 			    static.cs.brown.edu.
 
 ; for weenix
-redmine.weenix.cs.brown.edu.	    	IN				CNAME 			weenix.cs.brown.edu.
+redmine.weenix.cs.brown.edu.	    	IN				CNAME 			    weenix.cs.brown.edu.
 
 ; faculty search app (resume)
-belay.resume                        IN          CNAME 			spindle.cs.brown.edu.
-station.resume                      IN          CNAME 			spindle.cs.brown.edu.
+belay.resume                        IN          CNAME 			  spindle.cs.brown.edu.
+station.resume                      IN          CNAME 			  spindle.cs.brown.edu.
 
 ; continuation of cs32 project (see [CS #212057])
-cella                               IN          CNAME 			cella.nmws.net.
+cella                               IN          CNAME 			  cella.nmws.net.
 
 ; for cs132-twilio
-*.cs132-twilio.cs.brown.edu.             IN          A               128.148.36.62
-*.cs132-twilio.cs.brown.edu.             IN          MX              10 mx.cs.brown.edu.
+*.cs132-twilio.cs.brown.edu.        IN          A             128.148.36.62
+*.cs132-twilio.cs.brown.edu.        IN          MX            10 mx.cs.brown.edu.
+
+; for braphael
+compbio                             IN          CNAME         raphael-group.github.io.
 
 
 [%   CASE 'ilab.cs.brown.edu' -%]
