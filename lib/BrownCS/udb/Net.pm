@@ -10,7 +10,8 @@ use BrownCS::udb::Util qw(:all);
 use Exporter qw(import);
 
 our @EXPORT_OK = qw(
-  add_network
+  add_interface
+  add_addr
   dynamic_vlan
   dns_insert
   dns_update
@@ -31,7 +32,7 @@ our @EXPORT_OK = qw(
 
 our %EXPORT_TAGS = ("all" => [@EXPORT_OK]);
 
-sub add_network {
+sub add_interface {
   my $udb = shift;
   my ($device) = @_;
 
@@ -40,7 +41,7 @@ sub add_network {
   # retrieve any existing interfaces associated with this device
   my $iface_rs = $$device->net_interfaces;
 
-  # retreive any existing interfaces, with an assigned mac address, but no IP associated IP address
+  # retreive any existing interfaces, with an assigned mac address, but no associated IP address
   my $avail_iface_rs = $udb->resultset('NetInterfaces')->search({
       device_name => $$device->device_name,
       primary_address_id => { '=' => undef },
@@ -168,6 +169,30 @@ sub add_network {
       $addr->add_to_net_interfaces($iface);
     }
   }
+}
+
+sub add_addr {
+  my $udb = shift;
+  my ($iface) = @_;
+
+  my $uc = new BrownCS::udb::Console(udb => $udb);
+
+  my ($ipaddr, $vlan) = $uc->get_ip_and_vlan(1);
+
+  my $monitored = 0;
+  if (monitored_vlan($udb, $vlan->vlan_num)) {
+    $monitored = 1;
+  }
+
+  # associate the ip address and vlan with the interface
+  my $addr = $udb->resultset('NetAddresses')->create({
+    vlan => $vlan,
+    ipaddr => $ipaddr,
+    monitored => $monitored,
+    notification => 0,
+  });
+    
+  $addr->add_to_net_interfaces($$iface);
 }
 
 sub dynamic_vlan {

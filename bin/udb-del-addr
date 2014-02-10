@@ -26,28 +26,27 @@ GetOptions (
 ) or usage(1);
 usage(0) if $help;
 
-if (@ARGV < 0 || @ARGV > 1) {
+if (@ARGV != 1) {
   usage(2);
 }
 
 my $udb = BrownCS::udb::Schema->connect;
 my $uc = new BrownCS::udb::Console(udb => $udb);
 
-if (@ARGV != 1) {
-  usage(2);
-}
+my $name;
+if (@ARGV == 1) {
+  $name = shift @ARGV;
 
-my $name = shift @ARGV;
-my $device = $udb->resultset('Devices')->find($name);
-
-if (! $device) {
+  if (! device_exists($udb, $name)) {
     die "No record for device named \"$name\".\n";
+  }
 }
 
 my $rs;
 eval {
   $rs = $udb->txn_do(sub {
-    add_interface($udb, \$device);
+    my $addr = $uc->choose_addr($name);
+    $addr->delete;
   });
 };
 if ($@) {
@@ -61,16 +60,17 @@ __END__
 
 =head1 NAME
 
-udb-add-interface - Adds a new network interface to a device
+udb-del-addr - Delete an existing IP address from a device
 
 =head1 SYNOPSIS
 
-udb-add-interface <device>
+udb-del-interface <device>
 
 =head1 DESCRIPTION
 
-udb-add-interface allows a user to add a network interface to an existing
-device.
+Allows you to delete an existing IP address from a device's
+network interface.  If the device has multiple IP addresses,
+you will be prompted to choose which address to remove.
 
 =head1 OPTIONS
 

@@ -61,16 +61,16 @@ my @ports = $udb->resultset('NetPorts')->search({
 
 # if no result, search on device name
 unless(@ports) {
-	my $device = $udb->resultset('Devices')->find($name);
-	if ($device) {
+  my $device = $udb->resultset('Devices')->find($name);
+  if ($device) {
     if ($device->status && $device->status->equip_status_type eq 'spare') {
       exit(0);
     }
-		my $ifaces = $device->net_interfaces;
-		while (my $iface = $ifaces->next) {
-			push @ports, $iface->net_port;
-		}
-	}
+    my $ifaces = $device->net_interfaces;
+    while (my $iface = $ifaces->next) {
+      push @ports, $iface->net_port;
+    }
+  }
 }
 
 die "No record for wall plate or device name \"$name\".\n" unless(@ports);
@@ -78,7 +78,6 @@ die "No record for wall plate or device name \"$name\".\n" unless(@ports);
 my %switches = ();
 
 foreach my $port (@ports) {
-
   my $net_switch = $port->net_switch;
   my $switch_name = $net_switch->device_name;
 

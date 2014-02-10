@@ -47,7 +47,10 @@ if (! $device) {
 my $rs;
 eval {
   $rs = $udb->txn_do(sub {
-    add_interface($udb, \$device);
+    my $iface = $uc->choose_interface($device->device_name);
+    if ($iface) {
+      add_addr($udb, \$iface);
+    }
   });
 };
 if ($@) {
@@ -61,16 +64,22 @@ __END__
 
 =head1 NAME
 
-udb-add-interface - Adds a new network interface to a device
+udb-add-ip - Associates a new IP address with an existing devices's network interface
 
 =head1 SYNOPSIS
 
-udb-add-interface <device>
+udb-add-ip <device>
 
 =head1 DESCRIPTION
 
-udb-add-interface allows a user to add a network interface to an existing
-device.
+udb-add-ip 
+
+Allows you to add an IP address to a device's existing network interface.  If the device
+has multiple network interfaces, you will be prompted to choose one to associate the
+new IP address with.  If you add an IP address to an existing interface, which already
+has an assigned IP address and the VLAN of these two addresses differ, then you will 
+be alerted that this will create a trunked port and confirm whether or not you wish
+to continue.
 
 =head1 OPTIONS
 

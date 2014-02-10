@@ -136,7 +136,7 @@ eval {
 
       my $is_networked = $uc->confirm("\nIs this a networked device? (Y/n)", "y");
       if ($is_networked) {
-        add_network($udb, \$device);
+        add_interface($udb, \$device);
       }
 
       #

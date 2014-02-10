@@ -13,6 +13,10 @@ my %udb_commands = (
     'desc' => "add a new device",
     'common' => 1,
   },
+  'add-addr' => {
+    'desc' => "add a new IP address to a devices's existing network interface",
+    'common' => 0,
+  },
   'add-dns-alias' => {
     'desc' => "add a new DNS alias or associated a DNS alias with an existing entry",
     'common' => 0,
@@ -81,8 +85,11 @@ my %udb_commands = (
     'desc' => "remove one or more computers from a class",
     'common' => 0,
   },
+  'del-addr' => {
+    'desc' => "delete an IP address from a device's network interface",
+    'common' => 0,
   'del-interface' => {
-    'desc' => "delet a network interface to an existing device",
+    'desc' => "delete a network interface from an existing device",
     'common' => 0,
   },
   'delete' => {

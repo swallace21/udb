@@ -104,18 +104,19 @@ sub get_port_vlans {
   my ($port) = @_;
   my $ifaces = $port->net_interfaces;
 
-  my $vlans_rs = $ifaces->search({},
+  my $iface_rs = $ifaces->search({},
     {
       prefetch => {
         'net_addresses_net_interfaces' => 'net_address',
       },
-      '+select' => [ 'net_address.vlan_num' ],
-      '+as'     => [ 'Vlan' ],
     });
 
   my %vlans = ();
-  while (my $vlan = $vlans_rs->next) {
-    $vlans{$vlan->get_column('Vlan')} = 1;
+
+  while (my $iface = $iface_rs->next) {
+    foreach my $addr ($iface->net_addresses) {
+      $vlans{$addr->vlan_num} = 1;
+    }
   }
 
   my $native_vlans_rs = $ifaces->search({},
@@ -223,7 +224,7 @@ sub update_port {
 
   # Determine if this is a trunk or not...
   if (@other_vlans) {
-    my $all_vlans = join(',', $native_vlan, @other_vlans);
+    my @all_vlans = ("$native_vlan", @other_vlans);
 
     # Set encapsulation mode
     $self->send("switchport trunk encapsulation dot1q\r");
@@ -233,20 +234,28 @@ sub update_port {
     $self->send("switchport trunk allowed vlan none\r");
     $self->wait_for("$name\(config-if\)\#", "Wrong response trying to unset vlans");
 
-    # mkd - this needs to be fixed to enter the VLANS one at a time, but can't test until CIS
-    # fixes an authorization problem
-    $self->send("switchport trunk allowed vlan $all_vlans\r");
-    $self->wait_for("$name\(config-if\)\#", "Wrong response trying to set trunked vlans");
+    foreach my $vlan (@all_vlans) {
+      $self->send("switchport trunk allowed vlan add $vlan\r");
+      $self->wait_for("$name\(config-if\)\#", "Wrong response trying to add trunked vlan $vlan");
+    }
 
     # Set native vlan
     $self->send("switchport trunk native vlan $native_vlan\r");
-    $self->wait_for("$name\(config-if\)\#", "Wrong response trying to set native vlans");
+    $self->wait_for("$name\(config-if\)\#", "Wrong response trying to set native vlan");
 
     # Set mode
     $self->send("switchport mode trunk\r");
     $self->wait_for("$name\(config-if\)\#", "Wrong response trying to set trunk mode");
 
   } else {
+    # Remove any extraneous trunked vlans
+    $self->send("switchport trunk allowed vlan none\r");
+    $self->wait_for("$name\(config-if\)\#", "Wrong response trying to unset vlans");
+
+    # Disable trunking
+    $self->send("no switchport trunk native vlan\r");
+    $self->wait_for("$name\(config-if\)\#", "Wrong response trying to unset native vlan");
+    
     # Enter vlan
     $self->send("switchport access vlan $native_vlan\r");
     $self->wait_for("$name\(config-if\)\#", "Never got third config interface prompt");

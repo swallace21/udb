@@ -354,7 +354,7 @@ sub choose_interface {
   } elsif ($ifaces_rs->count == 1) {
     $iface = $ifaces_rs->single;
   } else {
-    my $iface_ix = 1;
+    my $iface_idx = 1;
     my @choices = ();
     while (my $iface = $ifaces_rs->next) {
       my $ip = "";
@@ -384,7 +384,7 @@ sub choose_interface {
       }
 
       push @choices, {
-        key => $iface_ix++,
+        key => $iface_idx++,
         name => $iface,
         desc => $iface->ethernet . $ip . $flag,
       };
@@ -396,6 +396,39 @@ sub choose_interface {
   return $iface;
 }
  
+sub choose_addr {
+  my $self = shift;
+  my ($name, $filter_type) = @_;
+  my $addr;
+
+  my $device = $self->udb->resultset('Devices')->find($name);
+  my $ifaces_rs = $device->net_interfaces;
+
+  my $addr_idx = 1;
+  my @choices = ();
+  if ($ifaces_rs->count == 0) {
+    print "The device \"$device->device_name\" does not have any network interfaces.\n";
+    print "Network addresses must be asociated with a network interface.  Did you\n";
+    print "mean to delete a DNS alias instead?\n";
+    exit(0);
+  } else {
+    while (my $iface = $ifaces_rs->next) {
+      my $mac = $iface->ethernet;
+      foreach my $addr ($iface->net_addresses) {
+        push @choices, {
+          key => $addr_idx++,
+          name => $addr,
+          desc => $addr->ipaddr,
+        };
+      }
+    }
+
+    $addr = $self->choose_from_menu("Select an IP address", \@choices);
+  }
+
+  return $addr;
+}
+
 sub get_management_type {
   my $self = shift;
   my ($default) = @_;
