@@ -57,7 +57,6 @@ if ($@) {
 }
 
 my $os = $uc->get_os_type;
-my $classes = $uc->get_comp_classes;
 
 my $rs;
 eval {
@@ -65,7 +64,6 @@ eval {
       $comp->update({
           os_type => $os,
         });
-      $udh->update_classes($comp, $classes);
     });
 };
 if ($@) {
