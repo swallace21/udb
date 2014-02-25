@@ -80,10 +80,9 @@ debian                              IN          CNAME           mirror.cs.brown.
 pkgs                                IN          CNAME           mirror.cs.brown.edu.
 mirror                              IN          MX              10 mx.cs.brown.edu.
 
-; remote desktop cluster skor, raisinets, jawbreaker
+; remote desktop cluster skor, raisinets
 rdesktop                            IN          A               10.116.111.52
-rdesktop			                      IN          A               10.116.111.4
-rdesktop                            IN          A               10.116.111.5
+rdesktop	                    IN          A               10.116.111.4
 
 ; temporary DNS entries
 
