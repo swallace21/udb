@@ -37,6 +37,10 @@ my %udb_commands = (
     'desc' => "build server configuration based on the database",
     'common' => 1,
   },
+  'change-class' => {
+    'desc' => "change or reset a computer's class",
+    'common' => 1,
+  },
   'change-comment' => {
     'desc' => "change a device's comment",
     'common' => 1,
