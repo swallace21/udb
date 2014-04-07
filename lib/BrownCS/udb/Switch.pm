@@ -175,6 +175,7 @@ sub update_port {
   my ($name) = $self->net_switch->fqdn =~ /([^\.]+)\..*/;
   my $switch_type = $self->net_switch->switch_type;
   my $vss_num = $self->net_switch->vss_num;
+  my $port_prefix = $self->net_switch->port_prefix;
   my $port_num = $port->port_num;
   my $blade_num = $port->blade_num;
 
@@ -185,14 +186,14 @@ sub update_port {
   $self->wait_for("$name\(config\)\#", "Never got config prompt");
 
   if ($switch_type eq '3560G') {
-    $self->send("int g0/$port_num\r");
+    $self->send("int $port_prefix/$port_num\r");
   } elsif ($switch_type eq '3750E') {
-    $self->send("int g$blade_num/0/$port_num\r");
+    $self->send("int $port_prefix$blade_num/0/$port_num\r");
   } elsif ($switch_type eq '6500') {
     if ($vss_num) {
-      $self->send("int g$vss_num/$blade_num/$port_num\r");
+      $self->send("int $port_prefix$vss_num/$blade_num/$port_num\r");
     } else {
-      $self->send("int g$blade_num/$port_num\r");
+      $self->send("int $port_prefix$blade_num/$port_num\r");
     }
   } else {
     die "Unknown switch type: $switch_type!\n";
