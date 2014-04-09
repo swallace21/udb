@@ -52,13 +52,18 @@ sub connect {
 sub DEMOLISH {
   my $self = shift;
   my ($name) = $self->net_switch->fqdn =~ /([^\.]+)\..*/;
+  my $switch_type = $self->net_switch->switch_type;
   my $con = $self->con;
 
   if ($con) {
     if ($self->modified) {
-      $self->send("write mem\r");
-      $self->wait_for("\[OK\]", "Never got write confirmation");
-      $self->wait_for("$name#", "Never got final enable prompt");
+      if ($switch_type eq 'nexus2k') {
+        $self->send("copy run start\r");
+      } else {
+        $self->send("write mem\r");
+        $self->wait_for("\[OK\]", "Never got write confirmation");
+        $self->wait_for("$name#", "Never got final enable prompt");
+      }
     }
     $self->send("exit\r");
     $con->hard_close;
@@ -195,6 +200,8 @@ sub update_port {
     } else {
       $self->send("int $port_prefix$blade_num/$port_num\r");
     }
+  } elsif ($switch_type eq 'nexus2k') {
+    $self->send("int $port_prefix/1/$port_num\r");
   } else {
     die "Unknown switch type: $switch_type!\n";
   }
@@ -219,9 +226,11 @@ sub update_port {
   $self->send("switchport\r");
   $self->wait_for("$name\(config-if\)\#", "Wrong response making port layer 2");
 
-  # request full flowcontrol
-  $self->send("flowcontrol receive desired\r");
-  $self->wait_for("$name\(config-if\)\#", "Wrong response turning on flow control");
+  if ($switch_type ne 'nexus2k') {
+    # request full flowcontrol
+    $self->send("flowcontrol receive desired\r");
+    $self->wait_for("$name\(config-if\)\#", "Wrong response turning on flow control");
+  }
 
   # Determine if this is a trunk or not...
   if (@other_vlans) {
@@ -265,24 +274,28 @@ sub update_port {
     $self->send("switchport mode access\r");
     $self->wait_for("$name\(config-if\)\#", "Never got fourth config interface prompt");
 
-    # Set encapsulation mode
-    $self->send("switchport trunk encapsulation negotiate\r");
-    $self->wait_for("$name\(config-if\)\#", "Wrong response while setting dot1q encapsulation");
+    if ($switch_type ne 'nexus2k') {
+      # Set encapsulation mode
+      $self->send("switchport trunk encapsulation negotiate\r");
+      $self->wait_for("$name\(config-if\)\#", "Wrong response while setting negotiated encapsulation");
+    }
   }
 
-  # portfast/bpduguard should only be set for ports with a single device
-  if ($ifaces->count > 1) {
-    $self->send("spanning-tree portfast disable\r");
-    $self->wait_for("$name\(config-if\)\#", "Wrong response setting spanning-tree portfast");
-
-    $self->send("spanning-tree bpduguard disable\r");
-    $self->wait_for("$name\(config-if\)\#", "Wrong response setting bpduguard");
-  } else {
-    $self->send("spanning-tree portfast\r");
-    $self->wait_for("$name\(config-if\)\#", "Wrong response setting spanning-tree portfast");
-
-    $self->send("spanning-tree bpduguard enable\r");
-    $self->wait_for("$name\(config-if\)\#", "Wrong response setting bpduguard");
+  if ($switch_type ne 'nexus2k') {
+    # portfast/bpduguard should only be set for ports with a single device
+    if ($ifaces->count > 1) {
+      $self->send("spanning-tree portfast disable\r");
+      $self->wait_for("$name\(config-if\)\#", "Wrong response setting spanning-tree portfast");
+  
+      $self->send("spanning-tree bpduguard disable\r");
+      $self->wait_for("$name\(config-if\)\#", "Wrong response setting bpduguard");
+    } else {
+      $self->send("spanning-tree portfast\r");
+      $self->wait_for("$name\(config-if\)\#", "Wrong response setting spanning-tree portfast");
+  
+      $self->send("spanning-tree bpduguard enable\r");
+      $self->wait_for("$name\(config-if\)\#", "Wrong response setting bpduguard");
+    }
   }
 
   $self->send(sprintf("%c", 0x1A));
