@@ -109,7 +109,7 @@ cella                               IN          CNAME 			  cella.nmws.net.
 
 ; for braphael
 compbio                             IN          CNAME         raphael-group.github.io.
-
+watson-cup                          IN          CNAME         mdml.github.io.
 
 [%   CASE 'ilab.cs.brown.edu' -%]
 [% END -%]
