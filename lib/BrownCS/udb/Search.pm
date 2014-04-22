@@ -309,7 +309,7 @@ sub search_spare {
     while (my $device = $devices_rs->next) {
       my $room = "";
 
-      if ($device->place->room) {
+      if ($device->place && $device->place->room) {
         $room = " (room: " . $device->place->room . ")";
       }
 
