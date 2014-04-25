@@ -420,6 +420,14 @@ define service{
    register 0
 }
 
+define service{
+   name backup_tsm_template
+   use service_template
+   service_description BACKUP_TSM
+   check_command check-backup-tsm
+   register 0
+}
+
 [% FOREACH servicegroup IN DBI.query("select ns.net_service,ns.description from net_services ns") -%]
 define servicegroup {
   servicegroup_name [% servicegroup.net_service %]
@@ -705,6 +713,13 @@ define service{
   use             krb_template
   host_name       [% host.hostname %]
   servicegroups   krb
+  contact_groups  urgent_group
+}
+[%  CASE 'backup_tsm' %]
+define service{
+  use             backup_tsm_template
+  host_name       [% host.hostname %]
+  servicegroups   backup_tsm
   contact_groups  urgent_group
 }
 
