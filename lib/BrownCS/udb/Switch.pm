@@ -192,7 +192,7 @@ sub update_port {
 
   if ($switch_type eq '3560G') {
     $self->send("int $port_prefix/$port_num\r");
-  } elsif ($switch_type eq '3750E') {
+  } elsif ($switch_type eq '3750E' || $switch_type eq '3850') {
     $self->send("int $port_prefix$blade_num/0/$port_num\r");
   } elsif ($switch_type eq '6500') {
     if ($vss_num) {
