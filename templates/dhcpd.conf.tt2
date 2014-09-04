@@ -82,13 +82,13 @@ zone 70.116.10.in-addr.arpa. {
 #
 # eucalyptus zone
 #
-zone euc.cs.brown.edu. {
-  primary 128.148.31.200;
-  key rndc-key;
-}
+#zone euc.cs.brown.edu. {
+#  primary 128.148.31.200;
+#  key rndc-key;
+#}
 
 #
-# internal server high speed interconnects??
+# internal servers, high speed interconnects
 #
 zone 101.116.10.in-addr.arpa. {
   primary 128.148.31.200;
@@ -118,7 +118,7 @@ use-host-decl-names on;
 #
 # Clients' search domains
 #
-option domain-search "cs.brown.edu","euc.cs.brown.edu","smn.cs.brown.edu";
+option domain-search "cs.brown.edu","smn.cs.brown.edu";
 
 #
 # NTP servers
@@ -154,8 +154,6 @@ subnet [% subnet.network %] netmask [% subnet.netmask %] {
 
     # Tell clients what their domain name is
     [%- SWITCH subnet.vlan_num %]
-    [%-   CASE '4006' %]
-    option domain-name "euc.cs.brown.edu";
     [%-   CASE '4007' %]
     option domain-name "smn.cs.brown.edu";
     [%-   CASE DEFAULT %]
@@ -164,9 +162,6 @@ subnet [% subnet.network %] netmask [% subnet.netmask %] {
 
     # Lease times
     [%- SWITCH subnet.vlan_num %]
-    [%-   CASE '4006' %]
-    default-lease-time 1200;
-    max-lease-time 3600;
     [%-   CASE '4007' %]
     default-lease-time 3600;
     max-lease-time 10800;
@@ -176,10 +171,6 @@ subnet [% subnet.network %] netmask [% subnet.netmask %] {
     [%- END %]
 
     [%- SWITCH subnet.vlan_num %]
-    [%-   CASE '4006' %]
-    # dynamic DNS options
-    ddns-domainname "euc.cs.brown.edu";
-    update-static-leases on;
     [%-   CASE '4007' %]
     # dynamic DNS options
     ddns-domainname "smn.cs.brown.edu";
@@ -237,26 +228,6 @@ group {
     }
 [% END -%]
 
-}
-
-#
-# Eucalyptus VM entries
-#
-group {
-[%
-    USE format;
-    euc_name = format('euc-vm%04d');
-    euc_mac  = format('02:01:01:01:%02x:%02x');
-    euc_ip   = format('10.116.%d.%d');
-    icky     = "x"; # workaround a TT parsing issue
- %]
-[% FOR i IN icky.repeat(766).split("");
-    IF ! loop.count.match('(255|256|257|511|512|513)') -%]
-    host [% euc_name(loop.count) %] {
-	hardware ethernet [% euc_mac(1 + (loop.count div 256), loop.count mod 256) %];
-	fixed-address [% euc_ip(61 + (loop.count div 256), loop.count mod 256) %];
-    }
-[% END; END %]
 }
 
 # EOF
