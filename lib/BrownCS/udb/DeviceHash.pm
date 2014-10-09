@@ -54,6 +54,9 @@ sub format_device {
       push @$ifaces, $self->format_interface($iface);
     }
     $out->{"Interfaces"} = $ifaces;
+  } else {
+    $out->{"Surplus date"} = $device->surplus_date;
+    $out->{"Buyer"} = $device->buyer;
   }
 
   return $out;
