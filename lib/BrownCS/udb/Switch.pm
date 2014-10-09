@@ -196,6 +196,10 @@ sub update_port {
     $self->send("int $port_prefix$blade_num/0/$port_num\r");
   } elsif ($switch_type eq '6500') {
     if ($vss_num) {
+      # this is a complete hack and really should be in the database, but I need it to work now!
+      if ($blade_num >= 8) { 
+        $port_prefix = "Te";
+      }
       $self->send("int $port_prefix$vss_num/$blade_num/$port_num\r");
     } else {
       $self->send("int $port_prefix$blade_num/$port_num\r");
