@@ -71,7 +71,7 @@ smtp                                IN          CNAME           sa.cs.brown.edu.
 caramello       60                  IN          A               128.148.6.13
 caramello                           IN          MX              10 caramello.cs.brown.edu.
 mx2                                 IN          A               128.148.6.13
-lists                               IN          TXT             "v=spf1 mx a ~all"
+lists                               IN          TXT             "v=spf1 mx a ip4:128.148.32.0/24 ~all"
 
 ; debian mirror entries
 ;debian          60                  IN          A               128.148.33.94
