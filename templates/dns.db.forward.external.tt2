@@ -15,11 +15,11 @@
 $ttl 30m
 
 @ IN  SOA dns.cs.brown.edu. root.cs.brown.edu. (
-				[% serial_num %]
-				10m 10m ; refresh, retry
-				7d      ; expire
-				5m      ; nonexistent TTL
-				)
+        [% serial_num %]
+        10m 10m ; refresh, retry
+        7d      ; expire
+        5m      ; nonexistent TTL
+        )
   IN  NS  dns.cs.brown.edu.
   IN  NS  bru-ns1.brown.edu.
   IN  NS  bru-ns2.brown.edu.
@@ -70,12 +70,12 @@ smtp                                IN          CNAME           sa.cs.brown.edu.
 lists                               IN          TXT             "v=spf1 ip4:128.148.32.0/24 ~all"
 
 ; debian mirror entries
-;debian          60                  IN          A               128.148.33.94
-;debian          60                  IN          A               128.148.33.24
-;centos                              IN          CNAME           debian.cs.brown.edu.
-;kits                                IN          CNAME           debian.cs.brown.edu.
+;debian          60                 IN          A               128.148.33.94
+;debian          60                 IN          A               128.148.33.24
+;centos                             IN          CNAME           debian.cs.brown.edu.
+;kits                               IN          CNAME           debian.cs.brown.edu.
 pkgs                                IN          CNAME           debian.cs.brown.edu.
-;debian                              IN          MX              10 mx.cs.brown.edu.
+;debian                             IN          MX              10 mx.cs.brown.edu.
 
 ; remote desktop cluster skor, raisinets
 rdesktop                            IN          A               10.116.111.52
@@ -88,17 +88,17 @@ rdesktop                            IN          A               10.116.111.4
 *.proj132.cs.brown.edu.             IN          MX             10 mx.cs.brown.edu.
 
 ; for blog.plt
-blog.plt.cs.brown.edu.	    			  IN				CNAME 			    static.cs.brown.edu.
+blog.plt.cs.brown.edu.              IN          CNAME           static.cs.brown.edu.
 
 ; for weenix
-redmine.weenix.cs.brown.edu.	    	IN				CNAME 			    weenix.cs.brown.edu.
+redmine.weenix.cs.brown.edu.        IN          CNAME           weenix.cs.brown.edu.
 
 ; faculty search app (resume)
-belay.resume                        IN          CNAME 			  spindle.cs.brown.edu.
-station.resume                      IN          CNAME 			  spindle.cs.brown.edu.
+belay.resume                        IN          CNAME         spindle.cs.brown.edu.
+station.resume                      IN          CNAME         spindle.cs.brown.edu.
 
 ; continuation of cs32 project (see [CS #212057])
-cella                               IN          CNAME 			  cella.nmws.net.
+cella                               IN          CNAME         cella.nmws.net.
 
 ; for cs132-twilio
 *.cs132-twilio.cs.brown.edu.        IN          A             128.148.36.62
@@ -107,6 +107,9 @@ cella                               IN          CNAME 			  cella.nmws.net.
 ; for braphael
 compbio                             IN          CNAME         raphael-group.github.io.
 watson-cup                          IN          CNAME         mdml.github.io.
+
+; for dhl
+granoff-cave                        IN          A             10.2.128.224
 
 [%   CASE 'ilab.cs.brown.edu' -%]
 [% END -%]
