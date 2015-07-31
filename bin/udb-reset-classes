@@ -95,7 +95,7 @@ udb-reset-classes - completely reset a computer's class list
 
 =head1 SYNOPSIS
 
-udb-change-class <computer>
+udb-reset-classes <computer>
 
 =head1 DESCRIPTION
 

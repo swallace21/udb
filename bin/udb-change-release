@@ -24,7 +24,7 @@ my $help = 0;
 my $verbose = 0;
 my $dryrun = 0;
 my $os = 'debian64'; # set default os to debian64
-my $release = 'wheezy'; # set debian release to wheezy
+my $release = 'jessie'; # set debian release to jessie
 my $pxelink = q{}; # set default pxelnk to null
 
 GetOptions (
@@ -83,7 +83,7 @@ print "current classes: " . join(' ', sort @classes) . "\n" if $verbose;
 
 # change class to specified release or wheezy by default
 foreach my $class (@classes) {
-  if ( $class =~ /lenny|squeeze|wheezy|centos/) {
+  if ( $class =~ /lenny|squeeze|wheezy|jessie|centos/) {
     push(@new_classes, $release);
   }
   else {
@@ -166,7 +166,7 @@ Specify which OS (debian, debian64, centos64); default=debian64
 
 =item B<-r>, B<--release>
 
-Specify which OS release (lenny, squeeze, wheezy, cento6.3); default=wheezy 
+Specify which OS release (lenny, squeeze, wheezy, jessie, cento6.3); default=jessie 
 
 =back
 
