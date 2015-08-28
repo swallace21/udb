@@ -57,7 +57,7 @@ sub add_interface {
     if ($avail_iface_rs->count > 0) {
       $iface = $uc->choose_interface($$device->device_name, "available");
     } else {
-      if (virtual_device($$device)) {
+      if (xen_device($$device)) {
         $iface = $$device->add_to_net_interfaces({
           device => $$device,
         });

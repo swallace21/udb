@@ -83,7 +83,7 @@ eval {
 
       $device->contact($uc->get_contact($device->contact));
 
-      if ($device->usage->tracked) {
+      if ($device->usage->tracked && ! virtual_device($device)) {
         my $owner;
         if ($device->manager->management_type =~ /tstaff/) {
           $owner = "dept"; 
@@ -96,7 +96,7 @@ eval {
       }
 
       # if this a device tstaff tracks, then gather pertinent information
-      if ($device->usage->tracked) {
+      if ($device->usage->tracked && ! virtual_device($device)) {
         $device->serial_num($uc->get_serial_num($device->serial_num));
         $device->brown_inv_num($uc->get_brown_inv_num($device->brown_inv_num));
         $device->po_num($uc->get_po_num($device->po_num));
@@ -115,7 +115,7 @@ eval {
       # location
       #
 
-      if ($device->usage->tracked) {
+      if ($device->usage->tracked && ! virtual_device($device)) {
         my ($city, $building, $room,$description) = $uc->get_place($device->place);
 
         my $loc = $udb->resultset('Places')->find_or_create({

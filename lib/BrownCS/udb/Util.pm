@@ -31,6 +31,8 @@ our @EXPORT_OK = qw(
   verify_nonempty
   verify_username
   virtual_device
+  vmware_device
+  xen_device
 );
 
 our %EXPORT_TAGS = ("all" => [@EXPORT_OK]);
@@ -307,10 +309,30 @@ sub verify_hostname {
 	};
 }
 
+sub vmware_device {
+  my ($device) = @_;
+
+  if ($device->usage && $device->usage->equip_usage_type =~ /vmware/) {
+    return 1;
+  } else {
+    return 0;
+  }
+}
+
+sub xen_device {
+  my ($device) = @_;
+
+  if ($device->usage && $device->usage->equip_usage_type =~ /xen/) {
+    return 1;
+  } else {
+    return 0;
+  }
+}
+
 sub virtual_device {
   my ($device) = @_;
 
-  if ($device->usage && $device->usage->equip_usage_type =~ /virtual/) {
+  if (xen_device($device) || vmware_device($device)) {
     return 1;
   } else {
     return 0;
