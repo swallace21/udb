@@ -344,7 +344,7 @@ sub search_ssh_known_hosts {
           $os_type = $device->computer->os_type->os_type;
         }
           
-        if ($os_type && ($os_type =~ /debian/ || $os_type =~ /centos/)) {
+        if ($os_type && ($os_type =~ /debian/ || $os_type =~ /centos/ || $os_type =~ /osx/)) {
           push @results, $device->device_name;
         }
       }
