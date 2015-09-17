@@ -239,7 +239,7 @@ sub dns_insert {
 
     my $vlan = $addr->vlan_num;
     my $device = $udb->resultset('Devices')->find($name);
-    if (grep(/$vlan/, @private_vlans) || ! ($device->usage->equip_usage_type =~ /tstaff/ || $device->usage->equip_usage_type =~ /server/ || $device->usage->equip_usage_type =~ /virtual/)) {
+    if (grep(/$vlan/, @private_vlans) || ! ($device->usage->equip_usage_type =~ /tstaff/ || $device->usage->equip_usage_type =~ /server/ || virtual_device($device))) {
       $region = "internal";
     } else {
       $region = "all";
