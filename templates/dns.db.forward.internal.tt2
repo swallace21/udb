@@ -78,6 +78,10 @@ mirror                              IN          MX              10 mx.cs.brown.e
 rdesktop                            IN          A               10.116.111.52
 rdesktop	                    IN          A               10.116.111.4
 
+; printhost 
+printhost                            IN          A              128.148.33.71 
+
+
 ; temporary DNS entries
 
 ; for cs132
