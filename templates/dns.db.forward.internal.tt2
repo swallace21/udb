@@ -81,6 +81,25 @@ rdesktop	                    IN          A               10.116.111.4
 ; printhost 
 printhost                            IN          A              128.148.33.71 
 
+; cups and dns-sd printing service entries
+b._dns-sd._udp       PTR @
+lb._dns-sd._udp      PTR @
+_ipp._tcp            PTR bw5._ipp._tcp.cs.brown.edu.
+_cups._sub._ipp.tcp      PTR bw5._ipp._tcp.cs.brown.edu.
+bw5._ipp._tcp SRV  0 0 631 printhost.cs.brown.edu.
+bw5._ipp._tcp TXT (
+                           "txtvers=1"
+                           "qtotal=3"
+                           "rp=printers/bw5"
+                           "adminurl=http://printhost.cs.brown.edu:631/printers/bw5"
+                           "product=(HP LaserJet P4015)"
+                           "note=CIT548"
+                           "ty=HP Laserjet P4015"
+                           "pdl=application/postscript"
+                           "Duplex=T"
+                           "TLS=1.2"
+                           "URF=none"
+                          )
 
 ; temporary DNS entries
 
