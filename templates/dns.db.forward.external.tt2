@@ -114,6 +114,9 @@ watson-cup                          IN          CNAME         mdml.github.io.
 ; for dhl
 granoff-cave                        IN          A             10.2.128.224
 
+; for jeff
+drafty                              IN          CNAME         irchiver.com.
+
 [%   CASE 'ilab.cs.brown.edu' -%]
 [% END -%]
 
