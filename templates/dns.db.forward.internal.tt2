@@ -252,6 +252,24 @@ c4._ipp._tcp TXT (
                            "URF=none"
                           )
 
+; c4hq
+_ipp._tcp            PTR c4hq._ipp._tcp.cs.brown.edu.
+_cups._sub._ipp.tcp      PTR c4hq._ipp._tcp.cs.brown.edu.
+c4hq._ipp._tcp SRV  0 0 631 printhost.cs.brown.edu.
+c4hq._ipp._tcp TXT (         
+                           "txtvers=1"
+                           "qtotal=1"
+                           "rp=printers/c4hq"
+                           "adminurl=http://printhost.cs.brown.edu:631/printers/c4hq"
+                           "product=(HP Color LaserJet 4700 Postscript)"
+                           "note=CIT475"
+                           "ty=HP Color LaserJet 4700 Series"
+                           "pdl=application/postscript"
+                           "Duplex=T"
+                           "TLS=1.2"
+                           "URF=none"
+                          )
+
 
 ; c5
 _ipp._tcp            PTR c5._ipp._tcp.cs.brown.edu.
