@@ -21,8 +21,8 @@ $ttl 30m
 				5m      ; nonexistent TTL
 				)
   IN  NS  dns-int.cs.brown.edu.
-  IN  NS  oracle.cs.brown.edu.
-  IN  NS  firebird.cs.brown.edu.
+  IN  NS  pocky.cs.brown.edu.
+  IN  NS  redbvines.cs.brown.edu.
 
 
 localhost                           IN          A               127.0.0.1
