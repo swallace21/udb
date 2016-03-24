@@ -12,6 +12,9 @@ use File::Basename;
 use File::Copy;
 #use Time::localtime;
 
+use Carp;
+use Data::Dumper;
+
 has 'udb' => ( is => 'ro', isa => 'BrownCS::udb::Schema', required => 1 );
 has 'verbose' => ( is => 'ro', isa => 'Bool', required => 1 );
 has 'dryrun' => ( is => 'ro', isa => 'Bool', required => 1 );
@@ -92,12 +95,14 @@ sub get_keytab {
   my $self = shift;
   my ($krbadmin, $keytab) = @_;
 
-  if (! -x '/usr/sbin/kadmin') {
-    print "ERROR: can't execute /usr/sbin/kadmin\n";
+  # changed from /usr/sbin/kadmin, which is just a symlink to
+  # /usr/bin/kadmin on adminhost
+  if (! -x '/usr/bin/kadmin') {
+    print "ERROR: can't execute /usr/bin/kadmin\n";
     exit 1;
   }
 
-  system("/usr/sbin/kadmin -q \"ktadd -q -k $keytab $krbadmin\" 2> /dev/null");
+  system("/usr/bin/kadmin -q \"ktadd -q -k $keytab $krbadmin\" 2> /dev/null");
   print "\n";
 
   if (! -e $keytab) {
@@ -409,6 +414,8 @@ sub build_netgroup {
   my $self = shift;
   my $udb = $self->udb;
 
+  print(Dumper($udb));
+
   if(not $self->dryrun) { BrownCS::udb::Util::okay_kerberos; }
 
   print "Building netgroups... ";
@@ -430,29 +437,38 @@ sub build_netgroup {
         {
           'net_interfaces' => {
             'net_addresses_net_interfaces' => {
-              'net_address' => 'net_dns_entries',
+              'net_address' => [ 'net_dns_entries' ],
             },
           },
         },
         ]
       },
       ],
-      '+select' => [ 'net_dns_entries.domain' ],
-      '+as'     => [ 'Domain' ],
-      order_by => [qw(me.device_name)],
+      # '+select' => [ 'net_dns_entries.domain' ],
+      # '+as'     => [ 'Domain' ],
+      # modified according to:
+      # https://rt.cpan.org/Public/Bug/Display.html?id=88923
+      '+columns' => { Domain => { min => 'net_dns_entries.domain' } },
+      # order_by => [qw(me.device_name)],
     });
 
   my $host_classes = get_host_class_map($udb);
 
   my $netgroups = {};
-
+  carp("build_netgroup -1");
+  carp("build_netgroup 0");
   while (my $host = $hosts->next) {
 
+    carp("build_netgroup 1");
     my $hostname = $host->device_name;
+    carp("build_netgroup 2");
     my $fqdn = ($host->device_name . "." . $host->get_column('Domain'));
+    carp("build_netgroup 3");
     my $manager = $host->device->manager->management_type;
+    carp("build_netgroup 4");
 
     my $os = $host->os_type;
+    carp("build_netgroup 5");
     next if not defined $os;
 
     if (trusted_nfs($host)) {
@@ -557,16 +573,22 @@ sub build_nagios {
 }
 
 sub build_nagios_hosts {
+  carp("build_nagios_hostgroups 0");
   my $self = shift;
   my $udb = $self->udb;
 
   my $file = '/sysvol/nagios/hosts.cfg';
   my $PATH_TMPFILE = $self->TMPDIR . basename($file);
+  carp("build_nagios_hostgroups 1");
   my $vars = {filename => $file, date => get_date(), dbh => $udb->storage->dbh};
+  carp("build_nagios_hostgroups 2");
+  print(Dumper($vars));
   $self->tt->process('hosts.cfg.tt2', $vars, $PATH_TMPFILE) || die $self->tt->error(), "\n";
 
+  carp("build_nagios_hostgroups 3");
   # send new config file to each server
   $self->commit_local($PATH_TMPFILE, $file);
+  carp("build_nagios_hostgroups 4");
   $self->commit_scp($file, "storm.cs.brown.edu:/etc/nagios3/conf.d/");
   if ( (not $self->dryrun) && $? != 0 ) {
     warn "$0: ERROR: Failed to copy nagios files to storm\n";
@@ -574,6 +596,7 @@ sub build_nagios_hosts {
 }
 
 sub build_nagios_hostgroups {
+  carp("build_nagios_hostgroups 0");
   my $self = shift;
   my $udb = $self->udb;
 

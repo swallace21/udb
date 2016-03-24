@@ -12,8 +12,13 @@ my $config = $config_yaml->[0];
 
 __PACKAGE__->load_classes;
 
+########################################################
+##                                                    ##
+##  FOR TESTING PURPOSES, SET dbname TO udb_test !!!  ##
+##                                                    ##
+########################################################
 __PACKAGE__->connection(
-  'dbi:Pg:dbname=udb;host=sysdb',
+  'dbi:Pg:dbname=udb_test;host=sysdb',
   $config->{user},
   $config->{pass},
 );
