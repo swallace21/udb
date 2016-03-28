@@ -29,7 +29,7 @@ my $dryrun = 0;
 my $verbose = 0;
 my $root = 0;
 
-print(Dumper($udb));
+#print(Dumper($udb));
 
 BEGIN { $| = 1 }
 
