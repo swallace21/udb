@@ -2,3 +2,5 @@
 .snapshot
 *~
 tags
+bin/jsb
+share/*
