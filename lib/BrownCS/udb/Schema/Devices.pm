@@ -121,10 +121,14 @@ __PACKAGE__->has_many(
     cascade_delete => 0,
   }
 );
+# To suppress the warning about using might_have on a nullable column
+# (see https://metacpan.org/pod/DBIx::Class::Relationship#might_have),
+# we set DBIC_DONT_VALIDATE_RELS to true. This is okay for a 
+# relationship between things in the same table (as is the case here).
 __PACKAGE__->might_have(
   "parent",
   "BrownCS::udb::Schema::Devices",
-  { device_name => "parent_device_name" },
+  { "foreign.parent_device_name" => "self.device_name" },
   {
     cascade_delete => 0,
   }

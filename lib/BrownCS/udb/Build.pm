@@ -92,12 +92,14 @@ sub get_keytab {
   my $self = shift;
   my ($krbadmin, $keytab) = @_;
 
-  if (! -x '/usr/sbin/kadmin') {
-    print "ERROR: can't execute /usr/sbin/kadmin\n";
+  # changed from /usr/sbin/kadmin, which is just a symlink to
+  # /usr/bin/kadmin on adminhost
+  if (! -x '/usr/bin/kadmin') {
+    print "ERROR: can't execute /usr/bin/kadmin\n";
     exit 1;
   }
 
-  system("/usr/sbin/kadmin -q \"ktadd -q -k $keytab $krbadmin\" 2> /dev/null");
+  system("/usr/bin/kadmin -q \"ktadd -q -k $keytab $krbadmin\" 2> /dev/null");
   print "\n";
 
   if (! -e $keytab) {
@@ -430,22 +432,25 @@ sub build_netgroup {
         {
           'net_interfaces' => {
             'net_addresses_net_interfaces' => {
-              'net_address' => 'net_dns_entries',
+              'net_address' => [ 'net_dns_entries' ],
             },
           },
         },
         ]
       },
       ],
-      '+select' => [ 'net_dns_entries.domain' ],
-      '+as'     => [ 'Domain' ],
-      order_by => [qw(me.device_name)],
+      # '+select' => [ 'net_dns_entries.domain' ],
+      # '+as'     => [ 'Domain' ],
+      # modified according to:
+      # https://rt.cpan.org/Public/Bug/Display.html?id=88923
+      '+columns' => { Domain => { min => 'net_dns_entries.domain' } },
+      # order_by => [qw(me.device_name)],
+      group_by => [qw(me.device_name me.os_type me.last_updated me.pxelink)],
     });
 
   my $host_classes = get_host_class_map($udb);
 
   my $netgroups = {};
-
   while (my $host = $hosts->next) {
 
     my $hostname = $host->device_name;

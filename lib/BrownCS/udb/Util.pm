@@ -149,12 +149,12 @@ sub get_host_class_map {
   my $rs = $udb->resultset('CompClassesComputers')->search({},
     {
       prefetch => ['computer', 'comp_class'],
-      include_columns => ['comp_class.name'],
+      '+columns' => ['comp_class.name'],
     });
 
   while (my $item = $rs->next) {
     my $name = $item->computer->device_name;
-    if (not defined @{$hash->{$name}}) {
+    if (not exists $hash->{$name}) {
       $hash->{$name} = [];
     }
     push @{$hash->{$name}}, $item->comp_class->name;
