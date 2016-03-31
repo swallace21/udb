@@ -72,6 +72,8 @@ lists                               IN          TXT             "v=spf1 ip4:128.
 ; debian mirror entries
 ;debian          60                 IN          A               128.148.33.94
 ;debian          60                 IN          A               128.148.33.24
+;debian          60                 IN          A               10.116.53.21
+;debian          60                 IN          A               10.116.53.22
 ;centos                             IN          CNAME           debian.cs.brown.edu.
 ;kits                               IN          CNAME           debian.cs.brown.edu.
 pkgs                                IN          CNAME           debian.cs.brown.edu.
