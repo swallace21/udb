@@ -69,8 +69,8 @@ smtp                                IN          CNAME           sa.cs.brown.edu.
 ; debian mirror entries
 mirror                              IN          A               128.148.33.94
 mirror                              IN          A               128.148.33.24
-;mirror                              IN          A               10.116.53.21
-;mirror                              IN          A               10.116.53.22
+mirror                              IN          A               10.116.53.21
+mirror                              IN          A               10.116.53.22
 kits                                IN          CNAME           mirror.cs.brown.edu.
 debian                              IN          CNAME           mirror.cs.brown.edu.
 pkgs                                IN          CNAME           mirror.cs.brown.edu.
