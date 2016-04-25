@@ -71,11 +71,11 @@ ignore client-updates;
 # SMN zones
 #
 zone smn.cs.brown.edu. {
-  primary 128.148.31.200;
+  primary 10.116.53.13;
   key rndc-key;
 }
 zone 70.116.10.in-addr.arpa. {
-  primary 128.148.31.200;
+  primary 10.116.53.13;
   key "rndc-key";
 }
 
@@ -83,7 +83,7 @@ zone 70.116.10.in-addr.arpa. {
 # eucalyptus zone
 #
 #zone euc.cs.brown.edu. {
-#  primary 128.148.31.200;
+#  primary 10.116.53.13;
 #  key rndc-key;
 #}
 
@@ -91,7 +91,7 @@ zone 70.116.10.in-addr.arpa. {
 # internal servers, high speed interconnects
 #
 zone 101.116.10.in-addr.arpa. {
-  primary 128.148.31.200;
+  primary 10.116.53.13;
   key "rndc-key";
 }
 
@@ -149,7 +149,7 @@ subnet [% subnet.network %] netmask [% subnet.netmask %] {
     [%-   CASE ['32', '36', '892', '897', '2239', '4008'] %]
     option domain-name-servers 128.148.32.121, 128.148.32.119, 128.148.32.123;
     [%-   CASE DEFAULT %]
-    option domain-name-servers 128.148.31.200, 128.148.31.36, 128.148.31.60;
+    option domain-name-servers 10.116.53.13, 10.116.53.5, 10.116.53.6;
     [%- END %]
 
     # Tell clients what their domain name is

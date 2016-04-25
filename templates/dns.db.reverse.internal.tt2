@@ -21,8 +21,8 @@ $ttl 30m
 				5m      ; nonexistent TTL
 				)
   IN  NS  dns-int.cs.brown.edu.
-  IN  NS  firebird.cs.brown.edu.
-  IN  NS  oracle.cs.brown.edu.
+  IN  NS  redbvines.cs.brown.edu.
+  IN  NS  pocky.cs.brown.edu.
 
 
 [% FOREACH entry IN DBI.query("select nde.dns_name||'.'||nde.domain as fqdn, na.ipaddr from net_dns_entries nde, net_addresses na where ( nde.dns_region = 'internal' or nde.dns_region = 'all' ) and nde.authoritative and nde.net_address_id = na.net_address_id and na.ipaddr is not null and na.enabled and na.ipaddr << '$cidr' order by na.ipaddr") -%]

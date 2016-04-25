@@ -21,8 +21,8 @@ $ttl 30m
 				5m      ; nonexistent TTL
 				)
   IN  NS  dns-int.cs.brown.edu.
-  IN  NS  oracle.cs.brown.edu.
-  IN  NS  firebird.cs.brown.edu.
+  IN  NS  pocky.cs.brown.edu.
+  IN  NS  redbvines.cs.brown.edu.
 
 
 localhost                           IN          A               127.0.0.1
@@ -67,8 +67,10 @@ mail                                IN          CNAME           sa.cs.brown.edu.
 smtp                                IN          CNAME           sa.cs.brown.edu.
 
 ; debian mirror entries
-mirror                              IN          A               128.148.33.94
-mirror                              IN          A               128.148.33.24
+;mirror                              IN          A               128.148.33.94
+;mirror                              IN          A               128.148.33.24
+mirror                              IN          A               10.116.53.21
+mirror                              IN          A               10.116.53.22
 kits                                IN          CNAME           mirror.cs.brown.edu.
 debian                              IN          CNAME           mirror.cs.brown.edu.
 pkgs                                IN          CNAME           mirror.cs.brown.edu.
@@ -246,6 +248,24 @@ c4._ipp._tcp TXT (
                            "product=(HP Color LaserJet CP4020 Series)"
                            "note=CIT480"
                            "ty=HP Color LaserJet CP4020 Series"
+                           "pdl=application/postscript"
+                           "Duplex=T"
+                           "TLS=1.2"
+                           "URF=none"
+                          )
+
+; c4hq
+_ipp._tcp            PTR c4hq._ipp._tcp.cs.brown.edu.
+_cups._sub._ipp.tcp      PTR c4hq._ipp._tcp.cs.brown.edu.
+c4hq._ipp._tcp SRV  0 0 631 printhost.cs.brown.edu.
+c4hq._ipp._tcp TXT (         
+                           "txtvers=1"
+                           "qtotal=1"
+                           "rp=printers/c4hq"
+                           "adminurl=http://printhost.cs.brown.edu:631/printers/c4hq"
+                           "product=(HP Color LaserJet 4700 Postscript)"
+                           "note=CIT475"
+                           "ty=HP Color LaserJet 4700 Series"
                            "pdl=application/postscript"
                            "Duplex=T"
                            "TLS=1.2"

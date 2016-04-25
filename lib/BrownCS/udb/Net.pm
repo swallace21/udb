@@ -48,7 +48,7 @@ sub add_interface {
       master_net_interface_id => { '=' => undef },
   });
 
-  if ($iface_rs->count == 0 || $avail_iface_rs->count != 0 || \
+  if ($iface_rs->count == 0 || $avail_iface_rs->count != 0 || 
     $uc->confirm("Do you want to associate a new IP address with this network connection (Y/n)?", "yes")) {
 
     my $iface;
