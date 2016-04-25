@@ -38,10 +38,10 @@ cs.brown.edu.                       IN          MX              10 mx.cs.brown.e
 $ttl 1d
 
 ; KRB master entries
-kerberos                            IN          CNAME           twirl.cs.brown.edu.
-_kerberos-master._udp.CS.BROWN.EDU. IN          SRV             0 0 88 twirl.cs.brown.edu.
-_kerberos-adm._tcp.CS.BROWN.EDU.    IN          SRV             0 0 749 twirl.cs.brown.edu.
-_kpasswd._udp.CS.BROWN.EDU.         IN          SRV             0 0 464 twirl.cs.brown.edu.
+kerberos                            IN          CNAME           flake.cs.brown.edu.
+_kerberos-master._udp.CS.BROWN.EDU. IN          SRV             0 0 88 flake.cs.brown.edu.
+_kerberos-adm._tcp.CS.BROWN.EDU.    IN          SRV             0 0 749 flake.cs.brown.edu.
+_kpasswd._udp.CS.BROWN.EDU.         IN          SRV             0 0 464 flake.cs.brown.edu.
 
 ; KRB server entries
 _kerberos._udp.CS.BROWN.EDU.        IN          SRV             0 0 88 crunchie.cs.brown.edu.
