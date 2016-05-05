@@ -79,7 +79,7 @@ sub send {
 sub wait_for {
   my $self = shift;
   my ($prompt, $error) = @_;
-  $self->con->expect(30, $prompt)
+  $self->con->expect(60, $prompt)
     or die ("$error, " .  $self->con->exp_error() .  "\n");
 }
 
