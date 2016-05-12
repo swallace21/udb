@@ -259,7 +259,7 @@ sub commit_scp {
 
   if (not $self->dryrun) {
     # The following line works. Think about it. 
-    open(my $fh, "/usr/bin/ksu -e /usr/bin/sudo /usr/bin/scp -pq @_ 2>&1 |") || die "$0: ERROR: Failed to scp files to $dst: $!\n";
+    open(my $fh, "/usr/bin/ksu -e /usr/bin/sudo /usr/bin/scp -o GSSAPIAuthentication=no -pq @_ 2>&1 |") || die "$0: ERROR: Failed to scp files to $dst: $!\n";
     while(<$fh>) {
       if ($self->verbose) {
         print $_;
@@ -283,7 +283,7 @@ sub commit_ssh {
   }
   if (not $self->dryrun) {
     # The following line works. Think about it. 
-    open(my $fh, "/usr/bin/ksu -e /usr/bin/sudo /usr/bin/ssh -x @_ 2>&1 |") || die "$0: ERROR: Failed to ssh to $dst: $!\n";
+    open(my $fh, "/usr/bin/ksu -e /usr/bin/sudo /usr/bin/ssh -o GSSAPIAuthentication=no -x @_ 2>&1 |") || die "$0: ERROR: Failed to ssh to $dst: $!\n";
     while(<$fh>) {
       if ($self->verbose) {
         print $_;
