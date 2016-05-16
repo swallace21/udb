@@ -147,7 +147,7 @@ subnet [% subnet.network %] netmask [% subnet.netmask %] {
     # DNS servers
     [%- SWITCH subnet.vlan_num %]
     [%-   CASE ['32', '36', '892', '897', '2239', '4008'] %]
-    option domain-name-servers 128.148.32.121, 128.148.32.119, 128.148.32.123;
+    option domain-name-servers 128.148.32.121, 128.148.32.37, 128.148.32.119;
     [%-   CASE DEFAULT %]
     option domain-name-servers 10.116.53.13, 10.116.53.5, 10.116.53.6;
     [%- END %]
