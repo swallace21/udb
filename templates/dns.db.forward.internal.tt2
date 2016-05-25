@@ -76,9 +76,8 @@ debian                              IN          CNAME           mirror.cs.brown.
 pkgs                                IN          CNAME           mirror.cs.brown.edu.
 mirror                              IN          MX              10 mx.cs.brown.edu.
 
-; remote desktop cluster skor, raisinets
-rdesktop                            IN          A               10.116.111.52
-rdesktop	                    IN          A               10.116.111.4
+; remote desktop cluster csrdserver.cs.brown.edu
+rdesktop                            IN          A               10.116.54.30
 
 ; printhost 
 printhost                            IN          A              128.148.33.71 

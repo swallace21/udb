@@ -554,7 +554,7 @@ sub build_nagios {
   $self->build_nagios_hosts;
   $self->build_nagios_hostgroups;
   $self->build_nagios_services;
-  $self->commit_ssh('storm.cs.brown.edu','/etc/init.d/nagios3 restart');
+  $self->commit_ssh('stormlord.cs.brown.edu','/etc/init.d/nagios3 restart');
   if ( (not $self->dryrun) && $? != 0 ) {
     warn "$0: ERROR: Failed to restart nagios server\n";
   }
@@ -572,9 +572,9 @@ sub build_nagios_hosts {
 
   # send new config file to each server
   $self->commit_local($PATH_TMPFILE, $file);
-  $self->commit_scp($file, "storm.cs.brown.edu:/etc/nagios3/conf.d/");
+  $self->commit_scp($file, "stormlord.cs.brown.edu:/etc/nagios3/conf.d/");
   if ( (not $self->dryrun) && $? != 0 ) {
-    warn "$0: ERROR: Failed to copy nagios files to storm\n";
+    warn "$0: ERROR: Failed to copy nagios files to stormlord\n";
   }
 }
 
@@ -589,9 +589,9 @@ sub build_nagios_hostgroups {
 
   # send new config file to each server
   $self->commit_local($PATH_TMPFILE, $file);
-  $self->commit_scp($file, "storm.cs.brown.edu:/etc/nagios3/conf.d/");
+  $self->commit_scp($file, "stormlord.cs.brown.edu:/etc/nagios3/conf.d/");
   if ( (not $self->dryrun) && $? != 0 ) {
-    warn "$0: ERROR: Failed to copy nagios files to storm\n";
+    warn "$0: ERROR: Failed to copy nagios files to stormlord\n";
   }
 }
 
@@ -606,9 +606,9 @@ sub build_nagios_services {
 
   # send new config file to each server
   $self->commit_local($PATH_TMPFILE, $file);
-  $self->commit_scp($file, "storm.cs.brown.edu:/etc/nagios3/conf.d/");
+  $self->commit_scp($file, "stormlord.cs.brown.edu:/etc/nagios3/conf.d/");
   if ( (not $self->dryrun) && $? != 0 ) {
-    warn "$0: ERROR: Failed to copy nagios files to storm\n";
+    warn "$0: ERROR: Failed to copy nagios files to stormlord\n";
   }
 }
 

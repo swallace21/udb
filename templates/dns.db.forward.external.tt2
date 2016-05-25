@@ -79,9 +79,8 @@ lists                               IN          TXT             "v=spf1 ip4:128.
 pkgs                                IN          CNAME           debian.cs.brown.edu.
 ;debian                             IN          MX              10 mx.cs.brown.edu.
 
-; remote desktop cluster skor, raisinets
-rdesktop                            IN          A               10.116.111.52
-rdesktop                            IN          A               10.116.111.4
+; remote desktop cluster csrdserver.cs.brown.edu
+rdesktop                            IN          A               10.116.54.30
 
 ; printhost
 printhost                            IN          A               128.148.32.5
