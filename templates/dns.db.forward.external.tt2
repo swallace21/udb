@@ -83,7 +83,7 @@ pkgs                                IN          CNAME           debian.cs.brown.
 rdesktop                            IN          A               10.116.54.30
 
 ; printhost
-printhost                            IN          A               128.148.32.5
+printhost                            IN          A               128.148.32.48
 
 ; temporary DNS entries
 
