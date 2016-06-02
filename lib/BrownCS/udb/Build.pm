@@ -5,6 +5,7 @@ use Template;
 use Template::Stash;
 use FindBin qw($RealBin);
 use BrownCS::udb::Util qw(:all);
+use BrownCS::udb::Search qw(:all);
 use NetAddr::IP qw(Coalesce);
 use List::MoreUtils qw(uniq);
 use File::Temp qw(tempfile tempdir);
@@ -550,20 +551,26 @@ sub build_nagios {
   my $self = shift;
   my $udb = $self->udb;
 
-  print "Building nagios files... ";
-  $self->build_nagios_hosts;
-  $self->build_nagios_hostgroups;
-  $self->build_nagios_services;
-  $self->commit_ssh('stormlord.cs.brown.edu','/etc/init.d/nagios3 restart');
-  if ( (not $self->dryrun) && $? != 0 ) {
-    warn "$0: ERROR: Failed to restart nagios server\n";
+  my ($success, @results) = search_class($udb)->("nagios",0);
+  if ($success) {
+    foreach my $device (@results) {
+      print "Building nagios files on $device... ";
+      $self->build_nagios_hosts("$device.cs.brown.edu");
+      $self->build_nagios_hostgroups("$device.cs.brown.edu");
+      $self->build_nagios_services("$device.cs.brown.edu");
+      $self->commit_ssh("$device.cs.brown.edu",'/etc/init.d/nagios3 restart');
+      if ( (not $self->dryrun) && $? != 0 ) {
+        warn "$0: ERROR: Failed to restart nagios server on $device\n";
+      }
+      print "done.\n";
+    }
   }
-  print "done.\n";
 }
 
 sub build_nagios_hosts {
   my $self = shift;
   my $udb = $self->udb;
+  my ($device) = @_;
 
   my $file = '/sysvol/nagios/hosts.cfg';
   my $PATH_TMPFILE = $self->TMPDIR . basename($file);
@@ -572,15 +579,16 @@ sub build_nagios_hosts {
 
   # send new config file to each server
   $self->commit_local($PATH_TMPFILE, $file);
-  $self->commit_scp($file, "stormlord.cs.brown.edu:/etc/nagios3/conf.d/");
+  $self->commit_scp($file, "$device:/etc/nagios3/conf.d/");
   if ( (not $self->dryrun) && $? != 0 ) {
-    warn "$0: ERROR: Failed to copy nagios files to stormlord\n";
+    warn "$0: ERROR: Failed to copy nagios files to $device\n";
   }
 }
 
 sub build_nagios_hostgroups {
   my $self = shift;
   my $udb = $self->udb;
+  my ($device) = @_;
 
   my $file = '/sysvol/nagios/hostgroups.cfg';
   my $PATH_TMPFILE = $self->TMPDIR . basename($file);
@@ -589,15 +597,16 @@ sub build_nagios_hostgroups {
 
   # send new config file to each server
   $self->commit_local($PATH_TMPFILE, $file);
-  $self->commit_scp($file, "stormlord.cs.brown.edu:/etc/nagios3/conf.d/");
+  $self->commit_scp($file, "$device:/etc/nagios3/conf.d/");
   if ( (not $self->dryrun) && $? != 0 ) {
-    warn "$0: ERROR: Failed to copy nagios files to stormlord\n";
+    warn "$0: ERROR: Failed to copy nagios files to device\n";
   }
 }
 
 sub build_nagios_services {
   my $self = shift;
   my $udb = $self->udb;
+  my ($device) = @_;
 
   my $file = '/sysvol/nagios/services.cfg';
   my $PATH_TMPFILE = $self->TMPDIR . basename($file);
@@ -606,9 +615,9 @@ sub build_nagios_services {
 
   # send new config file to each server
   $self->commit_local($PATH_TMPFILE, $file);
-  $self->commit_scp($file, "stormlord.cs.brown.edu:/etc/nagios3/conf.d/");
+  $self->commit_scp($file, "$device:/etc/nagios3/conf.d/");
   if ( (not $self->dryrun) && $? != 0 ) {
-    warn "$0: ERROR: Failed to copy nagios files to stormlord\n";
+    warn "$0: ERROR: Failed to copy nagios files to $device\n";
   }
 }
 

@@ -57,7 +57,7 @@ sub DEMOLISH {
 
   if ($con) {
     if ($self->modified) {
-      if ($switch_type eq 'nexus2k') {
+      if ($switch_type =~ /^(nexus2k|nexus5k)$/) {
         $self->send("copy run start\r");
       } else {
         $self->send("write mem\r");
@@ -206,6 +206,9 @@ sub update_port {
     }
   } elsif ($switch_type eq 'nexus2k') {
     $self->send("int $port_prefix/1/$port_num\r");
+  } elsif ($switch_type eq 'nexus5k') {
+    $blade_num += 1;
+    $self->send("int e$blade_num/$port_num\r");
   } else {
     die "Unknown switch type: $switch_type!\n";
   }
@@ -230,7 +233,7 @@ sub update_port {
   $self->send("switchport\r");
   $self->wait_for("$name\(config-if\)\#", "Wrong response making port layer 2");
 
-  if ($switch_type ne 'nexus2k') {
+  if ($switch_type !~ /^(nexus2k|nexus5k)$/) {
     # request full flowcontrol
     $self->send("flowcontrol receive desired\r");
     $self->wait_for("$name\(config-if\)\#", "Wrong response turning on flow control");
@@ -278,7 +281,7 @@ sub update_port {
     $self->send("switchport mode access\r");
     $self->wait_for("$name\(config-if\)\#", "Never got fourth config interface prompt");
 
-    if ($switch_type ne 'nexus2k') {
+    if ($switch_type !~ /^(nexus2k|nexus5k)$/) {
       # Set encapsulation mode
       $self->send("switchport trunk encapsulation negotiate\r");
       $self->wait_for("$name\(config-if\)\#", "Wrong response while setting negotiated encapsulation");
