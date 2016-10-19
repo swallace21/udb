@@ -288,6 +288,15 @@ define service{
 }
 
 define service{
+  name ssh_gw_template
+  use service_template
+  service_description SSH
+  check_command check-ssh-gw
+  register 0
+}
+
+
+define service{
   name spamd_template
   use service_template
   service_description SPAMD
@@ -650,7 +659,7 @@ define service{
 }
 [%  CASE 'ssh' %]
 define service{
-  use             ssh_template
+  use             ssh_gw_template
   host_name       [% host.hostname %]
   servicegroups   ssh
 }
