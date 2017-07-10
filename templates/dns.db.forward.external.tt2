@@ -121,6 +121,9 @@ drafty                              IN          A             159.203.115.186
 ; for rfonseca
 pane                                IN          CNAME         systems.cs.brown.edu.
 
+; port scan machine in datacenter
+researchscan11311                   IN          A             138.16.226.11
+
 [%   CASE 'ilab.cs.brown.edu' -%]
 [% END -%]
 
