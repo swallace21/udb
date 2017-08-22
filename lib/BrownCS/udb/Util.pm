@@ -345,8 +345,8 @@ sub okay_adminhost {
   use Sys::Hostname;
   my $hostname = hostname();
   chomp($hostname);
-  if($hostname ne 'adminhost') {
-    print "Warning: You are not on adminhost.\n";
+  if(($hostname ne 'adminhost') and ($hostname ne 'adminhost-ad')) {
+    print "Warning: You are not on adminhost or adminhost-ad.\n";
     return 0;
   }
   return 1;
