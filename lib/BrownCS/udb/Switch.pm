@@ -142,10 +142,10 @@ sub get_port_vlans {
   if (scalar(keys(%native_vlans)) > 1) {
   # I am not sure why this is being done
     warn "Warning: primary addresses should never have different VLANs!\n";
-    warn "Setting VLAN to 4007\n";
-    $native_vlan = '4007';
+    warn "Setting VLAN to 3962\n";
+    $native_vlan = '3962';
   } elsif (not $native_vlan) {
-    $native_vlan = '4007';
+    $native_vlan = '3962';
   }
 
   delete($vlans{$native_vlan});
