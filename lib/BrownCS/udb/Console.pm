@@ -514,7 +514,7 @@ sub get_ip_and_vlan {
 
   my $ip_or_vlan_preamble = <<EOF;
 What is IP address do you want assigned?
-If you just want an arbitrary IP on a given VLAN (e.g. 31, 4007 (was 36)),
+If you just want an arbitrary IP on a given VLAN (e.g. 31, 3962 (was 4007)),
 enter the VLAN number, and an IP will be picked for you.
 EOF
 

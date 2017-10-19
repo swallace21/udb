@@ -146,7 +146,7 @@ subnet [% subnet.network %] netmask [% subnet.netmask %] {
 
     # DNS servers
     [%- SWITCH subnet.vlan_num %]
-    [%-   CASE ['32', '36', '892', '897', '2239', '4008'] %]
+    [%-   CASE ['32', '36', '892', '897', '2239', '3956'] %]
     option domain-name-servers 128.148.32.121, 128.148.32.37, 128.148.32.119;
     [%-   CASE DEFAULT %]
     option domain-name-servers 10.116.53.13, 10.116.53.5, 10.116.53.6;
@@ -154,7 +154,7 @@ subnet [% subnet.network %] netmask [% subnet.netmask %] {
 
     # Tell clients what their domain name is
     [%- SWITCH subnet.vlan_num %]
-    [%-   CASE '4007' %]
+    [%-   CASE '3962' %]
     option domain-name "smn.cs.brown.edu";
     [%-   CASE DEFAULT %]
     option domain-name "cs.brown.edu";
@@ -162,7 +162,7 @@ subnet [% subnet.network %] netmask [% subnet.netmask %] {
 
     # Lease times
     [%- SWITCH subnet.vlan_num %]
-    [%-   CASE '4007' %]
+    [%-   CASE '3962' %]
     default-lease-time 3600;
     max-lease-time 10800;
     [%-   CASE DEFAULT %]
@@ -171,7 +171,7 @@ subnet [% subnet.network %] netmask [% subnet.netmask %] {
     [%- END %]
 
     [%- SWITCH subnet.vlan_num %]
-    [%-   CASE '4007' %]
+    [%-   CASE '3962' %]
     # dynamic DNS options
     ddns-domainname "smn.cs.brown.edu";
     update-static-leases on;
