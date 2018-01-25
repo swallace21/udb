@@ -124,6 +124,14 @@ pane                                IN          CNAME         systems.cs.brown.e
 ; port scan machine in datacenter
 researchscan11311                   IN          A             138.16.226.11
 
+; for the signmeup folks (see [CS #414567])
+signmeup                               IN          CNAME         us-east-1.galaxy-ingress.meteor.com.
+signmeup                               IN          TXT           "v=spf1 include:mailgun.org ~all"
+smtp._domainkey.signmeup.cs.brown.edu. IN          TXT           "k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC6t85u7yeKIz8lHgVGL3dS/OqlKZDPq1DN8OqWGjx+reUoHtr2efOjxNXsIPK/41DV7YSnskJMiJXeYNXToDUwy57j19o/R3e3pEcr76kjFo+3e54g2hJUl2i1LUxYIskuUdnVg8E/r1p8L9I+3kiAr5R9b+SYnGW8c6ngCSxuVwIDAQAB"
+signmeup                               IN          MX            mxa.mailgun.org.
+signmeup                               IN          MX            mxb.mailgun.org.
+email.signmeup.cs.brown.edu.           IN          CNAME         mailgun.org.
+
 [%   CASE 'ilab.cs.brown.edu' -%]
 [% END -%]
 
