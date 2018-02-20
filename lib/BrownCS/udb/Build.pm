@@ -463,6 +463,7 @@ sub build_netgroup {
 
     if (trusted_nfs($host)) {
       $self->add_to_group($netgroups, "trusted", $fqdn);
+      $self->add_to_group($netgroups, "cs-trusted", $fqdn);
     }
 
     if (nfs_host_install($host)) {
@@ -487,6 +488,7 @@ sub build_netgroup {
         $self->add_to_group($netgroups, "sunlab", $fqdn);
       } elsif (/^tstaff-netgroup$/) {
         $self->add_to_group($netgroups, "tstaff", $fqdn);
+        $self->add_to_group($netgroups, "cs-tstaff", $fqdn);
       } elsif (/^thermo$/) {
         $self->add_to_group($netgroups, "thermo", $fqdn);
       } elsif (/^liebert$/) {
