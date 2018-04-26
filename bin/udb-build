@@ -40,7 +40,7 @@ GetOptions (
 ) or usage(2);
 usage(1) if $help;
 
-my @services = ('staging', 'tftp','netgroup','dhcp','nagios','wpkg','dns','finger');
+my @services = ('staging', 'tftp','netgroup','dhcp','nagios','wpkg','dns','known_hosts_cache','finger');
 
 my %build;
 if (@ARGV > 0) {
@@ -115,6 +115,10 @@ eval {
       $ub->build_wpkg_hosts;
     }
 
+    if ($build{'known_hosts_cache'} || $build{'all'}) {
+      $ub->build_known_hosts_cache;
+    }
+
     if ($build{'finger'} || $build{'all'}) {
       $ub->build_finger_data;
     }
@@ -186,6 +190,8 @@ B<nagios> - Build nagios monitoring configurations
 B<wpkg> - Build wpkg configurations
 
 B<dns> - Build and distribute DNS data
+
+B<known_hosts_cache> - Build known hosts cache
 
 B<finger> - Build finger data
 
