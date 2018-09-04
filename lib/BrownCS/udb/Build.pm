@@ -981,6 +981,9 @@ sub build_known_hosts_cache {
         }
         # fix permissions
         my $group = (getgrnam('tstaff'))[2];
+        if (! $group) {
+            $group = (getgrnam('cs-tstaff'))[2];
+        }
         $self->commit_chown("0:$group $file");
         $self->commit_chmod("0664 $file");
         print "done.\n";

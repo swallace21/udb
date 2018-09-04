@@ -83,7 +83,7 @@ pkgs                                IN          CNAME           debian.cs.brown.
 rdesktop                            IN          A               10.116.54.30
 
 ; printhost
-printhost                            IN          A               128.148.32.5
+printhost                            IN          A               128.148.33.5
 
 ; temporary DNS entries
 
@@ -123,16 +123,27 @@ pane                                IN          CNAME         systems.cs.brown.e
 
 ; port scan machine in datacenter
 researchscan11311                   IN          A             138.16.226.11
-researchscan01                      IN          A             67.205.166.151
-researchscan02                      IN          A             159.89.138.225
+researchscan01                      IN          A             159.89.231.234
+researchscan02                      IN          A             167.99.166.171
+researchscan03                      IN          A             167.99.92.98
+researchscan04                      IN          A             159.65.2.3
+
+; for jswrenn pyrate.org add-on
+examplar                            IN          A             104.196.127.150
 
 ; for the signmeup folks (see [CS #414567])
-signmeup                               IN          CNAME         us-east-1.galaxy-ingress.meteor.com.
-; signmeup                               IN          TXT           "v=spf1 include:mailgun.org ~all"
-smtp._domainkey.signmeup.cs.brown.edu. IN          TXT           "k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC6t85u7yeKIz8lHgVGL3dS/OqlKZDPq1DN8OqWGjx+reUoHtr2efOjxNXsIPK/41DV7YSnskJMiJXeYNXToDUwy57j19o/R3e3pEcr76kjFo+3e54g2hJUl2i1LUxYIskuUdnVg8E/r1p8L9I+3kiAr5R9b+SYnGW8c6ngCSxuVwIDAQAB"
-; signmeup                               IN          MX            mxa.mailgun.org.
-; signmeup                               IN          MX            mxb.mailgun.org.
-email.signmeup.cs.brown.edu.           IN          CNAME         mailgun.org.
+signmeup                            IN          CNAME         us-east-1.galaxy-ingress.meteor.com.
+mg.signmeup.cs.brown.edu.           IN          TXT           "v=spf1 include:mailgun.org ~all"
+k1._domainkey.mg.signmeup.cs.brown.edu. IN      TXT           "k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDjax56/eVQhG6r7xZVC8XEJffEqRSLlL2trMvVym0ZcCHZHpJdQabzyz0HfnKWhrDG3Ntqbrrv/Wge2o/jrPr6cxGidwEn4qc0zKSF0ZWFYzzR8v2D7egY25+NqOXX/yxes0xN86lTNzaERiQy5rdegpve2qctKZV/MVz82lcpRQIDAQAB"
+mg.signmeup.cs.brown.edu.           IN          MX            10 mxa.mailgun.org.
+mg.signmeup.cs.brown.edu.           IN          MX            10 mxb.mailgun.org.
+email.mg.signmeup.cs.brown.edu.     IN          CNAME         mailgun.org.
+
+; for the fastx cluster
+fastx-cluster                       IN          A             128.148.31.22
+fastx-cluster                       IN          A             128.148.31.23
+fastx-cluster                       IN          A             128.148.31.24
+fastx-cluster                       IN          A             128.148.31.25
 
 [%   CASE 'ilab.cs.brown.edu' -%]
 [% END -%]
