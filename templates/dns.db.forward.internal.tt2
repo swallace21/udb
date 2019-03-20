@@ -297,7 +297,7 @@ researchscan02                      IN          A             167.99.166.171
 researchscan03                      IN          A             167.99.92.98
 researchscan04                      IN          A             159.65.2.3
 
-; for jswrenn pyrate.org add-on
+; for jswrenn pyret.org add-on
 examplar                            IN          A             104.196.127.150
 
 ; for the signmeup folks (see [CS #414567])
@@ -309,10 +309,15 @@ mg.signmeup.cs.brown.edu.           IN          MX            10 mxb.mailgun.org
 email.mg.signmeup.cs.brown.edu.     IN          CNAME         mailgun.org.
 
 ; for the fastx cluster
-fastx-cluster                       IN          A             128.148.31.22
-fastx-cluster                       IN          A             128.148.31.23
-fastx-cluster                       IN          A             128.148.31.24
-fastx-cluster                       IN          A             128.148.31.25
+fastx-cluster           600         IN          A             128.148.31.22
+fastx-cluster           600         IN          A             128.148.31.23
+fastx-cluster           600         IN          A             128.148.31.24
+fastx-cluster           600         IN          A             128.148.31.25
+fastx-cluster           600         IN          A             128.148.31.27
+fastx-cluster           600         IN          A             128.148.31.28
+
+; for tbn's "logic for systems" course
+check-ex-spec                       IN          A             35.227.38.190
 
 [%   CASE 'ilab.cs.brown.edu' -%]
 [% END -%]
