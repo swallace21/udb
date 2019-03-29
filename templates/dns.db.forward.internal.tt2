@@ -326,7 +326,7 @@ check-ex-spec                       IN          A             35.227.38.190
 [% entry.dns_name | format('%-35s') %] IN          A               [% entry.ipaddr %]
 [% END -%]
 
-[% FOREACH entry IN DBI.query("select distinct nde.dns_name from net_dns_entries nde, net_addresses na where ( nde.dns_region = 'internal' or nde.dns_region = 'all' ) and nde.net_address_id = na.net_address_id and na.ipaddr is not null and na.enabled and nde.domain = '$domain' and nde.authoritative order by nde.dns_name") -%]
+[% FOREACH entry IN DBI.query("select distinct nde.dns_name from net_dns_entries nde, net_addresses na where ( nde.dns_region = 'internal' or nde.dns_region = 'all' ) and nde.net_address_id = na.net_address_id and na.ipaddr is not null and na.enabled and nde.domain = '$domain' and nde.dns_name <> 'lmx' and nde.authoritative order by nde.dns_name") -%]
 [% entry.dns_name | format('%-35s') %] IN          MX              10 mx.cs.brown.edu.
 [% END -%]
 
