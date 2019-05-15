@@ -21,7 +21,7 @@ $ttl 30m
 				5m      ; nonexistent TTL
 				)
   IN  NS  dns-int.cs.brown.edu.
-  IN  NS  redbvines.cs.brown.edu.
+  IN  NS  dartagnan.cs.brown.edu.
   IN  NS  pocky.cs.brown.edu.
 
 
