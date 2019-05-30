@@ -23,6 +23,10 @@ $ttl 30m
   IN  NS  dns-int.cs.brown.edu.
   IN  NS  pocky.cs.brown.edu.
   IN  NS  dartagnan.cs.brown.edu.
+  IN  NS  bru-ns1.brown.edu.
+  IN  NS  bru-ns2.brown.edu.
+  IN  NS  bru-ns4.brown.edu.
+  IN  NS  ns1.ucsb.edu.
 
 
 localhost                           IN          A               127.0.0.1
