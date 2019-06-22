@@ -408,10 +408,11 @@ sub okay_root_silent {
 sub okay_tstaff_user {
   my $self = shift;
 
-  my @groupinf = getgrnam("tstaff");
+  my @groupinf_cs = getgrnam("tstaff");
+  my @groupinf_ad = getgrnam("cs-tstaff");
   my $user = getlogin || getpwuid($<);
-  if((!$user) || $groupinf[3] !~ /\b$user\b/){
-    print "Sorry, you're not in tstaff.\n";
+  if((!$user) || ($groupinf_cs[3] !~ /\b$user\b/ && $groupinf_ad[3] !~ /\b$user\b/)){
+    print "Sorry, you're not in tstaff/cs-tstaff.\n";
     return 0;
   }
   return 1;

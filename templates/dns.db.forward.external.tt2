@@ -23,7 +23,7 @@ $ttl 30m
   IN  NS  dns.cs.brown.edu.
   IN  NS  bru-ns1.brown.edu.
   IN  NS  bru-ns2.brown.edu.
-  IN  NS  bru-ns3.brown.edu.
+  IN  NS  bru-ns4.brown.edu.
   IN  NS  ns1.ucsb.edu.
 
 localhost                           IN          A               127.0.0.1
@@ -36,6 +36,7 @@ $ORIGIN cs.brown.edu.
 cs.brown.edu.                       IN          A               128.148.32.12
 cs.brown.edu.                       IN          MX              10 mx.cs.brown.edu.
 cs.brown.edu.                       IN          TXT             "v=spf1 ip4:128.148.32.0/24 ?all"
+cs.brown.edu.                       IN          TXT             "google-site-verification=NW28W39HoFkYROL7V6AQhd0dkXNeUalEwZWjQ6V5IKE"
 
 $ttl 1d
 
@@ -68,6 +69,7 @@ sa                                  IN          MX              10 sa.cs.brown.e
 mail                                IN          CNAME           sa.cs.brown.edu.
 smtp                                IN          CNAME           sa.cs.brown.edu.
 lists                               IN          TXT             "v=spf1 ip4:128.148.32.0/24 ~all"
+lmx                                 IN          MX              10 lmx.cs.brown.edu.
 
 ; debian mirror entries
 ;debian          60                 IN          A               128.148.33.94
@@ -83,7 +85,7 @@ pkgs                                IN          CNAME           debian.cs.brown.
 rdesktop                            IN          A               10.116.54.30
 
 ; printhost
-printhost                            IN          A               128.148.32.5
+printhost                            IN          A               128.148.33.5
 
 ; temporary DNS entries
 
@@ -116,13 +118,39 @@ watson-cup                          IN          CNAME         mdml.github.io.
 granoff-cave                        IN          A             10.2.128.224
 
 ; for jeff
-drafty                              IN          A             159.203.115.186
+drafty                              IN          A             128.148.36.16
 
 ; for rfonseca
 pane                                IN          CNAME         systems.cs.brown.edu.
 
 ; port scan machine in datacenter
 researchscan11311                   IN          A             138.16.226.11
+researchscan01                      IN          A             159.89.231.234
+researchscan02                      IN          A             167.99.166.171
+researchscan03                      IN          A             167.99.92.98
+researchscan04                      IN          A             159.65.2.3
+
+; for jswrenn pyret.org add-on
+examplar                            IN          A             104.196.127.150
+
+; for the signmeup folks (see [CS #414567])
+signmeup                            IN          CNAME         us-east-1.galaxy-ingress.meteor.com.
+mg.signmeup.cs.brown.edu.           IN          TXT           "v=spf1 include:mailgun.org ~all"
+k1._domainkey.mg.signmeup.cs.brown.edu. IN      TXT           "k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDjax56/eVQhG6r7xZVC8XEJffEqRSLlL2trMvVym0ZcCHZHpJdQabzyz0HfnKWhrDG3Ntqbrrv/Wge2o/jrPr6cxGidwEn4qc0zKSF0ZWFYzzR8v2D7egY25+NqOXX/yxes0xN86lTNzaERiQy5rdegpve2qctKZV/MVz82lcpRQIDAQAB"
+mg.signmeup.cs.brown.edu.           IN          MX            10 mxa.mailgun.org.
+mg.signmeup.cs.brown.edu.           IN          MX            10 mxb.mailgun.org.
+email.mg.signmeup.cs.brown.edu.     IN          CNAME         mailgun.org.
+
+; for the fastx cluster
+fastx-cluster           600         IN          A             128.148.31.22
+fastx-cluster           600         IN          A             128.148.31.25
+fastx-cluster           600         IN          A             128.148.31.27
+fastx-cluster           600         IN          A             128.148.31.29
+fastx-cluster           600         IN          A             128.148.31.32
+fastx-cluster           600         IN          A             128.148.31.33
+
+; for tbn's "logic for systems" course
+check-ex-spec                       IN          A             35.227.38.190
 
 [%   CASE 'ilab.cs.brown.edu' -%]
 [% END -%]
@@ -131,7 +159,7 @@ researchscan11311                   IN          A             138.16.226.11
 [% entry.dns_name | format('%-35s') %] IN          A               [% entry.ipaddr %]
 [% END -%]
 
-[% FOREACH entry IN DBI.query("select distinct nde.dns_name from net_dns_entries nde, net_addresses na where ( nde.dns_region = 'external' or nde.dns_region = 'all' ) and nde.net_address_id = na.net_address_id and na.ipaddr is not null and na.enabled and nde.domain = '$domain' and nde.authoritative order by nde.dns_name") -%]
+[% FOREACH entry IN DBI.query("select distinct nde.dns_name from net_dns_entries nde, net_addresses na where ( nde.dns_region = 'external' or nde.dns_region = 'all' ) and nde.net_address_id = na.net_address_id and na.ipaddr is not null and na.enabled and nde.domain = '$domain' and nde.dns_name <> 'lmx' and nde.authoritative order by nde.dns_name") -%]
 [% entry.dns_name | format('%-35s') %] IN          MX              10 mx.cs.brown.edu.
 [% END -%]
 

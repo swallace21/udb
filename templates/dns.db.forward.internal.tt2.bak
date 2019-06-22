@@ -23,10 +23,6 @@ $ttl 30m
   IN  NS  dns-int.cs.brown.edu.
   IN  NS  pocky.cs.brown.edu.
   IN  NS  dartagnan.cs.brown.edu.
-  IN  NS  bru-ns1.brown.edu.
-  IN  NS  bru-ns2.brown.edu.
-  IN  NS  bru-ns4.brown.edu.
-  IN  NS  ns1.ucsb.edu.
 
 
 localhost                           IN          A               127.0.0.1
@@ -84,8 +80,7 @@ mirror                              IN          MX              10 mx.cs.brown.e
 rdesktop                            IN          A               10.116.54.30
 
 ; printhost 
-printhost                            IN          A              128.148.33.5
-print                                IN          A              128.148.33.5
+printhost                            IN          A              128.148.33.71 
 
 ; cups and dns-sd printing service entries
 b._dns-sd._udp       PTR @
@@ -95,15 +90,15 @@ lb._dns-sd._udp      PTR @
 ; bw1 
 _ipp._tcp            PTR bw1._ipp._tcp.cs.brown.edu.
 _cups._sub._ipp.tcp      PTR bw1._ipp._tcp.cs.brown.edu.
-bw1._ipp._tcp SRV  0 0 631 print.cs.brown.edu.
+bw1._ipp._tcp SRV  0 0 631 printhost.cs.brown.edu.
 bw1._ipp._tcp TXT (
                            "txtvers=1"
                            "qtotal=1"
                            "rp=printers/bw1"
-                           "adminurl=http://print.cs.brown.edu:631/printers/bw1"
-                           "product=(HP LaserJet 600 M603)"
-                           "note=Rm 143"
-                           "ty=HP LaserJet 600 M603"
+                           "adminurl=http://printhost.cs.brown.edu:631/printers/bw1"
+                           "product=(HP LaserJet 600 M601)"
+                           "note=CIT143"
+                           "ty=HP LaserJet 600 M60"
                            "pdl=application/postscript"
                            "Duplex=T"
                            "TLS=1.2"
@@ -113,14 +108,14 @@ bw1._ipp._tcp TXT (
 ; bw2
 _ipp._tcp            PTR bw2._ipp._tcp.cs.brown.edu.
 _cups._sub._ipp.tcp      PTR bw2._ipp._tcp.cs.brown.edu.
-bw2._ipp._tcp SRV  0 0 631 print.cs.brown.edu.
+bw2._ipp._tcp SRV  0 0 631 printhost.cs.brown.edu.
 bw2._ipp._tcp TXT (
                            "txtvers=1"
                            "qtotal=1"
                            "rp=printers/bw2"
-                           "adminurl=http://print.cs.brown.edu:631/printers/bw2"
+                           "adminurl=http://printhost.cs.brown.edu:631/printers/bw2"
                            "product=(HP LaserJet P3015)"
-                           "note=Rm 271"
+                           "note=CIT271"
                            "ty=HP LaserJet P3015"
                            "pdl=application/postscript"
                            "Duplex=T"
@@ -128,18 +123,37 @@ bw2._ipp._tcp TXT (
                            "URF=none"
                           )
 
+; ccmb-bw2
+_ipp._tcp            PTR ccmb-bw2._ipp._tcp.cs.brown.edu.
+_cups._sub._ipp.tcp      PTR ccmb-bw2._ipp._tcp.cs.brown.edu.
+ccmb-bw2._ipp._tcp SRV  0 0 631 printhost.cs.brown.edu.
+ccmb-bw2._ipp._tcp TXT (        
+                           "txtvers=1"
+                           "qtotal=1"
+                           "rp=printers/ccmb-bw2"
+                           "adminurl=http://printhost.cs.brown.edu:631/printers/ccmb-bw2"
+                           "product=(HP LaserJet 1022n Printer)"
+                           "note=CIT244"
+                           "ty=HP LaserJet 1022n"
+                           "pdl=application/postscript"
+                           "Duplex=T"
+                           "TLS=1.2"
+                           "URF=none"
+                          )
+
+
 ; bw3
 _ipp._tcp            PTR bw3._ipp._tcp.cs.brown.edu.
 _cups._sub._ipp.tcp      PTR bw3._ipp._tcp.cs.brown.edu.
-bw3._ipp._tcp SRV  0 0 631 print.cs.brown.edu.
+bw3._ipp._tcp SRV  0 0 631 printhost.cs.brown.edu.
 bw3._ipp._tcp TXT (
                            "txtvers=1"
                            "qtotal=1"
                            "rp=printers/bw3"
-                           "adminurl=http://print.cs.brown.edu:631/printers/bw3"
-                           "product=(HP LaserJet 600 M604)"
-                           "note=Rm 350"
-                           "ty=HP LaserJet P3015"
+                           "adminurl=http://printhost.cs.brown.edu:631/printers/bw3"
+                           "product=(HP LaserJet P4015)"
+                           "note=CIT350"
+                           "ty=HP LaserJet P4015"
                            "pdl=application/postscript"
                            "Duplex=T"
                            "TLS=1.2"
@@ -150,14 +164,14 @@ bw3._ipp._tcp TXT (
 ; bw4
 _ipp._tcp            PTR bw4._ipp._tcp.cs.brown.edu.
 _cups._sub._ipp.tcp      PTR bw4._ipp._tcp.cs.brown.edu.
-bw4._ipp._tcp SRV  0 0 631 print.cs.brown.edu.
+bw4._ipp._tcp SRV  0 0 631 printhost.cs.brown.edu.
 bw4._ipp._tcp TXT (
                            "txtvers=1"
                            "qtotal=1"
                            "rp=printers/bw4"
-                           "adminurl=http://print.cs.brown.edu:631/printers/bw4"
+                           "adminurl=http://printhost.cs.brown.edu:631/printers/bw4"
                            "product=(HP LaserJet P4015)"
-                           "note=Rm 480"
+                           "note=CITi480"
                            "ty=HP LaserJet P4015"
                            "pdl=application/postscript"
                            "Duplex=T"
@@ -168,14 +182,14 @@ bw4._ipp._tcp TXT (
 ; bw5
 _ipp._tcp            PTR bw5._ipp._tcp.cs.brown.edu.
 _cups._sub._ipp.tcp      PTR bw5._ipp._tcp.cs.brown.edu.
-bw5._ipp._tcp SRV  0 0 631 print.cs.brown.edu.
+bw5._ipp._tcp SRV  0 0 631 printhost.cs.brown.edu.
 bw5._ipp._tcp TXT (
                            "txtvers=1"
                            "qtotal=1"
                            "rp=printers/bw5"
-                           "adminurl=http://print.cs.brown.edu:631/printers/bw5"
+                           "adminurl=http://printhost.cs.brown.edu:631/printers/bw5"
                            "product=(HP LaserJet P4015)"
-                           "note=Rm 548"
+                           "note=CIT548"
                            "ty=HP Laserjet P4015"
                            "pdl=application/postscript"
                            "Duplex=T"
@@ -183,18 +197,37 @@ bw5._ipp._tcp TXT (
                            "URF=none"
                           )
 
+; c2-243
+_ipp._tcp            PTR c2-243._ipp._tcp.cs.brown.edu.
+_cups._sub._ipp.tcp      PTR c2-243._ipp._tcp.cs.brown.edu.
+c2-243._ipp._tcp SRV  0 0 631 printhost.cs.brown.edu.
+c2-243._ipp._tcp TXT (
+                           "txtvers=1"
+                           "qtotal=1"
+                           "rp=printers/c2-243"
+                           "adminurl=http://printhost.cs.brown.edu:631/printers/c2-243"
+                           "product=(GPL Ghostscript)"
+                           "note=CIT350"
+                           "ty=HP Color LaserJet MFP M476dn"
+                           "pdl=application/postscript"
+                           "Duplex=T"
+                           "TLS=1.2"
+                           "URF=none"
+                          )
+
+
 ; c3
 _ipp._tcp            PTR c3._ipp._tcp.cs.brown.edu.
 _cups._sub._ipp.tcp      PTR c3._ipp._tcp.cs.brown.edu.
-c3._ipp._tcp SRV  0 0 631 print.cs.brown.edu.
+c3._ipp._tcp SRV  0 0 631 printhost.cs.brown.edu.
 c3._ipp._tcp TXT (
                            "txtvers=1"
                            "qtotal=1"
                            "rp=printers/c3"
-                           "adminurl=http://print.cs.brown.edu:631/printers/c3"
-                           "product=(HP Color LaserJet CP4020-CP4520 Series)"
-                           "note=Rm 350"
-                           "ty=HP Color LaserJet CP4020-CP4520 Series"
+                           "adminurl=http://printhost.cs.brown.edu:631/printers/c3"
+                           "product=(HP Color LaserJet CP4020 Series)"
+                           "note=CIT350"
+                           "ty=HP Color LaserJet CP4020 Series"
                            "pdl=application/postscript"
                            "Duplex=T"
                            "TLS=1.2"
@@ -205,15 +238,15 @@ c3._ipp._tcp TXT (
 ; c4
 _ipp._tcp            PTR c4._ipp._tcp.cs.brown.edu.
 _cups._sub._ipp.tcp      PTR c4._ipp._tcp.cs.brown.edu.
-c4._ipp._tcp SRV  0 0 631 print.cs.brown.edu.
+c4._ipp._tcp SRV  0 0 631 printhost.cs.brown.edu.
 c4._ipp._tcp TXT (
                            "txtvers=1"
                            "qtotal=1"
                            "rp=printers/c4"
-                           "adminurl=http://print.cs.brown.edu:631/printers/c4"
-                           "product=(HP Color LaserJet CP4020-CP4520 Series)"
-                           "note=Rm 480"
-                           "ty=HP Color LaserJet CP4020-CP4520 Series"
+                           "adminurl=http://printhost.cs.brown.edu:631/printers/c4"
+                           "product=(HP Color LaserJet CP4020 Series)"
+                           "note=CIT480"
+                           "ty=HP Color LaserJet CP4020 Series"
                            "pdl=application/postscript"
                            "Duplex=T"
                            "TLS=1.2"
@@ -223,15 +256,15 @@ c4._ipp._tcp TXT (
 ; c4hq
 _ipp._tcp            PTR c4hq._ipp._tcp.cs.brown.edu.
 _cups._sub._ipp.tcp      PTR c4hq._ipp._tcp.cs.brown.edu.
-c4hq._ipp._tcp SRV  0 0 631 print.cs.brown.edu.
+c4hq._ipp._tcp SRV  0 0 631 printhost.cs.brown.edu.
 c4hq._ipp._tcp TXT (         
                            "txtvers=1"
                            "qtotal=1"
                            "rp=printers/c4hq"
-                           "adminurl=http://print.cs.brown.edu:631/printers/c4hq"
-                           "product=(HP Color LaserJet 4700)"
-                           "note=HQ Rm 475"
-                           "ty=HP Color LaserJet 4700"
+                           "adminurl=http://printhost.cs.brown.edu:631/printers/c4hq"
+                           "product=(HP Color LaserJet 4700 Postscript)"
+                           "note=CIT475"
+                           "ty=HP Color LaserJet 4700 Series"
                            "pdl=application/postscript"
                            "Duplex=T"
                            "TLS=1.2"
@@ -242,15 +275,34 @@ c4hq._ipp._tcp TXT (
 ; c5
 _ipp._tcp            PTR c5._ipp._tcp.cs.brown.edu.
 _cups._sub._ipp.tcp      PTR c5._ipp._tcp.cs.brown.edu.
-c5._ipp._tcp SRV  0 0 631 print.cs.brown.edu.
+c5._ipp._tcp SRV  0 0 631 printhost.cs.brown.edu.
 c5._ipp._tcp TXT (
                            "txtvers=1"
                            "qtotal=1"
                            "rp=printers/c5"
-                           "adminurl=http://print.cs.brown.edu:631/printers/c5"
-                           "product=(HP Color LaserJet CP4020-CP4520 Series)"
-                           "note=Rm 480"
-                           "ty=HP Color LaserJet CP4020-CP4520 Series"
+                           "adminurl=http://printhost.cs.brown.edu:631/printers/c5"
+                           "product=(HP Color LaserJet CP4020 Series)"
+                           "note=CIT480"
+                           "ty=HP Color LaserJet CP4020 Series"
+                           "pdl=application/postscript"
+                           "Duplex=T"
+                           "TLS=1.2"
+                           "URF=none"
+                          )
+
+
+; mocap
+_ipp._tcp            PTR mocap._ipp._tcp.cs.brown.edu.
+_cups._sub._ipp.tcp      PTR c5._ipp._tcp.cs.brown.edu.
+mocap._ipp._tcp SRV  0 0 631 printhost.cs.brown.edu.
+mocap._ipp._tcp TXT (
+                           "txtvers=1"
+                           "qtotal=1"
+                           "rp=printers/mocap"
+                           "adminurl=http://printhost.cs.brown.edu:631/printers/mocap"
+                           "product=(hp color LaserJet 2500)"
+                           "note=CIT148"
+                           "ty=HP Color LaserJet 2500"
                            "pdl=application/postscript"
                            "Duplex=T"
                            "TLS=1.2"
@@ -296,32 +348,14 @@ pane                                IN          CNAME         systems.cs.brown.e
 
 ; port scan machine in datacenter
 researchscan11311                   IN          A             138.16.226.11
-researchscan01                      IN          A             159.89.231.234
-researchscan02                      IN          A             167.99.166.171
-researchscan03                      IN          A             167.99.92.98
-researchscan04                      IN          A             159.65.2.3
-
-; for jswrenn pyret.org add-on
-examplar                            IN          A             104.196.127.150
 
 ; for the signmeup folks (see [CS #414567])
-signmeup                            IN          CNAME         us-east-1.galaxy-ingress.meteor.com.
-mg.signmeup.cs.brown.edu.           IN          TXT           "v=spf1 include:mailgun.org ~all"
-k1._domainkey.mg.signmeup.cs.brown.edu. IN      TXT           "k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDjax56/eVQhG6r7xZVC8XEJffEqRSLlL2trMvVym0ZcCHZHpJdQabzyz0HfnKWhrDG3Ntqbrrv/Wge2o/jrPr6cxGidwEn4qc0zKSF0ZWFYzzR8v2D7egY25+NqOXX/yxes0xN86lTNzaERiQy5rdegpve2qctKZV/MVz82lcpRQIDAQAB"
-mg.signmeup.cs.brown.edu.           IN          MX            10 mxa.mailgun.org.
-mg.signmeup.cs.brown.edu.           IN          MX            10 mxb.mailgun.org.
-email.mg.signmeup.cs.brown.edu.     IN          CNAME         mailgun.org.
-
-; for the fastx cluster
-fastx-cluster           600         IN          A             128.148.31.22
-fastx-cluster           600         IN          A             128.148.31.25
-fastx-cluster           600         IN          A             128.148.31.27
-fastx-cluster           600         IN          A             128.148.31.29
-fastx-cluster           600         IN          A             128.148.31.32
-fastx-cluster           600         IN          A             128.148.31.33
-
-; for tbn's "logic for systems" course
-check-ex-spec                       IN          A             35.227.38.190
+signmeup                               IN          CNAME         us-east-1.galaxy-ingress.meteor.com.
+; signmeup                               IN          TXT           "v=spf1 include:mailgun.org ~all"
+smtp._domainkey.signmeup.cs.brown.edu. IN          TXT           "k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC6t85u7yeKIz8lHgVGL3dS/OqlKZDPq1DN8OqWGjx+reUoHtr2efOjxNXsIPK/41DV7YSnskJMiJXeYNXToDUwy57j19o/R3e3pEcr76kjFo+3e54g2hJUl2i1LUxYIskuUdnVg8E/r1p8L9I+3kiAr5R9b+SYnGW8c6ngCSxuVwIDAQAB"
+; signmeup                               IN          MX            mxa.mailgun.org.
+; signmeup                               IN          MX            mxb.mailgun.org.
+email.signmeup.cs.brown.edu.           IN          CNAME         mailgun.org.
 
 [%   CASE 'ilab.cs.brown.edu' -%]
 [% END -%]
@@ -330,7 +364,7 @@ check-ex-spec                       IN          A             35.227.38.190
 [% entry.dns_name | format('%-35s') %] IN          A               [% entry.ipaddr %]
 [% END -%]
 
-[% FOREACH entry IN DBI.query("select distinct nde.dns_name from net_dns_entries nde, net_addresses na where ( nde.dns_region = 'internal' or nde.dns_region = 'all' ) and nde.net_address_id = na.net_address_id and na.ipaddr is not null and na.enabled and nde.domain = '$domain' and nde.dns_name <> 'lmx' and nde.authoritative order by nde.dns_name") -%]
+[% FOREACH entry IN DBI.query("select distinct nde.dns_name from net_dns_entries nde, net_addresses na where ( nde.dns_region = 'internal' or nde.dns_region = 'all' ) and nde.net_address_id = na.net_address_id and na.ipaddr is not null and na.enabled and nde.domain = '$domain' and nde.authoritative order by nde.dns_name") -%]
 [% entry.dns_name | format('%-35s') %] IN          MX              10 mx.cs.brown.edu.
 [% END -%]
 

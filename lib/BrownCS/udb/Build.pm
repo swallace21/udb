@@ -463,6 +463,7 @@ sub build_netgroup {
 
     if (trusted_nfs($host)) {
       $self->add_to_group($netgroups, "trusted", $fqdn);
+      $self->add_to_group($netgroups, "cs-trusted", $fqdn);
     }
 
     if (nfs_host_install($host)) {
@@ -487,6 +488,7 @@ sub build_netgroup {
         $self->add_to_group($netgroups, "sunlab", $fqdn);
       } elsif (/^tstaff-netgroup$/) {
         $self->add_to_group($netgroups, "tstaff", $fqdn);
+        $self->add_to_group($netgroups, "cs-tstaff", $fqdn);
       } elsif (/^thermo$/) {
         $self->add_to_group($netgroups, "thermo", $fqdn);
       } elsif (/^liebert$/) {
@@ -933,7 +935,7 @@ sub build_dns {
 
   # send new config file to each server
   my %dns_servers = (
-    internal => [ 'firebird','oracle', 'pocky', 'redbvines' ],
+    internal => [ 'firebird','oracle', 'pocky', 'dartagnan' ],
     external => [ 'salt','pepper' ],
   );
 
@@ -955,6 +957,45 @@ sub build_dns {
 
   print "done.\n";
 
+}
+
+sub build_known_hosts_cache {
+  my $self = shift;
+  my $udb = $self->udb;
+
+  my $file = '/u/system/sysadmin/known_hosts';
+  my $PATH_TMPFILE = $self->TMPDIR . basename($file);
+
+
+  print "Building known hosts cache... ";
+  my ($success1, @hosts) = search_ssh_known_hosts($udb)->(1);
+  my ($success2, @switches) = search_switches($udb)->(1);
+  if ($success1 && $success2) {
+    if (not $self->dryrun) {
+      if (open my $fh, '>', $PATH_TMPFILE) {
+        print $fh join("\n", @hosts, @switches, '');
+        close $fh;
+        $self->commit_local($PATH_TMPFILE, $file);
+        if ($self->verbose) {
+          print "DEBUG: fix permissions\n";
+        }
+        # fix permissions
+        my $group = (getgrnam('tstaff'))[2];
+        if (! $group) {
+            $group = (getgrnam('cs-tstaff'))[2];
+        }
+        $self->commit_chown("0:$group $file");
+        $self->commit_chmod("0664 $file");
+        print "done.\n";
+      }
+      else {
+        warn "$0: ERROR: Can't open $PATH_TMPFILE [for $file]\n";
+      }
+    }
+  }
+  else {
+    warn "$0: ERROR: Failed to build known hosts cache\n";
+  }
 }
 
 sub build_finger_data {

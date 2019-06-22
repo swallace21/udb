@@ -22,6 +22,7 @@ our @EXPORT_OK = qw(
   search_room
   search_serial
   search_ssh_known_hosts
+  search_switches
   search_spare
   search_usage
   search_walljack
@@ -366,6 +367,26 @@ sub search_ssh_known_hosts {
       }
     }
     
+    if (@results) {
+      return (1, @results);
+    } else {
+      return (0, undef);
+    }
+  };
+}
+
+sub search_switches {
+  my $udb = shift;
+  return sub {
+    my ($verbose) = @_;
+    my @results;
+
+    my $rs = $udb->resultset('NetSwitches');
+
+    while (my $switch = $rs->next) {
+      push @results, $switch->fqdn;
+    }
+
     if (@results) {
       return (1, @results);
     } else {

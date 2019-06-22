@@ -141,6 +141,15 @@ switch($type) {
     # this only makes sense to return a list of hosts, i.e. batch mode
     $batch=1; 
   }
+  case "switches" {
+    if (@ARGV) {
+      print "ERROR: no search string is required\n\n";
+      usage(2)
+    }
+    ($success, @results) = search_switches($udb)->(1);
+    # this only makes sense to return a list of switches, i.e. batch mode
+    $batch=1; 
+  }
   case "usage" {
     if (! $string) {
       print "ERROR: you must enter a usage to search for\n\n";
@@ -237,6 +246,7 @@ where <type of search> can be one of:
   spare           - search for spare systems
   ssh_known_hosts - search for machines that should be included in 
                     ssh_known_hosts file
+  switches        - search for switches
   walljack        - search for devices connected to a given walljack
 
 =head1 DESCRIPTION
