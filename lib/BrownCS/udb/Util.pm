@@ -423,7 +423,7 @@ sub okay_tstaff_machine {
   my $hostname = hostname();
   $hostname = $hostname . ".cs.brown.edu";
 
-  my @machines = `netgroup tstaff`;
+  my @machines = `netgroup cs-tstaff`;
   my $host;
   foreach $host (@machines) {
     chomp($host);
