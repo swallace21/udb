@@ -88,7 +88,7 @@ rdesktop                            IN          A               10.116.54.30
 printhost                            IN          A               128.148.33.5
 
 ; hstore andy pavlo
-hstore                            IN          CNAME              db-web.pc.cs.cmu.edu
+hstore                            IN          CNAME              db-web.pc.cs.cmu.edu.
 
 
 ; temporary DNS entries
