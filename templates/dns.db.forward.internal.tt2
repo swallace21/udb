@@ -87,6 +87,9 @@ rdesktop                            IN          A               10.116.54.30
 printhost                            IN          A              128.148.33.5
 print                                IN          A              128.148.33.5
 
+; hstore andy pavlo
+hstore                            IN          CNAME              db-web.pc.cs.cmu.edu
+
 ; cups and dns-sd printing service entries
 b._dns-sd._udp       PTR @
 lb._dns-sd._udp      PTR @
