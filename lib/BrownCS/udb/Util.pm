@@ -408,14 +408,18 @@ sub okay_root_silent {
 sub okay_tstaff_user {
   my $self = shift;
 
-  my @groupinf_cs = getgrnam("tstaff");
-  my @groupinf_ad = getgrnam("cs-tstaff");
+  my @groupinf = getgrnam("tstaff");
+  @groupinf or @groupinf = getgrnam("cs-tstaff");
   my $user = getlogin || getpwuid($<);
-  if((!$user) || ($groupinf_cs[3] !~ /\b$user\b/ && $groupinf_ad[3] !~ /\b$user\b/)){
-    print "Sorry, you're not in tstaff/cs-tstaff.\n";
-    return 0;
-  }
-  return 1;
+  #print "user = $user\n";
+  #print "groupinf[0] = $groupinf[0]\n";
+  #print "groupinf[1] = $groupinf[1]\n";
+  #print "groupinf[2] = $groupinf[2]\n";
+  #print "groupinf[3] = $groupinf[3]\n";
+  return 1 if $user && $groupinf[3] =~ /\b$user\b/;
+
+  print "Sorry, you're not in tstaff/cs-tstaff.\n";
+  return 0;
 }
 
 sub okay_tstaff_machine {
@@ -425,7 +429,7 @@ sub okay_tstaff_machine {
   my $hostname = hostname();
   $hostname = $hostname . ".cs.brown.edu";
 
-  my @machines = `netgroup tstaff`;
+  my @machines = `netgroup cs-tstaff`;
   my $host;
   foreach $host (@machines) {
     chomp($host);
