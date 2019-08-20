@@ -326,6 +326,10 @@ fastx-cluster           600         IN          A             128.148.31.33
 ; for tbn's "logic for systems" course
 check-ex-spec                       IN          A             35.227.38.190
 
+; for mheller6's data-druid
+prompted.data-druid.cs.brown.edu.       IN      CNAME           data-druid.cs.brown.edu.
+unprompted.data-druid.cs.brown.edu.     IN      CNAME           data-druid.cs.brown.edu.
+
 [%   CASE 'ilab.cs.brown.edu' -%]
 [% END -%]
 
