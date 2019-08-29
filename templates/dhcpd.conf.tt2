@@ -106,9 +106,10 @@ zone 101.116.10.in-addr.arpa. {
 # WINS Server information
 #
 # We need WINS until Samba can run an AD domain.
-option netbios-name-servers 128.148.33.135, 128.148.33.152;
+# Diabled WINS becasue we joined ad.brown.edu 8/29/19 - pkp
+# option netbios-name-servers 128.148.33.135, 128.148.33.152;
 # Use point-to-point traffic (not broadcast) with the WINS server
-option netbios-node-type 2;
+# option netbios-node-type 2;
 
 #
 # Tell clients their hostname is whatever's listed here
