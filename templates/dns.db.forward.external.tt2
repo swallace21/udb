@@ -136,6 +136,9 @@ researchscan04                      IN          A             159.65.2.3
 
 ; for jswrenn pyret.org add-on
 examplar                            IN          A             104.196.127.150
+; per john_wrenn@brown.edu 8/29/19
+pyret                               IN          A             104.196.127.150
+
 
 ; for the signmeup folks (see [CS #414567])
 signmeup                            IN          CNAME         us-east-1.galaxy-ingress.meteor.com.
