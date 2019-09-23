@@ -185,6 +185,23 @@ bw5._ipp._tcp TXT (
                            "TLS=1.2"
                            "URF=none"
                           )
+; scili-bw
+_ipp._tcp            PTR scili-bw._ipp._tcp.cs.brown.edu.
+_cups._sub._ipp.tcp      PTR scili-bw._ipp._tcp.cs.brown.edu.
+scili-bw._ipp._tcp SRV  0 0 631 print.cs.brown.edu.
+scili-bw._ipp._tcp TXT (
+                           "txtvers=1"
+                           "qtotal=1"
+                           "rp=printers/scili-bw"
+                           "adminurl=http://print.cs.brown.edu:631/printers/scili-bw"
+                           "product=(HP LaserJet 600 M603)"
+                           "note=Rm 802"
+                           "ty=HP LaserJet 600 M603"
+                           "pdl=application/postscript"
+                           "Duplex=T"
+                           "TLS=1.2"
+                           "URF=none"
+                          )
 
 ; c3
 _ipp._tcp            PTR c3._ipp._tcp.cs.brown.edu.
