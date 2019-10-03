@@ -163,6 +163,9 @@ check-ex-spec                       IN          A             35.227.38.190
 prompted.data-druid.cs.brown.edu.       IN      CNAME           data-druid.cs.brown.edu.
 unprompted.data-druid.cs.brown.edu.     IN      CNAME           data-druid.cs.brown.edu.
 
+; for jtomkins
+visual                              IN          CNAME           brownvc.github.io.
+
 [%   CASE 'ilab.cs.brown.edu' -%]
 [% END -%]
 
