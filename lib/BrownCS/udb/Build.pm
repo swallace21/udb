@@ -935,7 +935,7 @@ sub build_dns {
 
   # send new config file to each server
   my %dns_servers = (
-    internal => [ 'firebird','oracle', 'pocky', 'dartagnan' ],
+    internal => [ 'pocky', 'dartagnan' ],
     external => [ 'salt','pepper' ],
   );
 
