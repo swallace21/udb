@@ -128,6 +128,9 @@ drafty                              IN          A             128.148.36.16
 ; for rfonseca
 pane                                IN          CNAME         systems.cs.brown.edu.
 
+; for ayalava2
+bds                                 IN          CNAME         browndata.org.
+
 ; port scan machine in datacenter
 researchscan11311                   IN          A             138.16.226.11
 researchscan01                      IN          A             159.89.231.234
