@@ -487,12 +487,17 @@ sub build_netgroup {
         $self->add_to_group($netgroups, "sunlab", $fqdn);
       } elsif (/^tstaff-netgroup$/) {
         $self->add_to_group($netgroups, "tstaff", $fqdn);
+        $self->add_to_group($netgroups, "build", $fqdn);
       } elsif (/^thermo$/) {
         $self->add_to_group($netgroups, "thermo", $fqdn);
       } elsif (/^liebert$/) {
         $self->add_to_group($netgroups, "liebert", $fqdn);
       } elsif (/^server$/) {
         $self->add_to_group($netgroups, "server", $fqdn);
+      } elsif (/^gpfs\.server$/) {
+        $self->add_to_group($netgroups, "build", $fqdn);
+      } elsif (/^regtest$/) {
+        $self->add_to_group($netgroups, "build", $fqdn);
       } elsif (/^grid\.exec$/) {
         $self->add_to_group($netgroups, "sge", $fqdn);
       }
