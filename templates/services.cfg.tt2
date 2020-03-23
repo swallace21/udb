@@ -437,6 +437,14 @@ define service{
    register 0
 }
 
+define service{
+  name fastx_template
+  use service_template
+  service_description FASTX
+  check_command check-fastx
+  register 0
+}
+
 [% FOREACH servicegroup IN DBI.query("select ns.net_service,ns.description from net_services ns") -%]
 define servicegroup {
   servicegroup_name [% servicegroup.net_service %]
@@ -444,6 +452,10 @@ define servicegroup {
 }
 
 [% END -%]
+define servicegroup {
+  servicegroup_name fastx-cluster
+  alias FastX cluster
+}
 
 [% FOREACH host IN DBI.query("select na.ipaddr, fqdn_brown(nde.dns_name, nde.domain) as hostname, ns.net_service from net_addresses na, net_services ns, net_addresses_net_services nans, net_dns_entries nde where nans.net_address_id = na.net_address_id and nans.net_service = ns.net_service and na.monitored and na.enabled and nde.authoritative and nde.net_address_id = na.net_address_id order by ns.net_service, hostname") -%]
 [% SWITCH host.net_service %]
@@ -733,6 +745,15 @@ define service{
 }
 
 [% END -%]
+[% END -%]
+
+[% FOREACH host IN DBI.query("select fqdn_brown(nde.dns_name, nde.domain) as hostname from net_dns_entries nde join net_addresses na using (net_address_id) join net_addresses_net_interfaces nani using (net_address_id) join net_interfaces ni using (net_interface_id) left join (computers c left join comp_classes_computers ccc using (device_name) join comp_classes cc using(comp_class_id)) using (device_name) where na.monitored and na.enabled and ni.primary_address_id = na.net_address_id and ni.ethernet is not null and na.ipaddr is not null and nde.authoritative and cc.name = 'fastx.cluster' order by hostname") -%]
+define service{
+  use             fastx_template
+  host_name       [% host.hostname %]
+  servicegroups   fastx-cluster
+  contact_groups  urgent_group
+}
 [% END -%]
 
 # EOF
