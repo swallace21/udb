@@ -150,7 +150,7 @@ subnet [% subnet.network %] netmask [% subnet.netmask %] {
     [%-   CASE ['32', '36', '892', '897', '2239', '3956'] %]
     option domain-name-servers 128.148.32.121, 128.148.32.37, 128.148.32.119;
     [%-   CASE DEFAULT %]
-    option domain-name-servers 10.116.53.13, 10.116.53.5, 10.116.53.34;
+    option domain-name-servers 10.116.53.13, 10.1.1.10, 10.116.53.5, 10.116.53.34;
     [%- END %]
 
     # Tell clients what their domain name is
