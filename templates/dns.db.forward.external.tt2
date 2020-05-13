@@ -163,8 +163,8 @@ fastx-cluster           600         IN          A             128.148.31.29
 fastx-cluster           600         IN          A             128.148.31.32
 fastx-cluster           600         IN          A             128.148.31.33
 fastx-cluster           600         IN          A             128.148.31.40
-;fastx-cluster           600         IN          A             128.148.31.41
-;fastx-cluster           600         IN          A             128.148.31.42
+fastx-cluster           600         IN          A             128.148.31.41
+fastx-cluster           600         IN          A             128.148.31.42
 fastx-cluster           600         IN          A             128.148.31.43
 
 ; for tbn's "logic for systems" course
