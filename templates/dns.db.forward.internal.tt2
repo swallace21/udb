@@ -85,6 +85,7 @@ rdesktop                            IN          A               10.116.54.30
 ;CIS managed Windows servers for tstaff access
 trds                                IN          CNAME           ptscscit.ad.brown.edu.
 vsphere                             IN          CNAME           pvmjbcit.ad.brown.edu.
+files                               IN          CNAME           files.brown.edu.
 
 ; printhost 
 printhost                            IN          A              128.148.33.5
