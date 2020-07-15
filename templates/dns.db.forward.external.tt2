@@ -71,6 +71,12 @@ smtp                                IN          CNAME           sa.cs.brown.edu.
 lists                               IN          TXT             "v=spf1 ip4:128.148.32.0/24 ~all"
 lmx                                 IN          MX              10 lmx.cs.brown.edu.
 tmx                                 IN          MX              10 tmx.cs.brown.edu.
+; ----- DKIM key 2020 for cs.brown.edu
+2020._domainkey IN      TXT     ( "v=DKIM1; h=sha256; k=rsa; "
+          "p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqYzVE2eY1iXvp/WLn/mxzRApqblnB5yvfdOONXM9Hvyt44JDBNYwSE9zl9qiVgAbp5kQUo22BCipxQ+aOfEwKXDD0omoe4t5HzHXrsGkiAEFL1hGjc23AmgJCe3VJzQUaLMp36C67lrhfXgycAnVLdbpX69eXT7WUh3qyCGzIjVbsBy7dUGv7b2y5CBTLeOakb50cET1m5s9+D"
+          "HCva3d5nKUzy+UVRJVcUAsuXsNTb9T8KPVq3/VR9VGS0hoVj4Hdfg8Hg/sD6gATdsh/ekDYVIKkpcNf3LFSEHzB/6fWqkjBmM2z5qb5WMTG5R4OdtH058s1lUGd5wU+YSbAEdMNQIDAQAB" )  
+; ----- DKIM key 2020 for cs.brown.edu
+
 
 ; debian mirror entries
 ;debian          60                 IN          A               128.148.33.94
