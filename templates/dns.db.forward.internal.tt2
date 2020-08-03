@@ -365,7 +365,9 @@ unprompted.data-druid.cs.brown.edu.     IN      CNAME           data-druid.cs.br
 ; for jtomkins
 visual                          IN      CNAME           brownvc.github.io. 
 dsd				IN	CNAME		brownvc.github.io.
- 
+
+; for jeffh
+hci-v2                               IN          A             134.122.114.25 
 
 [%   CASE 'ilab.cs.brown.edu' -%]
 [% END -%]
