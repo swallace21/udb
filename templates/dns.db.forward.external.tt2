@@ -186,6 +186,14 @@ dsd				    IN		CNAME		brownvc.github.io.
 
 ; for jeffh
 hci-v2                               IN          A             134.122.114.25
+remotion                             IN          A             134.122.114.25
+sochiatrist                          IN          A             134.122.114.25
+selfe                                IN          A             134.122.114.25
+dark                                 IN          A             134.122.114.25
+uxfactor                             IN          A             134.122.114.25
+portalble                            IN          A             134.122.114.25
+hci                                  IN          A             134.122.114.25
+webgazer                             IN          A             134.122.114.25
 
 [%   CASE 'ilab.cs.brown.edu' -%]
 [% END -%]
