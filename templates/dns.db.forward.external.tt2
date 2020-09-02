@@ -194,6 +194,8 @@ uxfactor                             IN          A             134.122.114.25
 portalble                            IN          A             134.122.114.25
 hci                                  IN          A             134.122.114.25
 webgazer                             IN          A             134.122.114.25
+chime                                IN          A             134.122.114.25
+sleepcoacher                         IN          A             134.122.114.25
 
 [%   CASE 'ilab.cs.brown.edu' -%]
 [% END -%]
