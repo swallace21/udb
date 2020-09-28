@@ -731,7 +731,8 @@ sub verify_wall_plate {
 
     if ($wall_plate =~ /^MR$/ ) {
       return (1, $wall_plate);
-    } elsif ($wall_plate =~ /^\d\d\d\w?(-\d+)?-(D\d+|\d\w|\d+[A-D])$/ ) {
+    #} elsif ($wall_plate =~ /^\d\d\d\w?(-\d+)?-(D\d+|\d\w|\d+[A-D])$/ ) { sw: old
+    } elsif ($wall_plate =~ /^\d\d\d?\w?(-\d+)?-(\w\d+|\d\w|\d+[A-D])(-MARSTON)?$/ ) {
       return (1, $wall_plate);
     }
 

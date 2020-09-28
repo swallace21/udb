@@ -116,7 +116,7 @@ eval {
       #
 
       if ($device->usage->tracked && ! virtual_device($device)) {
-        my ($city, $building, $room,$description) = $uc->get_place($device->place);
+        my ($city, $building, $room, $description) = $uc->get_place($device->place);
 
         my $loc = $udb->resultset('Places')->find_or_create({
             city => $city,
