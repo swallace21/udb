@@ -58,7 +58,8 @@ Extract data from Response and Send back
 ####### Global Vars
 my $User;
 my $Pass;
-my $Network = "10.9.1.0/24"; # 10.9.114.0/24
+my $Network_test = "10.9.1.0/24";
+my $Network = "10.9.114.0/24";
 my $Base_url = "https://gm.brown.edu/wapi";
 my $Api_vers = "v2.10.1";
 my $Grid = "grid/b25lLmNsdXN0ZXIkMA:Infoblox";
@@ -128,10 +129,35 @@ sub run_request {
 }
 
 sub get_next_avail_ip {
+    my ($macaddr,$hostname,$new_fixed_ip) = @_;
+
+    my $data_json = "{
+        \"ipv4addr\":\"func:nextavailableip:$new_fixed_ip\",
+        \"mac\":\"$macaddr\",
+        \"name\":\"$hostname\",
+        \"options\" : [{ \"name\": \"host-name\", \"value\": \"$hostname\" }]
+    }";
+
+    my $api_url = "fixedaddress?_return_fields%2B=ipv4addr,mac&_return_as_object=1";
+    
+    my $response = run_request("POST",$api_url,$data_json);
+
+    my $json = decode_json($response->content);
+
+    while ( my ($key, $val) = each(%{$json->{result}}) ) {
+        if($key eq "ipv4addr") {
+            return $val;   
+        }
+    }
+
+    post_dhcp_restart();
+}
+
+sub post_fixed_ip {
     my ($macaddr,$hostname) = @_;
 
     my $data_json = "{
-        \"ipv4addr\":\"func:nextavailableip:$Network\",
+        \"ipv4addr\":\"$Network\",
         \"mac\":\"$macaddr\",
         \"name\":\"$hostname\",
         \"options\" : [{ \"name\": \"host-name\", \"value\": \"$hostname\" }]
