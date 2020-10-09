@@ -383,6 +383,9 @@ webgazer                             IN          A             134.122.114.25
 chime                                IN          A             134.122.114.25
 sleepcoacher                         IN          A             134.122.114.25
 
+; for aragaven
+ptbdb                                IN          CNAME         ptbdbcit.services.brown.edu.
+
 [%   CASE 'ilab.cs.brown.edu' -%]
 [% END -%]
 
