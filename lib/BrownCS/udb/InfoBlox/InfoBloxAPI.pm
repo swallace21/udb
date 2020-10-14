@@ -233,6 +233,22 @@ sub get_hosts() {
     }
 }
 
+sub get_ip_address_info {
+    my ($ip) = @_;
+    my $data_json = '{}';
+    my $api_url = "search?address=$ip&_return_as_object=1";
+    my $response = run_request("GET",$api_url,$data_json);
+    my $json = decode_json($response->content);
+
+    foreach my $element ( @{ $json->{result} } ) {
+        while ( my ($key, $val) = each(%$element) ) {
+            if(($key eq "_ref" || $key eq "name") && (strContains($val,"ipv4address"))) {
+                say $val;
+            }
+        }
+    }
+}
+
 sub check_if_dhcp_requires_restart() {
     say "shaun... we still need to debug this";
     #die;
