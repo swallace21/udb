@@ -249,6 +249,25 @@ sub get_ip_address_info {
     }
 }
 
+sub post_fixed_avail_ip {
+    my ($ip,$macaddr,$hostname) = @_;
+
+    my $data_json = "{ 
+        \"ipv4addr\":\"$ip\", 
+        \"mac\":\"$macaddr\", 
+        \"name\":\"$hostname\",
+        \"options\" : [{ \"name\": \"host-name\", \"value\": \"$hostname\" }]
+    }";
+
+    my $api_url = "fixedaddress?_return_fields%2B=ipv4addr,mac&_return_as_object=1";
+    
+    my $response = run_request("POST",$api_url,$data_json);
+
+    if($response) { # sw need to test
+        post_dhcp_restart();
+    }
+}
+
 sub check_if_dhcp_requires_restart() {
     say "shaun... we still need to debug this";
     #die;
