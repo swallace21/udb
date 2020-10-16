@@ -263,9 +263,7 @@ sub post_fixed_avail_ip {
     
     my $response = run_request("POST",$api_url,$data_json);
 
-    if($response) { # sw need to test
-        post_dhcp_restart();
-    }
+    post_dhcp_restart();
 }
 
 sub check_if_dhcp_requires_restart() {
