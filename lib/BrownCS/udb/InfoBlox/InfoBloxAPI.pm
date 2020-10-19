@@ -98,9 +98,11 @@ sub build_request {
     
     my $request;
     if($rest_method eq "POST") {
-        $request = POST($url);
+        $request = HTTP::Request::Common::POST($url);
     } elsif($rest_method eq "GET") {
-        $request = GET($url);
+        $request = HTTP::Request::Common::GET($url);
+    } elsif($rest_method eq "DELETE") {
+        $request = HTTP::Request::Common::DELETE($url);
     }
     $request->header( 'Content-Type' => 'application/json' );
     $request->content( $data_json );
@@ -239,14 +241,30 @@ sub get_ip_address_info {
     my $api_url = "search?address=$ip&_return_as_object=1";
     my $response = run_request("GET",$api_url,$data_json);
     my $json = decode_json($response->content);
+    #print Dumper($json);
+    my $delete_info = "";
 
+    ### Will return if IP assigned to working machine
     foreach my $element ( @{ $json->{result} } ) {
         while ( my ($key, $val) = each(%$element) ) {
-            if(($key eq "_ref" || $key eq "name") && (strContains($val,"ipv4address"))) {
-                say $val;
+            if(($key eq "_ref" || $key eq "name") && (strContains($val,"ipv4address")) && (strContains($val,$ip)) ) {
+                $delete_info = $val;
             }
         }
     }
+
+    ### Will return if IP assigned to a non-working machine
+    if($delete_info eq "") {
+        foreach my $element ( @{ $json->{result} } ) {
+            while ( my ($key, $val) = each(%$element) ) {
+                if( ($key eq "_ref") && (strContains($val,"fixedaddress")) && (strContains($val,$ip)) ) {
+                    $delete_info = $val;
+                }
+            }
+        }
+    }
+    
+    return $delete_info;
 }
 
 sub post_fixed_avail_ip {
@@ -264,6 +282,14 @@ sub post_fixed_avail_ip {
     my $response = run_request("POST",$api_url,$data_json);
 
     post_dhcp_restart();
+}
+
+sub post_delete_ip {
+    my ($delete_info) = @_;
+    my $data_json = '{}';
+    
+    my $api_url = "$delete_info&_return_as_object=1";
+    my $response = run_request("DELETE",$api_url,$data_json);
 }
 
 sub check_if_dhcp_requires_restart() {
