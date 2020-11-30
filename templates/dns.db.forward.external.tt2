@@ -139,13 +139,6 @@ pane                                IN          CNAME         systems.cs.brown.e
 ; for ayalava2
 bds                                 IN          CNAME         browndata.org.
 
-; port scan machine in datacenter
-researchscan11311                   IN          A             138.16.226.11
-researchscan01                      IN          A             159.89.231.234
-researchscan02                      IN          A             167.99.166.171
-researchscan03                      IN          A             167.99.92.98
-researchscan04                      IN          A             159.65.2.3
-
 ; for jswrenn pyret.org add-on
 examplar                            IN          A             104.196.127.150
 ; per john_wrenn@brown.edu 8/29/19
