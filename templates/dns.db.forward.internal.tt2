@@ -316,9 +316,6 @@ compbio                             IN          CNAME         raphael-group.gith
 ; for dhl
 granoff-cave                        IN          A             10.2.128.224
 
-; for jeff
-drafty                              IN          A             128.148.36.16
-
 ; for jtompki1
 explorecsr                          IN          CNAME         brownvc.github.io.
 
@@ -379,6 +376,7 @@ hci                                  IN          A             134.122.114.25
 webgazer                             IN          A             134.122.114.25
 chime                                IN          A             134.122.114.25
 sleepcoacher                         IN          A             134.122.114.25
+drafty                               IN          A             64.154.38.46
 
 ; for aragaven
 ptbdb                                IN          CNAME         ptbdbcit.services.brown.edu.
