@@ -381,6 +381,9 @@ drafty                               IN          A             64.154.38.46
 ; for aragaven
 ptbdb                                IN          CNAME         ptbdbcit.services.brown.edu.
 
+; ethics hta
+socially-responsible-computing      IN          A             128.148.36.129
+
 [%   CASE 'ilab.cs.brown.edu' -%]
 [% END -%]
 
