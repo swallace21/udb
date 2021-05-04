@@ -385,7 +385,7 @@ ptbdb                                IN          CNAME         ptbdbcit.services
 socially-responsible-computing      IN          A             128.148.36.129
 
 ; for dhl                           
-www.vrwiki.cs.brown.edu.            IN          CNAME           vrwiki.cs.brown.edu.
+;www.vrwiki.cs.brown.edu.            IN          CNAME           static.cs.brown.edu.
 www.vrwiki.cs.brown.edu.            IN          TXT             "google-site-verification=_KR0PFxjp-Us1e6SVOfYFlh42V8zZmTaKpqgfDchGIk"
 
 [%   CASE 'ilab.cs.brown.edu' -%]
