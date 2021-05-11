@@ -156,7 +156,7 @@ email.mg.signmeup.cs.brown.edu.     IN          CNAME         mailgun.org.
 ; for the fastx cluster
 fastx-cluster           600         IN          A             128.148.31.22
 fastx-cluster           600         IN          A             128.148.31.23
-fastx-cluster           600         IN          A             128.148.31.24
+;fastx-cluster           600         IN          A             128.148.31.24
 fastx-cluster           600         IN          A             128.148.31.25
 fastx-cluster           600         IN          A             128.148.31.27
 fastx-cluster           600         IN          A             128.148.31.28
@@ -164,7 +164,7 @@ fastx-cluster           600         IN          A             128.148.31.29
 fastx-cluster           600         IN          A             128.148.31.32
 fastx-cluster           600         IN          A             128.148.31.33
 fastx-cluster           600         IN          A             128.148.31.40
-fastx-cluster           600         IN          A             128.148.31.41
+;fastx-cluster           600         IN          A             128.148.31.41
 fastx-cluster           600         IN          A             128.148.31.42
 ; remove lordlyon from the cluster for now - bnacar
 ;fastx-cluster           600         IN          A             128.148.31.43
@@ -198,8 +198,9 @@ drafty                               IN          A             64.154.38.46
 ptbdb                                IN          CNAME         ptbdbcit.services.brown.edu.
 
 ; for dhl
-;www.vrwiki.cs.brown.edu.            IN          CNAME           static.cs.brown.edu.
-www.vrwiki.cs.brown.edu.            IN          TXT             "google-site-verification=_KR0PFxjp-Us1e6SVOfYFlh42V8zZmTaKpqgfDchGIk"
+rx6kzhmqqfox.www.vrwiki.cs.brown.edu. IN         CNAME         gv.yuosl5qsk4jiul.dv.googlehosted.com.
+www.vrwiki.cs.brown.edu.              IN         CNAME         ghs.googlehosted.com.
+;www.vrwiki.cs.brown.edu.            IN          TXT             "google-site-verification=_KR0PFxjp-Us1e6SVOfYFlh42V8zZmTaKpqgfDchGIk"
 
 [%   CASE 'ilab.cs.brown.edu' -%]
 [% END -%]
