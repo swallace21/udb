@@ -184,6 +184,7 @@ dsd				    IN		CNAME		brownvc.github.io.
 hci-v2                               IN          A             134.122.114.25
 remotion                             IN          A             134.122.114.25
 sochiatrist                          IN          A             134.122.114.25
+sochiatrist-cloud                    IN          A             140.82.46.236
 selfe                                IN          A             134.122.114.25
 dark                                 IN          A             134.122.114.25
 uxfactor                             IN          A             134.122.114.25
