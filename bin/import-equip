@@ -244,7 +244,6 @@ vlan_insert("tstaff-dmz", 32, "128.148.32.0/25", 1, "128.148.32.1");
 vlan_insert("tstaff-private", 192, "192.168.1.0/24", 0, "192.168.1.1");
 vlan_insert("tstaff-private", 898, "10.116.0.0/16", 1, "10.116.1.1");
 vlan_insert("tstaff-private", 897, "192.168.10.0/24", 1, "192.168.10.1");
-vlan_insert("tstaff-standard", 31, "128.148.31.0/24", 1, "128.148.31.1");
 vlan_insert("tstaff-standard", 33, "128.148.33.0/24", 1, "128.148.33.1");
 vlan_insert("tstaff-standard", 37, "128.148.37.0/24", 1, "128.148.37.1");
 vlan_insert("tstaff-standard", 38, "128.148.38.0/24", 1, "128.148.38.1");
