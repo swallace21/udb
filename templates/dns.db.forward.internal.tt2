@@ -338,20 +338,18 @@ mg.signmeup.cs.brown.edu.           IN          MX            10 mxb.mailgun.org
 email.mg.signmeup.cs.brown.edu.     IN          CNAME         mailgun.org.
 
 ; for the fastx cluster
-fastx-cluster           600         IN          A             128.148.31.22
-fastx-cluster           600         IN          A             128.148.31.23
-fastx-test           600         IN          A             128.148.31.24
-fastx-cluster           600         IN          A             128.148.31.25
-fastx-cluster           600         IN          A             128.148.31.27
-fastx-cluster           600         IN          A             128.148.31.28
-fastx-cluster           600         IN          A             128.148.31.29
-fastx-cluster           600         IN          A             128.148.31.32
-fastx-cluster           600         IN          A             128.148.31.33
-fastx-cluster           600         IN          A             128.148.31.40
-fastx-test           600         IN          A             128.148.31.41
-fastx-cluster           600         IN          A             128.148.31.42
-; remove lordlyon from the cluster for now - bnacar
-;fastx-cluster           600         IN          A             128.148.31.43
+fastx-cluster           600         IN          A             128.148.33.21
+fastx-cluster           600         IN          A             128.148.33.22
+fastx-cluster           600         IN          A             128.148.33.23
+fastx-cluster           600         IN          A             128.148.33.24
+fastx-cluster           600         IN          A             128.148.33.25
+fastx-cluster           600         IN          A             128.148.33.26
+fastx-cluster           600         IN          A             128.148.33.27
+fastx-cluster           600         IN          A             128.148.33.28
+fastx-cluster           600         IN          A             128.148.33.30
+fastx-cluster           600         IN          A             128.148.33.31
+fastx-cluster           600         IN          A             128.148.33.35
+fastx-cluster           600         IN          A             128.148.33.37
 
 ; for tbn's "logic for systems" course
 check-ex-spec                       IN          A             35.227.38.190
