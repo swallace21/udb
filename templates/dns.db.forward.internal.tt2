@@ -322,9 +322,6 @@ explorecsr                          IN          CNAME         brownvc.github.io.
 ; for rfonseca
 pane                                IN          CNAME         systems.cs.brown.edu.
 
-; for ayalava2
-bds                                 IN          CNAME         browndata.org.
-
 ; for jswrenn pyret.org add-on
 examplar                            IN          A             104.196.127.150
 pyret                               IN          A             104.196.127.150
