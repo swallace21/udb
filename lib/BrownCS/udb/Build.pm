@@ -363,6 +363,8 @@ sub build_tftpboot {
       $bootimage = "fai-windows";
     } elsif ($os->os_type eq 'server200864') {
       $bootimage = "fai-windows";
+    } elsif ($os->os_type eq 'windows1064') {
+      $bootimage = "fai-windows";
     }
     
     next if not defined($bootimage);
