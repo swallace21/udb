@@ -338,7 +338,7 @@ email.mg.signmeup.cs.brown.edu.     IN          CNAME         mailgun.org.
 ; vms
 fastx-cluster           600         IN          A             128.148.33.21
 fastx-cluster           600         IN          A             128.148.33.22
-;fastx-cluster           600         IN          A             128.148.33.23
+fastx-cluster           600         IN          A             128.148.33.23
 fastx-cluster           600         IN          A             128.148.33.24
 fastx-cluster           600         IN          A             128.148.33.25
 fastx-cluster           600         IN          A             128.148.33.26
