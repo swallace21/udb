@@ -87,7 +87,6 @@ mirror                              IN          A               10.116.53.40
 ;debian          60                 IN          A               10.116.53.40
 ;centos                             IN          CNAME           debian.cs.brown.edu.
 ;kits                               IN          CNAME           debian.cs.brown.edu.
-kits                                IN          CNAME           mirror.cs.brown.edu.
 pkgs                                IN          CNAME           debian.cs.brown.edu.
 ;debian                             IN          MX              10 mx.cs.brown.edu.
 
