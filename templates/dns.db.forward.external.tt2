@@ -79,8 +79,6 @@ tmx                                 IN          MX              10 tmx.cs.brown.
 
 
 ; debian mirror entries
-mirror                              IN          A               10.116.53.39
-mirror                              IN          A               10.116.53.40
 ;debian          60                 IN          A               128.148.33.94
 ;debian          60                 IN          A               128.148.33.24
 ;debian          60                 IN          A               10.116.53.39
