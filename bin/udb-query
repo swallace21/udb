@@ -101,6 +101,13 @@ switch($type) {
     }
     ($success, @results) = search_ethernet($udb)->($string,$verbose);
   }
+  case "manager" {
+    if (! $string) {
+      print "ERROR: you must enter manager string to search for\n\n";
+      usage(2)
+    }
+    ($success, @results) = search_manager($udb)->($string,$verbose);
+  }
   case "os_type" {
     if (! $string) {
       print "ERROR: you must enter an os_type to search for\n\n";
@@ -239,6 +246,7 @@ where <type of search> can be one of:
   device          - search for a given device name
   dns             - search for a given dns name
   ethernet        - search for a given ethernet address
+  manager         - search for a device by manager
   os_type         - search for a given os_type
   po              - search for a given po number
   room            - search for devices within a given room

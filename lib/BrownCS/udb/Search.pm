@@ -17,6 +17,7 @@ our @EXPORT_OK = qw(
   search_device
   search_dns
   search_ethernet
+  search_manager
   search_os_type
   search_po
   search_room
@@ -206,6 +207,21 @@ sub search_dns {
     my ($name, $verbose) = @_;
 
     my @results = fuzzy_search($udb, 'NetDnsEntries', 'dns_name', $name, $verbose);
+
+    if (@results) {
+      return (1, @results);
+    } else {
+      return (0, undef);
+    }
+  };
+}
+
+sub search_manager {
+  my $udb = shift;
+  return sub {
+    my ($manager, $verbose) = @_;
+
+    my @results = fuzzy_search($udb, 'Devices', 'manager', $manager, $verbose);
 
     if (@results) {
       return (1, @results);
