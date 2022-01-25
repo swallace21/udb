@@ -26,6 +26,7 @@ our @EXPORT_OK = qw(
   search_switches
   search_spare
   search_usage
+  search_vlan
   search_walljack
 );
 
@@ -423,6 +424,39 @@ sub search_usage {
     } else {
       return (0, undef);
     }
+  };
+}
+
+sub search_vlan {
+  my $udb = shift;
+
+  return sub {
+    my ($vlan, $verbose) = @_;
+
+    my $rs = $udb->resultset('Devices')->search(
+      {
+        'primary_address.vlan_num' => $vlan,
+      },
+      {
+        join => {
+          'net_interfaces' => 'primary_address'
+        },
+      },
+    );
+
+    if ($rs->count) {
+      my @results;
+
+      while (my $device = $rs->next) {
+        push @results, $device->device_name;
+      }
+
+      if (@results) {
+        return (1, @results);
+      }
+    }
+
+    return (0, undef);
   };
 }
 

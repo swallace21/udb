@@ -164,6 +164,13 @@ switch($type) {
     }
     ($success, @results) = search_usage($udb)->($string,$verbose);
   }
+  case "vlan" {
+    if (! $string) {
+      print "ERROR: you must enter a vlan number to search for\n\n";
+      usage(2)
+    }
+    ($success, @results) = search_vlan($udb)->($string,$verbose);
+  }
   case "walljack" {
     if (! $string) {
       print "ERROR: you must enter walljack to search for\n\n";
@@ -255,6 +262,8 @@ where <type of search> can be one of:
   ssh_known_hosts - search for machines that should be included in 
                     ssh_known_hosts file
   switches        - search for switches
+  usage           - search for devices by usage
+  vlan            - search for device by vlan number
   walljack        - search for devices connected to a given walljack
 
 =head1 DESCRIPTION
