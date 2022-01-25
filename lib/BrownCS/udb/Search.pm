@@ -14,6 +14,7 @@ our @EXPORT_OK = qw(
   search_class
   search_comment
   search_contact
+  search_date
   search_device
   search_dns
   search_ethernet
@@ -23,6 +24,7 @@ our @EXPORT_OK = qw(
   search_room
   search_serial
   search_ssh_known_hosts
+  search_switch
   search_switches
   search_spare
   search_usage
@@ -180,6 +182,42 @@ sub search_contact {
     } else {
       return (0, undef);
     }
+  };
+}
+
+sub search_date {
+  my $udb = shift;
+  return sub {
+    my ($date, $verbose) = @_;
+
+    my $op = '=';
+    if ($date =~ m/^([ba]?)\d\d\d\d-\d\d-\d\d$/) {
+      $op = '<' if $1 eq 'b';
+      $op = '>' if $1 eq 'a';
+      $date =~ s/^.// if $1;
+    }
+    else {
+      print("Bad date, use [ba]YYYY-MM-DD (b=before, a=after)\n");
+      return (0, undef);
+    }
+
+    my $rs = $udb->resultset('Devices')->search({
+      installed_on => { $op => $date }
+    });
+
+    if ($rs->count) {
+      my @results;
+
+      while (my $device = $rs->next) {
+        push @results, $device->device_name;
+      }
+
+      if (@results) {
+        return (1, @results);
+      }
+    }
+
+    return (0, undef);
   };
 }
 
@@ -389,6 +427,40 @@ sub search_ssh_known_hosts {
     } else {
       return (0, undef);
     }
+  };
+}
+
+sub search_switch {
+  my $udb = shift;
+
+  return sub {
+    my ($switch, $verbose) = @_;
+    $switch =~ s/\..*//;  # remove domain
+
+    my $rs = $udb->resultset('Devices')->search(
+      {
+        'net_port.switch_name' => $switch,
+      },
+      {
+        join => {
+          'net_interfaces' => 'net_port'
+        },
+      },
+    );
+
+    if ($rs->count) {
+      my @results;
+
+      while (my $device = $rs->next) {
+        push @results, $device->device_name;
+      }
+
+      if (@results) {
+        return (1, @results);
+      }
+    }
+
+    return (0, undef);
   };
 }
 

@@ -80,6 +80,13 @@ switch($type) {
     }
     ($success, @results) = search_contact($udb)->($string,$verbose);
   }
+  case "date" {
+    if (! $string) {
+      print "ERROR: you must enter date string to search for\n\n";
+      usage(2)
+    }
+    ($success, @results) = search_date($udb)->($string,$verbose);
+  }
   case "device" {
     if (! $string) {
       print "ERROR: you must enter device string to search for\n\n";
@@ -147,6 +154,13 @@ switch($type) {
     ($success, @results) = search_ssh_known_hosts($udb)->(1);
     # this only makes sense to return a list of hosts, i.e. batch mode
     $batch=1; 
+  }
+  case "switch" {
+    if (! $string) {
+      print "ERROR: you must enter a switch name to search for\n\n";
+      usage(2)
+    }
+    ($success, @results) = search_switch($udb)->($string,$verbose);
   }
   case "switches" {
     if (@ARGV) {
@@ -250,6 +264,8 @@ where <type of search> can be one of:
   class           - search for devices in a given class
   comment         - search for a given comment
   contact         - search for a device whose contact is a given user
+  date            - search for devices by install date ([ba]YYYY-MM-DD
+                                                        b=before, a=after)
   device          - search for a given device name
   dns             - search for a given dns name
   ethernet        - search for a given ethernet address
@@ -261,6 +277,7 @@ where <type of search> can be one of:
   spare           - search for spare systems
   ssh_known_hosts - search for machines that should be included in 
                     ssh_known_hosts file
+  switch          - search for devices by switch name
   switches        - search for switches
   usage           - search for devices by usage
   vlan            - search for device by vlan number
