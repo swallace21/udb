@@ -150,6 +150,16 @@ mg.signmeup.cs.brown.edu.           IN          MX            10 mxa.mailgun.org
 mg.signmeup.cs.brown.edu.           IN          MX            10 mxb.mailgun.org.
 email.mg.signmeup.cs.brown.edu.     IN          CNAME         mailgun.org.
 
+; new signmeup (see [CS #669255])
+hours                            IN          CNAME          cname.vercel-dns.com.
+api.hours.cs.brown.edu.          IN          A              216.239.32.21
+api.hours.cs.brown.edu.          IN          A              216.239.34.21
+api.hours.cs.brown.edu.          IN          A              216.239.36.21
+api.hours.cs.brown.edu.          IN          A              216.239.38.21
+api.hours.cs.brown.edu.          IN          TXT            "google-site-verification=lee99vv2jVroND1srZvvvMxcXdNpWKXoUWA40Uz-WuA"
+
+
+
 ; for the fastx cluster
 ; vms
 fastx-cluster           600         IN          A             128.148.33.21
