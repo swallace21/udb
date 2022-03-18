@@ -400,6 +400,10 @@ rx6kzhmqqfox.www.vrwiki.cs.brown.edu. IN         CNAME         gv.yuosl5qsk4jiul
 www.vrwiki.cs.brown.edu.              IN         CNAME         ghs.googlehosted.com.
 ;www.vrwiki.cs.brown.edu.            IN          TXT             "google-site-verification=_KR0PFxjp-Us1e6SVOfYFlh42V8zZmTaKpqgfDchGIk"
 
+; for drithcie
+aireu                                IN          CNAME         aireu.github.io.
+
+
 [%   CASE 'ilab.cs.brown.edu' -%]
 [% END -%]
 
