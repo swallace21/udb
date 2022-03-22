@@ -941,7 +941,7 @@ sub build_dns {
   # send new config file to each server
   my %dns_servers = (
     internal => [ 'pocky', 'dartagnan' ],
-    external => [ 'salt','pepper' ],
+    external => [ 'salt','pepper', 'garlic', 'onion' ],
   );
 
   foreach my $region (@regions) {
