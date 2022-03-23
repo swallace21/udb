@@ -26,7 +26,7 @@ $ttl 30m
   IN  NS  anycast.brown.edu.
 
 
-localhost                           IN          A               127.0.0.1
+localhost.                          IN          A               127.0.0.1
 
 [% SWITCH domain -%]
 [%   CASE 'cs.brown.edu' %]

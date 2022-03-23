@@ -26,7 +26,7 @@ $ttl 30m
   IN  NS  bru-ns4.brown.edu.
   IN  NS  ns1.ucsb.edu.
 
-localhost                           IN          A               127.0.0.1
+localhost.                          IN          A               127.0.0.1
 
 [% SWITCH domain -%]
 [%   CASE 'cs.brown.edu' %]
