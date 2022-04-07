@@ -396,7 +396,7 @@ ptbdb                                IN          CNAME         ptbdbcit.services
 socially-responsible-computing      IN          A             128.148.36.129
 
 ; for dhl                           
-rx6kzhmqqfox.www.vrwiki.cs.brown.edu. IN         CNAME         gv.yuosl5qsk4jiul.dv.googlehosted.com.
+rx6kzhmqqfox.www.vrwiki.cs.brown.edu. IN         CNAME         gv-yuosl5qsk4jiul.dv.googlehosted.com.
 www.vrwiki.cs.brown.edu.              IN         CNAME         ghs.googlehosted.com.
 ;www.vrwiki.cs.brown.edu.            IN          TXT             "google-site-verification=_KR0PFxjp-Us1e6SVOfYFlh42V8zZmTaKpqgfDchGIk"
 

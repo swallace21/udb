@@ -210,7 +210,7 @@ drafty                               IN          A             64.154.38.46
 ptbdb                                IN          CNAME         ptbdbcit.services.brown.edu.
 
 ; for dhl
-rx6kzhmqqfox.www.vrwiki.cs.brown.edu. IN         CNAME         gv.yuosl5qsk4jiul.dv.googlehosted.com.
+rx6kzhmqqfox.www.vrwiki.cs.brown.edu. IN         CNAME         gv-yuosl5qsk4jiul.dv.googlehosted.com.
 www.vrwiki.cs.brown.edu.              IN         CNAME         ghs.googlehosted.com.
 ;www.vrwiki.cs.brown.edu.            IN          TXT             "google-site-verification=_KR0PFxjp-Us1e6SVOfYFlh42V8zZmTaKpqgfDchGIk"
 
