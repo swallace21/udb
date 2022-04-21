@@ -85,7 +85,7 @@ tmx                                 IN          MX              10 tmx.cs.brown.
 ;debian          60                 IN          A               10.116.53.40
 ;centos                             IN          CNAME           debian.cs.brown.edu.
 ;kits                               IN          CNAME           debian.cs.brown.edu.
-pkgs                                IN          CNAME           debian.cs.brown.edu.
+;pkgs                               IN          CNAME           debian.cs.brown.edu.
 ;debian                             IN          MX              10 mx.cs.brown.edu.
 
 ; remote desktop cluster csrdserver.cs.brown.edu
