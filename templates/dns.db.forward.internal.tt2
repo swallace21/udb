@@ -376,19 +376,18 @@ neuralfields				IN	CNAME		brownvc.github.io.
 ivl				IN	CNAME		brown-ivl.github.io.
 
 ; for jeffh
-hci-v2                               IN          A             134.122.114.25 
-remotion                             IN          A             134.122.114.25
-sochiatrist                          IN          A             134.122.114.25
-sochiatrist-cloud                    IN          A             128.148.247.12
-selfe                                IN          A             134.122.114.25
-dark                                 IN          A             134.122.114.25
-uxfactor                             IN          A             134.122.114.25
-portalble                            IN          A             134.122.114.25
-hci                                  IN          A             134.122.114.25
-webgazer                             IN          A             134.122.114.25
-chime                                IN          A             134.122.114.25
-sleepcoacher                         IN          A             134.122.114.25
+remotion                             IN          A             140.82.1.67
+sochiatrist                          IN          A             140.82.1.67
+selfe                                IN          A             140.82.1.67
+dark                                 IN          A             140.82.1.67
+uxfactor                             IN          A             140.82.1.67
+portalble                            IN          A             140.82.1.67
+hci                                  IN          A             140.82.1.67
+webgazer                             IN          A             140.82.1.67
+chime                                IN          A             140.82.1.67
+sleepcoacher                         IN          A             140.82.1.67
 drafty                               IN          A             64.154.38.46
+sochiatrist-cloud                    IN          A             128.148.247.12
 
 ; for aragaven
 ptbdb                                IN          CNAME         ptbdbcit.services.brown.edu.
