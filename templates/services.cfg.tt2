@@ -487,13 +487,13 @@ define service{
   servicegroups   gpfs
   contact_groups  escalation_group
 }
-[% CASE 'smb' %]
-define service{
-  use             smb_template
-  host_name       [% host.hostname %]
-  servicegroups   smb
-  contact_groups  urgent_group
-}
+# [% CASE 'smb' %]
+# define service{
+#  use             smb_template
+#  host_name       [% host.hostname %]
+#  servicegroups   smb
+#  contact_groups  urgent_group
+# }
 [%  CASE 'printer' %]
 define service{
   use             printer_template
@@ -736,13 +736,13 @@ define service{
   servicegroups   krb
   contact_groups  urgent_group
 }
-[%  CASE 'backup_tsm' %]
-define service{
-  use             backup_tsm_template
-  host_name       [% host.hostname %]
-  servicegroups   backup_tsm
-  contact_groups  urgent_group
-}
+# [%  CASE 'backup_tsm' %]
+# define service{
+#  use             backup_tsm_template
+#  host_name       [% host.hostname %]
+#  servicegroups   backup_tsm
+#  contact_groups  urgent_group
+# }
 
 [% END -%]
 [% END -%]
