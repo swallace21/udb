@@ -42,7 +42,7 @@ if ($svg && ! $force && -e "$output_dir/$prefix.svg") {
 
 # dump and collect important SQL statements, so that sqlfairy is happy
 print STDERR "Please enter your udb database ";
-open(SQL_QUERY, "/usr/bin/pg_dump --schema-only --no-owner --no-acl --no-tablespaces -h sysdb.cs.brown.edu udb |") || die "Can't dump database\n";
+open(SQL_QUERY, "/usr/bin/pg_dump --schema-only --no-owner --no-acl --no-tablespaces -h sysdb2.cs.brown.edu udb |") || die "Can't dump database\n";
 while(<SQL_QUERY>) {
   if (my ($table) = /^CREATE TABLE (.*) \(/) { 
     my @entries;

@@ -13,7 +13,7 @@ my $config = $config_yaml->[0];
 __PACKAGE__->load_classes;
 
 __PACKAGE__->connection(
-  'dbi:Pg:dbname=udb;host=sysdb',
+  'dbi:Pg:dbname=udb;host=sysdb2',
   $config->{user},
   $config->{pass},
 );
