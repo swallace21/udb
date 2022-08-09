@@ -217,6 +217,13 @@ www.vrwiki.cs.brown.edu.              IN         CNAME         ghs.googlehosted.
 ; for drithcie
 aireu                                IN          CNAME         aireu.github.io.
 
+; for sk
+rust-book.cs.brown.edu.              IN          A             185.199.108.153
+rust-book.cs.brown.edu.              IN          A             185.199.109.153
+rust-book.cs.brown.edu.              IN          A             185.199.110.153
+rust-book.cs.brown.edu.              IN          A             185.199.111.153
+
+
 
 [%   CASE 'ilab.cs.brown.edu' -%]
 [% END -%]
