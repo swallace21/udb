@@ -374,6 +374,7 @@ dsd				IN	CNAME		brownvc.github.io.
 ; for srinath sridhar
 neuralfields				IN	CNAME		brownvc.github.io.
 ivl				IN	CNAME		brown-ivl.github.io.
+brics         IN    CNAME   brown-ivl.github.io.
 
 ; for jeffh
 remotion                             IN          A             140.82.1.67
