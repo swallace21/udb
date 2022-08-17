@@ -61,7 +61,7 @@ my $Pass;
 my $Network_test = "10.9.1.0/24";
 my $Network = "10.9.114.0/24";
 my $Base_url = "https://gm.brown.edu/wapi";
-my $Api_vers = "v2.10.1";
+my $Api_vers = "v2.11.3"; # old 2.10.1 :: new v2.11.3
 my $Grid = "grid/b25lLmNsdXN0ZXIkMA:Infoblox";
 my $Json = JSON::MaybeXS->new(utf8 => 1, pretty => 1);
 
