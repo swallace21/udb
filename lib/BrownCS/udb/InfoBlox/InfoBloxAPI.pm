@@ -20,7 +20,7 @@ use YAML::Tiny;
 
 InfoBlox
 
-Stores functions related to InfoBlox to manage IPs and machines in Marston Hall.
+Stores functions related to InfoBlox to manage IPs and machines in Arnold.
 
 Authorship: Shaun Wallace (sw90)
 

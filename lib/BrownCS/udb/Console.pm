@@ -714,10 +714,10 @@ sub get_place {
     $new_building = 'CIT';
     $new_room = $self->get_updated_val("Room number", $default_room);
   } else {
-    my $is_in_marston = $self->confirm("\nIs this device located in the Marston? (Y/n)", "y");
-    if ($is_in_marston) {
+    my $is_in_arnold = $self->confirm("\nIs this device located in the Arnold? (Y/n)", "y");
+    if ($is_in_arnold) {
       $new_city = 'Providence';
-      $new_building = 'Marston';
+      $new_building = 'Arnold';
       $new_room = $self->get_updated_val("Room number", $default_room);
     } else {
       my $is_on_campus = $self->confirm("\nIs this device located on campus? (Y/n)", "y");
