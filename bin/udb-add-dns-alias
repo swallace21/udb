@@ -1,0 +1,134 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+use Pod::Usage;
+
+use FindBin qw($RealBin);
+use lib "$RealBin/../lib";
+use BrownCS::udb::Schema;
+use BrownCS::udb::Util qw(:all);
+use BrownCS::udb::Console qw(:all);
+use BrownCS::udb::Net qw(:all);
+
+# Print a simple help message.
+sub usage {
+  my ($exit_status) = @_;
+  pod2usage({ -exitval => $exit_status, -verbose => 1});
+}
+
+my $help = 0;
+
+GetOptions (
+  'help|h|?' => \$help, 
+) or usage(1);
+usage(0) if $help;
+
+if (@ARGV < 0 || @ARGV > 1) {
+  usage(2);
+}
+
+my $udb = BrownCS::udb::Schema->connect;
+my $uc = new BrownCS::udb::Console(udb => $udb);
+
+my $name;
+if (@ARGV == 1) {
+  $name = shift @ARGV;
+
+  if (! dns_name_exists($udb, $name)) {
+    die "No record for DNS name $name.\n";
+  }
+}
+
+my $rs;
+eval {
+  $rs = $udb->txn_do(sub {
+    my ($alias, $domain, $region, $authoritative) = $uc->get_dns_alias($name);
+
+    my $addr;
+
+    # associate the DNS alias with an network address
+    if ($name) {
+      $addr = $udb->resultset('NetDnsEntries')->search({
+        dns_name => {'=', $name},
+      })->single;
+    } else { 
+      my ($ip, $vlan) = $uc->get_ip_and_vlan;
+      $addr = $udb->resultset('NetAddresses')->find_or_create({
+        vlan => $vlan,
+        ipaddr => $ip,
+        monitored => 0,
+      });
+    }
+
+    # create a DNS entry
+    $udb->resultset('NetDnsEntries')->find_or_create({
+      dns_name => $alias,
+      domain => $domain,
+      net_address_id => $addr->net_address_id,
+      authoritative => $authoritative,
+      dns_region => $region,
+     });
+  });
+};
+if ($@) {
+  die <<EOF;
+Operation failed. Details:
+  $@
+EOF
+}
+
+__END__
+
+=head1 NAME
+
+udb-add-dns-alias - Adds a new DNS A record or CNAME
+
+=head1 SYNOPSIS
+
+B<udb-add-dns-alias> [device name|existing DNS alias]
+
+=head1 DESCRIPTION
+
+B<udb-add-dns-alias> allows a user to create a new DNS alias.  The command
+can create both A and CNAME records.
+
+=over
+
+=item B<Creating A records>
+
+If you do not provide a name on the command line, udb will create an A
+record with the information you provide.  If the name you provide already 
+exists, the result will be a DNS round robin; the same name resolving to
+two equally weighted DNS A records.
+
+=item B<Create CNAME records>
+
+If you provide an exising B<device name> or B<DNS alias> on the command line, 
+udb will create a new CNAME referencing the existing device name or DNS A
+record.
+
+=back
+
+=head1 OPTIONS
+
+=over
+
+=item B<-h>, B<--help>
+
+Print a help message and exit.
+
+=back
+
+=head1 AUTHORS
+
+Mark Dieterich.
+
+=head1 SEE ALSO
+
+B<udb>
+
+=cut
+

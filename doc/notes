@@ -1,0 +1,9 @@
+- verify equipment managed_by and zone managed_by must match
+- verify NetPortsNetVlans matches NetAddressesNetPorts
+- disallow interfaces on one port with primary addrs on different vlans
+- email kathy when computer is added (Brown inv number, serial #, etc)
+- email kathy when name is changed/added (label)
+- fix windows udb sysinfo (port to perl -- check os)
+- build: add kerberos credentials
+- schema should have timestamps everywhere
+

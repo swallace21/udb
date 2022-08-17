@@ -1,0 +1,107 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+use Pod::Usage;
+
+use FindBin qw($RealBin);
+use lib "$RealBin/../lib";
+use BrownCS::udb::Schema;
+use BrownCS::udb::Util qw(:all);
+use BrownCS::udb::Console qw(:all);
+
+# Print a simple help message.
+sub usage {
+  my ($exit_status) = @_;
+  pod2usage({ -exitval => $exit_status, -verbose => 1});
+}
+
+my $help = 0;
+my $verbose = 0;
+my $dryrun = 0;
+
+GetOptions (
+  'help|h|?' => \$help, 
+  'v|verbose' => \$verbose,
+  'n|dryrun' => \$dryrun,
+) or usage(1);
+usage(0) if $help;
+
+my $udb = BrownCS::udb::Schema->connect;
+my $uc = new BrownCS::udb::Console(udb => $udb);
+
+if (not $dryrun) {
+  if (not BrownCS::udb::Util::okay_tstaff) {
+    print "Insufficient privileges - check your warnings.\n";
+    exit;
+  }
+}
+
+if ((@ARGV < 1) or (@ARGV > 2)) {
+  usage(2);
+}
+
+my $name = shift @ARGV;
+
+my $device = $udb->resultset('Devices')->find($name);
+die "No record for device $name.\n" if not $device;
+
+my $comment;
+if (@ARGV >= 1) {
+  $comment = shift @ARGV;
+} else {
+  $comment = $uc->get_comments($device->comments);
+}
+
+if ($dryrun) {
+  print "Dry run finished...\n";
+  exit;
+}
+
+$device->comments($comment);
+$device->update;
+
+__END__
+
+=head1 NAME
+
+udb-change-comment - Update the comment on an existing device record in UDB
+
+=head1 SYNOPSIS
+
+udb-change-user <device>
+
+=head1 DESCRIPTION
+
+Update the comment on an existing device record in UDB.
+
+=head1 OPTIONS
+
+=over
+
+=item B<-h>, B<--help>
+
+Print a help message and exit.
+
+=item B<-n>, B<--dryrun>
+
+Don't make any changes; just print what would be done.
+
+=item B<-v>, B<--verbose>
+
+Print lots of text about what is going on.
+
+=back
+
+=head1 AUTHORS
+
+Mark Dieterich.
+
+=head1 SEE ALSO
+
+B<udb>
+
+=cut
+

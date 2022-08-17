@@ -1,0 +1,169 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+use Pod::Usage;
+
+use FindBin qw($RealBin);
+use lib "$RealBin/../lib";
+use BrownCS::udb::Schema;
+use BrownCS::udb::Util qw(:all);
+use BrownCS::udb::Console qw(:all);
+use BrownCS::udb::Net qw(:all);
+use BrownCS::udb::Switch;
+
+# Print a simple help message.
+sub usage {
+  my ($exit_status) = @_;
+  pod2usage({ -exitval => $exit_status, -verbose => 1});
+}
+
+my $help = 0;
+my $verbose = 0;
+my $dryrun = 0;
+my $build = (not $dryrun);
+
+GetOptions (
+  'help|h|?' => \$help, 
+  'v|verbose' => \$verbose,
+  'n|dryrun' => \$dryrun,
+) or usage(1);
+usage(0) if $help;
+
+my $udb = BrownCS::udb::Schema->connect;
+my $uc = new BrownCS::udb::Console(udb => $udb);
+
+if (not $dryrun) {
+  if (!BrownCS::udb::Util::okay_tstaff || !BrownCS::udb::Util::okay_adminhost){
+    print "Insufficient privileges - check your warnings.\n";
+    exit;
+  }
+}
+
+if (@ARGV != 1) {
+  usage(2);
+}
+
+my $name = shift @ARGV;
+
+my $device = $udb->resultset('Devices')->find($name);
+die "No record for device $name.\n" if not $device;
+
+my $chosen_iface;
+
+my $ifaces_rs = $device->net_interfaces;
+if ($ifaces_rs->count == 0) {
+  print "The device $name does not have any network interfaces.\n";
+  exit(0);
+} elsif ($ifaces_rs->count == 1) {
+  $chosen_iface = $ifaces_rs->single;
+} else {
+  my $iface_ix = 1;
+  my @choices = ();
+  while (my $iface = $ifaces_rs->next) {
+    push @choices, {
+      key => $iface_ix++,
+      name => $iface,
+      desc => $iface->ethernet,
+    };
+  }
+  $chosen_iface = $uc->choose_from_menu("Select an interface", \@choices);
+}
+
+my $chosen_addr;
+
+my $addrs_rs = $chosen_iface->net_addresses;
+if ($addrs_rs->count == 0) {
+  print "The interface you selected does not have any network addresses.\n";
+  exit(0);
+} elsif ($addrs_rs->count == 1) {
+  $chosen_addr = $addrs_rs->single;
+} else {
+  my $addr_ix = 1;
+  my @choices = ();
+  while (my $addr = $addrs_rs->next) {
+    push @choices, {
+      key => $addr_ix++,
+      name => $addr,
+      desc => $addr->ipaddr,
+    };
+  }
+  $chosen_addr = $uc->choose_from_menu("Select an address", \@choices);
+}
+
+my ($ipaddr, $vlan) = $uc->get_ip_and_vlan(1);
+
+if ($dryrun) {
+  print "Dry run finished...\n";
+  exit;
+}
+
+my $monitored = 0;
+if (monitored_vlan($udb, $vlan->vlan_num)) {
+  $monitored = 1;
+}
+
+$chosen_addr->vlan($vlan);
+$chosen_addr->update({
+    ipaddr => $ipaddr,
+    monitored => $monitored,
+  });
+
+if ($build) {
+  my $port = $chosen_iface->net_port;
+  if ($port) {
+    my $net_switch = $port->net_switch;
+
+    my $switch = BrownCS::udb::Switch->new({
+        net_switch => $net_switch,
+        verbose => $verbose,
+      });
+    $switch->connect;
+    $switch->update_port($port);
+  }
+}
+
+__END__
+
+=head1 NAME
+
+udb-change-ip - Change the IP or VLAN of a device
+
+=head1 SYNOPSIS
+
+udb-change-ip <device>
+
+=head1 DESCRIPTION
+
+Perform maintenance on an existing device record in UDB.
+
+=head1 OPTIONS
+
+=over
+
+=item B<-h>, B<--help>
+
+Print a help message and exit.
+
+=item B<-n>, B<--dryrun>
+
+Don't make any changes; just print what would be done.
+
+=item B<-v>, B<--verbose>
+
+Print lots of text about what is going on.
+
+=back
+
+=head1 AUTHORS
+
+Aleks Bromfield.
+
+=head1 SEE ALSO
+
+B<udb>
+
+=cut
+

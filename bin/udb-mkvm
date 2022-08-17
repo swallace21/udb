@@ -1,0 +1,277 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+use Pod::Usage;
+use NetAddr::IP;
+
+use FindBin qw($RealBin);
+use lib "$RealBin/../lib";
+use BrownCS::udb::Schema;
+use BrownCS::udb::Util qw(:all);
+use BrownCS::udb::Net qw(:all);
+use BrownCS::udb::Console qw(:all);
+
+# Print a simple help message.
+sub usage {
+  my ($exit_status) = @_;
+  pod2usage({ -exitval => $exit_status, -verbose => 1});
+}
+
+my $help = 0;
+my $verbose = 0;
+my $dryrun = 0;
+
+GetOptions (
+  'help|h|?' => \$help, 
+  'v|verbose' => \$verbose,
+  'n|dryrun' => \$dryrun,
+) or usage(1);
+usage(0) if $help;
+
+my $udb = BrownCS::udb::Schema->connect;
+my $uc = new BrownCS::udb::Console(udb => $udb);
+
+if (not $dryrun) {
+  if (not BrownCS::udb::Util::okay_tstaff) {
+    print "Insufficient privileges - check your warnings.\n";
+    exit;
+  }
+}
+
+if (@ARGV != 1) {
+  usage(2);
+}
+
+my $name = shift @ARGV;
+
+my $existing_device = $udb->resultset('Devices')->find($name);
+die "Device $name already exists.\n" if $existing_device;
+
+my $vm_type = $uc->choose_from_menu(
+  "What type of VM is this?",
+  [
+  {
+    key => 1,
+    name => "tstaff",
+    desc => "tstaff",
+  },
+  {
+    key => 2,
+    name => "unsup",
+    desc => "user-managed, unsupported network",
+  },
+  {
+    key => 3,
+    name => "userdmz",
+    desc => "user-managed dmz",
+  },
+  ],
+  "unsup",
+);
+
+my ($managed_by, $equip_usage_type);
+my ($ipaddr, $vlan);
+
+if ($vm_type eq 'tstaff') {
+  $managed_by = 'tstaff';
+  $equip_usage_type = 'tstaff';
+  ($ipaddr, $vlan) = $uc->get_ip_and_vlan(1);
+} elsif ($vm_type eq 'unsup') {
+  $managed_by = 'user';
+  $equip_usage_type = 'virtual';
+  (undef, $ipaddr, $vlan) = verify_ip_or_vlan($udb)->("36");
+} elsif ($vm_type eq 'userdmz') {
+  $managed_by = 'user';
+  $equip_usage_type = 'virtual';
+  (undef, $ipaddr, $vlan) = verify_ip_or_vlan($udb)->("892");
+}
+
+my $os = 'debian';
+my $classes = $uc->get_comp_classes;
+my $contact = $uc->get_updated_val("Username of the primary user", '', \&verify_username);
+my $comments = $uc->get_comments;
+
+# do xm list to determine which host
+
+if ($dryrun) {
+  print "Dry run finished...\n";
+  exit;
+}
+
+my $rs;
+eval {
+  $rs = $udb->txn_do(sub {
+
+      my $comp = $udb->resultset('Computers')->create({
+          os_type => $os,
+          device => {
+            status => 'virtual',
+            usage => $equip_usage_type,
+            manager => $managed_by,
+            device_name => $name,
+            contact => $contact,
+            comments => $comments,
+          },
+        });
+
+      if ($classes) {
+        foreach (@$classes) {
+          my $class = $udb->resultset('CompClasses')->find_or_create({
+              name => $_,
+              os_type => $os,
+            });
+          $comp->add_to_comp_classes($class);
+        }
+      }
+
+      my $device = $comp->device;
+
+      my $sysinfo = $udb->resultset('CompSysinfo')->find_or_create({
+          device => $device,
+        });
+      $device->comp_sysinfo($sysinfo);
+
+      my $addr = $udb->resultset('NetAddresses')->create({
+          vlan => $vlan,
+          ipaddr => $ipaddr,
+          monitored => 0,
+        });
+
+      dns_insert_both($name, 'cs.brown.edu', $addr, 1);
+
+      my $iface = $device->add_to_net_interfaces({
+          device => $device,
+          primary_address => $addr,
+        });
+
+      $addr->add_to_net_interfaces($iface);
+
+    });
+};
+if ($@) {
+  die <<EOF;
+Failed to add $name. Try again.
+
+Details:
+  $@
+EOF
+}
+
+sub dns_insert {
+  my ($a, $b, $c, $d, $e) = @_;
+  $udb->resultset('NetDnsEntries')->find_or_create({
+      dns_name => $a,
+      domain => $b,
+      net_address => $c,
+      authoritative => $d,
+      dns_region => $e,
+    });
+}
+
+sub dns_insert_both {
+  my ($a, $b, $c, $d) = @_;
+  dns_insert($a, $b, $c, $d, "internal");
+  dns_insert($a, $b, $c, $d, "external");
+}
+
+### #!/bin/sh
+### 
+### # assume we're on the DMZ
+### 
+### usage() {
+###   echo "usage: $0 vm_name xen_host owner"
+###   exit 1
+### }
+### 
+### if [ $# -lt 3 ]
+### then
+###   usage
+### fi
+### 
+### VM_NAME=$1
+### XEN_HOST=$2
+### OWNER=$3
+### 
+### #cdb insert
+### #cdb make
+### 
+### vim /maytag/sys0/Linux/groups
+### 
+### IPTABLES_RULES=/maytag/sys0/Linux/files/add/group.debian.external.firewall/etc/iptables.rules
+### 
+### vim $IPTABLES_RULES
+### 
+### # scp $IPTABLES_RULES fw:/etc/iptables.rules
+### # ssh fw /etc/iptables.rules
+### 
+### # ssh dmznfs "lvcreate -L5G -n$VM_NAME vol && \
+### #               mkfs -t ext3 /dev/vol/$VM_NAME && \
+### #               /etc/ha.d/resource.d/mntlvms start"
+### 
+### DMZNFS_EXPORTS=/maytag/sys0/Linux/files/add/group.debian.server.baby_ruth/etc/exports
+### 
+### vim $DMZNFS_EXPORTS
+### 
+### for dmznfs in baby ruth
+### do
+###   scp $DMZNFS_EXPORTS $dmznfs:/etc/exports
+###   ssh $dmznfs /etc/init.d/nfs-kernel-server restart
+### done
+### 
+### vm_ip=`host $VM_NAME | grep address | awk '{print $4}'`
+### 
+### ssh $XEN_HOST "xen-create-image --hostname=$VM_NAME --ip=$vm_ip && \
+###                  xm create -c /xen/configs/$XEN_HOST/$VM_NAME.cfg"
+### 
+### /tstaff/bin/pushsshhosts $vmname
+### 
+### /u/system/bin/push_run -i $vmname
+### 
+### ssh $vmname shutdown -r now
+
+
+__END__
+
+=head1 NAME
+
+udb-mkvm - Add a Xen guest to UDB
+
+=head1 SYNOPSIS
+
+udb-mkvm <device>
+
+=head1 DESCRIPTION
+
+adds a device to the database
+
+=head1 OPTIONS
+
+=over
+
+=item B<-h>, B<--help>
+
+Print a help message and exit.
+
+=item B<-n>, B<--dryrun>
+
+Don't make any changes; just print what would be done.
+
+=item B<-v>, B<--verbose>
+
+Print lots of text about what is going on.
+
+=back
+
+=head1 AUTHORS
+
+Aleks Bromfield.
+
+=head1 SEE ALSO
+
+B<udb>
+
+=cut
+

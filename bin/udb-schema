@@ -1,0 +1,169 @@
+#!/usr/bin/perl
+
+use File::Temp qw/ tempfile /;
+use File::Copy;
+use Getopt::Long;
+use Cwd;
+use Pod::Usage;
+
+my @binaries = ('/usr/bin/pg_dump', '/usr/bin/sqlt-graph');
+foreach my $binary (@binaries) {
+  if (! -x $binary) {
+    print STDERR "ERROR: $binary not executable, exiting...\n";
+    exit(1);
+  }
+}
+
+my %tables;
+my @constraints;
+my @references;
+
+my $help = 0;
+my $force = 0;
+my $output_dir = getcwd;
+my $prefix = "udb";
+my $sql = 1;
+my $svg = 1;
+
+GetOptions ('help|?' => \$help, 'force' => \$force, 'output=s' => \$output_dir, 'prefix' => \$prefix, 'sql!' => \$sql, 'svg!' => \$svg) || die pod2usage(2);
+pod2usage(1) if $help;
+
+if ($sql && ! $force && -e "$output_dir/$prefix.sql") {
+  print "ERROR: output file \'$output_dir/$prefix.sql\' already exists.  Use\n";
+  print "the --force option if you want to force output\n";
+  exit(1);
+}
+
+if ($svg && ! $force && -e "$output_dir/$prefix.svg") {
+  print "ERROR: output file \'output file $output_dir/$prefix.svg\' already exists.  Use\n";
+  print "the --force option if you want to force output\n";
+  exit(1);
+}
+
+# dump and collect important SQL statements, so that sqlfairy is happy
+print STDERR "Please enter your udb database ";
+open(SQL_QUERY, "/usr/bin/pg_dump --schema-only --no-owner --no-acl --no-tablespaces -h sysdb2.cs.brown.edu udb |") || die "Can't dump database\n";
+while(<SQL_QUERY>) {
+  if (my ($table) = /^CREATE TABLE (.*) \(/) { 
+    my @entries;
+
+    $line = $_;
+    while ($line !~ /\)\;/) {
+      if ($line !~ /CONSTRAINT/) {
+        chomp($line);
+        $line =~ s/dns_safe_text/text/;  
+        push @entries, $line;
+      }
+      $line = <SQL_QUERY>;
+    }
+
+    $tables{$table} = [ @entries ];
+  }
+
+  if (my ($table) = /^ALTER TABLE ONLY (.*)/) {
+    $line = $_;
+    while ($line !~ /^$/) {
+      chomp($line);
+      $line =~ s/\;$//;
+
+      if (($line =~ /ADD CONSTRAINT.*PRIMARY KEY/) || ($line =~ /ADD CONSTRAINT.*UNIQUE/)) {
+        $line =~ s/^.*key //;
+        push @constraints, "$table;$line";
+      }
+
+      if ($line =~ /ADD CONSTRAINT.*FOREIGN KEY/) {
+        my ($key) = $line =~ /FOREIGN KEY \((.*)\) REFERENCES/;
+        $line =~ s/.*FOREIGN KEY \($key\) //;
+        $line =~ s/\(.*//;
+        
+        push @references, "$table;$key;$line";
+      }
+
+      $line = <SQL_QUERY>;
+    }
+  }
+}
+close(SQL_QUERY);
+
+my ($fh, $filename) = tempfile(SUFFIX => '.sql');
+open(OUTPUT, "> $filename") || die "ERROR: can't open temporary file\n";
+
+foreach my $table (keys %tables) {
+  if (grep(/^$table;/, @constraints) && $tables{$table}[-1] !~ /,/) {
+    $tables{$table}[-1] .= ",";
+  }
+
+  foreach my $entry (@{$tables{$table}}) {
+    if ($entry !~ /^CREATE/) {
+      my ($field) = $entry =~ /\s+([^\s]+)\s+/;
+      if (my ($reference) = grep(/^$table;$field;/, @references)) {
+        $reference =~ s/$table;$field;//;
+        $entry =~ s/,/ $reference,/;
+      }
+    }
+    print OUTPUT "$entry\n";
+  }
+  
+  my $i = 0;
+  foreach my $constraint (my @applicable_constraints = grep(/^$table;/, @constraints)) {
+    $constraint =~ s/$table;//;
+    if ($i != $#applicable_constraints) {
+      $constraint .= ",";
+    }
+    print OUTPUT "    $constraint\n";
+    $i++;
+  }
+  
+  print OUTPUT ");\n\n";
+}
+
+close(OUTPUT);
+
+if ($svg) {
+  system("/usr/bin/sqlt-graph -f PostgreSQL -o $output_dir/$prefix.svg -t svg $filename");
+}
+
+if ($sql) {
+  move($filename,"$output_dir/$prefix.sql") || die "ERROR: can't rename SQL file\n";
+  print "Output SQL to \'$output_dir/$prefix.sql\'.  Done.\n";
+}
+
+exit;
+
+__END__
+
+=head1 NAME
+
+udb-schema - Query udb database and generate ouput files representating database
+
+=head1 SYNOPSIS
+
+udb-schema [options]
+
+Options:
+
+  --help      brief help message
+  --output    where to place output files
+  --sql       generate sql output
+  --no-sql    don't generate sql output
+  --svg       generate svg output
+  --no-svg    don't generate svg output
+
+=head1 OPTIONS
+=over 8
+
+=item B<-help>
+Print a brief help message and exits.
+
+=item B<-output_dir>
+Prints the manual page and exits.
+
+=back
+
+=head1 DESCRIPTION
+
+B<udb-schema> queries the udb database and outputs an sql representation and/or
+svg represenatation of the database structure.  By default, both formats will
+be output.
+
+=cut

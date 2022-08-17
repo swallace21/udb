@@ -1,0 +1,200 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+use Pod::Usage;
+
+use FindBin qw($RealBin);
+use lib "$RealBin/../lib";
+use BrownCS::udb::Schema;
+use BrownCS::udb::Util qw(:all);
+use BrownCS::udb::Console qw(:all);
+
+# Print a simple help message.
+sub usage {
+  my ($exit_status) = @_;
+  pod2usage({ -exitval => $exit_status, -verbose => 1});
+}
+
+my $help = 0;
+my $verbose = 0;
+my $dryrun = 0;
+
+sub vprint {
+  my ($msg) = @_;
+  if ($verbose) {
+    print $msg, "\n";
+  }
+}
+
+GetOptions (
+  'help|h|?' => \$help, 
+  'v|verbose' => \$verbose,
+  'n|dryrun' => \$dryrun,
+) or usage(1);
+usage(0) if $help;
+
+my $udb = BrownCS::udb::Schema->connect;
+my $uc = new BrownCS::udb::Console(udb => $udb);
+
+if (not $dryrun) {
+  if (not BrownCS::udb::Util::okay_tstaff){
+    print "Insufficient privileges - check your warnings.\n";
+    exit;
+  }
+}
+
+if (@ARGV < 1) {
+  usage(2);
+}
+
+my @dns_names = @ARGV;
+my $rs;
+
+eval {
+  $rs = $udb->txn_do(sub {
+    foreach my $name (@dns_names) {
+      my @addrs;
+
+      # check to see whether this name is associated with a device
+      # if so, get associated addresses
+      my $device = $udb->resultset('Devices')->find($name);
+      if ($device) {
+        my $iface_rs = $device->net_interfaces;
+        while (my $iface = $iface_rs->next) {
+          if ($iface->net_addresses) {
+            my $addr_rs = $iface->net_addresses;
+            while (my $addr = $addr_rs->next) {
+              # we can only monitor hosts with static IP addresses
+              if ($addr->ipaddr) {
+                push @addrs, $addr;
+              }
+            }
+          }
+        }
+      } elsif (my $dns_entry = $udb->resultset('NetDnsEntries')->search({dns_name => $name,})->single) {
+        my $addr = $dns_entry->net_address;
+        if ($addr->ipaddr) {
+          push @addrs, $dns_entry->net_address; 
+        }
+      }
+
+      if (! @addrs) {
+        print "No static IP addresses are associated with $name and\n";
+        print "we are unable to monitor dynamic hosts.\n";
+        next;
+      }
+    
+      if($dryrun){
+        print "Dry run finished...\n";
+        exit;
+      }
+
+      print "Current monitoring configuration for $name:\n";
+      my $continue_mod = 1;
+      my $notifications = 0;
+      while ($continue_mod) {
+        printf "\n%10s%13s\n", "IP address", "Monitored";
+        my $addr_ix = 1;
+        my @choices;
+        foreach my $addr (@addrs) {
+          printf "%11s%7s\n", $addr->ipaddr, $addr->monitored;
+          if ($addr->notification) {
+            $notifications = 1;
+          }
+          push @choices, {
+            key => $addr_ix++,
+            name => $addr,
+            desc => $addr->ipaddr,
+          };
+        }
+
+        if ($uc->confirm("\nWould you like to make any changes (Y/n)?", "yes")) {
+          my $chosen_addr = $uc->choose_from_menu("\nSelect an address to modify", \@choices);
+          my $ip = $chosen_addr->ipaddr;
+          my $monitored = $uc->confirm("Should $ip be monitored (Y/n)?", "yes");
+
+          $chosen_addr->update({
+            monitored => $monitored,
+          });
+        } else {
+          $continue_mod = 0;
+        }
+      }
+
+      my $default = "N";
+      my $alternate = "y";
+      print "\nTstaff notifications must be enabled or disabled for all addresses\n";
+      print "on a particular host.  Notifications for this host are currently ";
+      if ($notifications) {
+        print "enabled\n";
+        $default = "Y";
+        $alternate = "n";
+      } else {
+        print "disabled\n";
+      }
+      print "\n";
+      $notifications = $uc->confirm("Do you wish to enable Tstaff notifications for this host ($default/$alternate)?", $default);
+      foreach my $addr (@addrs) {
+        if ($addr->monitored) {
+          $addr->update({
+            notification => $notifications,
+          });
+        }
+      }
+    }
+  });
+};
+if ($@) {
+  die <<EOF;
+Failed to update one or more names. Try again.
+
+Details:
+  $@
+EOF
+}
+
+__END__
+
+=head1 NAME
+
+udb-monitoring - Modifies the monitoring settings associated with a dns or host name
+
+=head1 SYNOPSIS
+
+udb-monitoring <dns name|hostname>
+
+=head1 DESCRIPTION
+
+Change the monitoring settings for one or more dns or host names
+
+=head1 OPTIONS
+
+=over
+
+=item B<-h>, B<--help>
+
+Print a help message and exit.
+
+=item B<-n>, B<--dryrun>
+
+Don't make any changes; just print what would be done.
+
+=item B<-v>, B<--verbose>
+
+Print lots of text about what is going on.
+
+=back
+
+=head1 AUTHORS
+
+Mark Dieterich.
+
+=head1 SEE ALSO
+
+B<udb>
+
+=cut
+

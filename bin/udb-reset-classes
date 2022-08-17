@@ -1,0 +1,132 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+use Pod::Usage;
+
+use FindBin qw($RealBin);
+use lib "$RealBin/../lib";
+use BrownCS::udb::Schema;
+use BrownCS::udb::Util qw(:all);
+use BrownCS::udb::Console;
+use BrownCS::udb::DeviceHash;
+
+# Print a simple help message.
+sub usage {
+  my ($exit_status) = @_;
+  pod2usage({ -exitval => $exit_status, -verbose => 1});
+}
+
+my $help = 0;
+my $verbose = 0;
+my $dryrun = 0;
+
+GetOptions (
+  'help|h|?' => \$help, 
+  'v|verbose' => \$verbose,
+  'n|dryrun' => \$dryrun
+) or usage(1);
+usage(0) if $help;
+
+my $udb = BrownCS::udb::Schema->connect;
+my $uc = new BrownCS::udb::Console(udb => $udb);
+my $udh = new BrownCS::udb::DeviceHash(udb => $udb);
+
+if (not $dryrun) {
+  if (not BrownCS::udb::Util::okay_tstaff){
+    print "Insufficient privileges - check your warnings.\n";
+    exit;
+  }
+}
+
+if (@ARGV != 1) {
+  usage(2);
+}
+
+my $name = shift @ARGV;
+my $device;
+my $comp;
+
+eval {
+  $device = $udb->resultset('Devices')->find($name);
+  $comp = $device->computer;
+};
+if ($@) {
+  die "No record for computer $name.\n";
+}
+
+# get new class from user
+my $classes = $uc->get_comp_classes;
+
+# get current classes
+my @cur_classes = $comp->comp_classes->get_column('name')->all;
+
+
+if ($dryrun) {
+  print "Dry run only...\n";
+  print "Name: " . $device->device_name . "\n" ;
+  print "Current Class: " . join(' ',@cur_classes) . "\n" ;
+  print "New Classes: " . join(' ',@$classes)  .  "\n";
+  print "Dry run finished...\n";
+  exit;
+}
+
+
+my $rs;
+eval {
+  $rs = $udb->txn_do(sub {
+      $udh->update_classes($comp, $classes);
+    });
+};
+if ($@) {
+  die <<EOF;
+Operation failed. Details:
+  $@
+EOF
+}
+
+__END__
+
+=head1 NAME
+
+udb-reset-classes - completely reset a computer's class list
+
+=head1 SYNOPSIS
+
+udb-reset-classes <computer>
+
+=head1 DESCRIPTION
+
+This will wipe all existing computer classes and replace it with a list of
+classes you provide.
+
+=head1 OPTIONS
+
+=over
+
+=item B<-h>, B<--help>
+
+Print a help message and exit.
+
+=item B<-n>, B<--dryrun>
+
+Don't make any changes; just print what would be done.
+
+=item B<-v>, B<--verbose>
+
+Print lots of text about what is going on.
+
+=back
+
+=head1 AUTHORS
+
+Phirum Peang.
+
+=head1 SEE ALSO
+
+B<udb>
+
+=cut
+

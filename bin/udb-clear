@@ -1,0 +1,137 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+use Pod::Usage;
+
+use FindBin qw($RealBin);
+use lib "$RealBin/../lib";
+use BrownCS::udb::Schema;
+use BrownCS::udb::Util qw(:all);
+use BrownCS::udb::Console qw(:all);
+
+# Print a simple help message.
+sub usage {
+  my ($exit_status) = @_;
+  pod2usage({ -exitval => $exit_status, -verbose => 1});
+}
+
+my $help = 0;
+my $verbose = 0;
+my $dryrun = 0;
+
+GetOptions (
+  'help|h|?' => \$help, 
+  'n|dryrun' => \$dryrun,
+) or usage(1);
+usage(0) if $help;
+
+my $udb = BrownCS::udb::Schema->connect;
+my $uc = new BrownCS::udb::Console(udb => $udb);
+
+if (not $dryrun) {
+  if (not BrownCS::udb::Util::okay_tstaff){
+    print "Insufficient privileges - check your warnings.\n";
+    exit;
+  }
+}
+
+if (@ARGV <= 0) {
+  usage(2);
+}
+
+my $cmd = shift;
+
+my $rs;
+
+eval {
+  $rs = $udb->txn_do(sub {
+    if ($cmd =~ /^build-lock$/) {
+      clear_build_lock();
+    } elsif ($cmd =~ /^tracking-info$/) {
+      clear_tracking_info(@ARGV);
+    }
+  });
+};
+if ($@) {
+  die <<EOF;
+Failed to update one or more names. Try again.
+
+Details:
+  $@
+EOF
+}
+
+sub clear_build_lock {
+  if (!$uc->confirm("Are you sure you want to clear the build lock? (y/N)", "no")) {
+    exit(0);
+  }
+
+  my $build_lock = $udb->resultset('State')->find('build_lock');
+  $build_lock->value(0);
+  $build_lock->update;
+}
+
+sub clear_tracking_info {
+  my @args = @_;
+
+  foreach my $name (@args) {
+    my $device = $udb->resultset('Devices')->find($name);
+    if (! $device) {
+      print "Device $name not found... skipping\n";
+      next;
+    }
+  
+    if (!$uc->confirm("Are you sure you want to clear $name\'s tracking information? (y/N)", "no")) {
+      next;
+    }
+
+    $device->brown_inv_num("");
+    $device->serial_num("");
+    $device->po_num("");
+
+    $device->update;
+  }
+}
+
+__END__
+
+=head1 NAME
+
+udb-clear - Clear up various udb related issues
+
+=head1 SYNOPSIS
+
+udb-clear <command> [<arg> ...]
+
+=head1 DESCRIPTION
+
+You should only run this if you know what you are doing and you'll have to read the
+code to figure out what that means ;)
+
+=head1 OPTIONS
+
+=over
+
+=item B<-h>, B<--help>
+
+Print a help message and exit.
+
+=item B<-n>, B<--dryrun>
+
+Don't make any changes; just print what would be done.
+
+=back
+
+=head1 AUTHORS
+
+Mark Dieterich.
+
+=head1 SEE ALSO
+
+B<udb>
+
+=cut
+

@@ -1,0 +1,267 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use Getopt::Long qw(:config pass_through);
+use Pod::Usage;
+
+use FindBin qw($RealBin);
+
+my %udb_commands = (
+  'add' => {
+    'desc' => "add a new device",
+    'common' => 1,
+  },
+  'add-addr' => {
+    'desc' => "add a new IP address to a devices's existing network interface",
+    'common' => 0,
+  },
+  'add-dns-alias' => {
+    'desc' => "add a new DNS alias or associated a DNS alias with an existing entry",
+    'common' => 0,
+  },
+  'add-interface' => {
+    'desc' => "add a new network interface to an existing device",
+    'common' => 0,
+  },
+  'add-port' => {
+    'desc' => "add a network port to wall plate mapping",
+    'common' => 0,
+  },
+  'add-to-class' => {
+    'desc' => "add one or more computers to a class",
+    'common' => 0,
+  },
+  'build' => {
+    'desc' => "build server configuration based on the database",
+    'common' => 1,
+  },
+  'reset-classes' => {
+    'desc' => "change or reset a computer's class",
+    'common' => 1,
+  },
+  'change-comment' => {
+    'desc' => "change a device's comment",
+    'common' => 1,
+  },
+  'change-ip' => {
+    'desc' => "change a networked device's IP or VLAN",
+    'common' => 1,
+  },
+  'change-mac' => {
+    'desc' => "change a networked device's MAC address",
+    'common' => 1,
+  },
+  'change-manager' => {
+    'desc' => "change manager of a device",
+    'common' => 1,
+  },
+  'change-os' => {
+    'desc' => "change a computer's software configuration",
+    'common' => 1,
+  },
+  'change-release' => {
+    'desc' => "change a computer's os release",
+    'common' => 1,
+  },
+  'change-port' => {
+    'desc' => "change a network port to wall plate mapping",
+    'common' => 0,
+  },
+  'change-user' => {
+    'desc' => "change a device's primary user or contact",
+    'common' => 1,
+  },
+  'classes' => {
+    'desc' => "list the classes to which the computers belongs",
+    'common' => 0,
+  },
+  'contact-list' => {
+    'desc' => "print out a contact list for all devices in a class",
+    'common' => 0,
+  },
+  'del-dns-alias' => {
+    'desc' => "delete a DNS alias",
+    'common' => 0,
+   },
+  'del-from-class' => {
+    'desc' => "remove one or more computers from a class",
+    'common' => 0,
+  },
+  'del-addr' => {
+    'desc' => "delete an IP address from a device's network interface",
+    'common' => 0,
+  },
+  'del-interface' => {
+    'desc' => "delete a network interface from an existing device",
+    'common' => 0,
+  },
+  'delete' => {
+    'desc' => "delete a device",
+    'common' => 0,
+  },
+  'disable' => {
+    'desc' => "disable (make a device spare)",
+    'common' => 1,
+  },
+  'enable' => {
+    'desc' => "enable (deploy a device)",
+    'common' => 1,
+  },
+  'get-next-uid' => {
+    'desc' => "get the next free uid",
+    'common' => 0,
+  },
+  'get-next-gid' => {
+    'desc' => "get the next free gid",
+    'common' => 0,
+  },
+  'help' => {
+    'desc' => "show all available commands",
+    'common' => 1,
+  },
+  'index' => {
+    'desc' => "interface like the old index db",
+    'common' => 1,
+  },
+  'make-surplus' => {
+    'desc' => "surplus a device",
+    'common' => 1,
+  },
+  'mkvm' => {
+    'desc' => "add a new xen vm",
+    'common' => 0,
+  },
+  'monitoring' => {
+    'desc' => "control whether a dns name/device is monitored",
+    'common' => 0,
+  },
+  'move' => {
+    'desc' => "move a device to a new location",
+    'common' => 1,
+  },
+  'pxelink' => {
+    'desc' => "create a new PXElink entry",
+    'common' => 0,
+  },
+  'query' => {
+    'desc' => "search for devices",
+    'common' => 0,
+  },
+  'rename' => {
+    'desc' => "rename a device",
+    'common' => 1,
+  },
+  'schema' => {
+    'desc' => "create an svg version of the current udb schema",
+    'common' => 0,
+  },
+  'show' => {
+    'desc' => "print a summary of a device",
+    'common' => 1,
+  },
+  'reset-port' => {
+    'desc' => "reset a port on a switch",
+    'common' => 1,
+  },
+  'tracking-info' => {
+    'desc' => "update device tracking information",
+    'common' => 1,
+  },
+);
+
+# Print a simple help message.
+sub usage {
+  my ($exit_status, $common) = @_;
+  pod2usage({ -exitval => 'NOEXIT', -verbose => 2, -noperldoc => 1});
+
+  if ($common) {
+    print "COMMON COMMANDS:\n\n";
+  } else {
+    print "COMMANDS:\n\n";
+  }
+    
+  foreach my $k (sort(keys(%udb_commands))) {
+    if ($common) {
+      next if not $udb_commands{$k}{'common'};
+    }
+    printf("    %-18s%s\n", $k, $udb_commands{$k}{'desc'});
+  }
+
+  print "\nSee 'udb help COMMAND' for more information on a specific command.\n";
+  
+  exit($exit_status);
+}
+
+my $help = 0;
+my $debug = 0;
+
+GetOptions (
+  'help|h|?' => \$help,
+  'debug' => \$debug,
+) or usage(1, 1);
+
+my $cmd = shift;
+
+if (! defined $cmd) {
+  usage(2, 1);
+}
+
+if (($cmd eq 'help') or $help) {
+  if (@ARGV or $help) {
+    if ($cmd eq 'help') {
+      $cmd = shift;
+    }
+    unshift(@ARGV, '-h');
+  } else {
+    usage(0, 0);
+  }
+}
+
+if ($cmd eq 'change') {
+  my $cmd2 = shift;
+  $cmd = "$cmd-$cmd2";
+}
+
+if (! defined($udb_commands{$cmd}) || $cmd eq 'help') {
+  usage(2, 1);
+}
+
+exec("$RealBin/udb-$cmd", @ARGV);
+
+__END__
+
+=head1 NAME
+
+udb - main interface to the Universal DataBase
+
+=head1 SYNOPSIS
+
+udb <command> [<arg> ...]
+
+=head1 DESCRIPTION
+
+Wrapper script for running other udb commands.
+
+=head1 VERSION
+
+1.07
+
+=head1 OPTIONS
+
+=over
+
+=item B<-h>, B<--help>
+
+Print a help message and exit.
+
+=back
+
+=head1 AUTHORS
+
+Aleks Bromfield,
+Mark Dieterich
+
+=cut
+

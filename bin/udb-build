@@ -1,0 +1,225 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+use Getopt::Std;
+use Pod::Usage;
+use Data::Dumper;
+use Date::Format;
+use File::Temp;
+use File::Path;
+
+use FindBin qw($RealBin);
+use lib "$RealBin/../lib";
+use BrownCS::udb::Schema;
+use BrownCS::udb::Build;
+use BrownCS::udb::Util qw(:all);
+
+# Print a simple help message.
+sub usage {
+  my ($exit_status) = @_;
+  pod2usage({ -exitval => $exit_status, -verbose => 1});
+}
+
+my $help = 0;
+my $udb = BrownCS::udb::Schema->connect;
+my $dryrun = 0;
+my $verbose = 0;
+my $root = 0;
+
+#print(Dumper($udb));
+
+BEGIN { $| = 1 }
+
+GetOptions (
+  'help|h|?' => \$help, 
+  'n|dryrun' => \$dryrun,
+  'v|verbose' => \$verbose,
+) or usage(2);
+usage(1) if $help;
+
+my @services = ('staging', 'tftp','netgroup','dhcp','nagios','wpkg','dns','known_hosts_cache','finger');
+
+my %build;
+if (@ARGV > 0) {
+  foreach my $arg (@ARGV) {
+    if (! grep(/$arg/, @services)) {
+      print "\nError: unknown service type \"$arg\"\n\n";
+      usage(2);
+    } else {
+      $build{$arg} = 1;
+    }
+  }
+} else {
+  $build{'all'} = 1;
+}
+
+my $ub = new BrownCS::udb::Build(udb => $udb, verbose => $verbose, dryrun => $dryrun);
+
+if (not $dryrun) {
+
+  if(not BrownCS::udb::Util::okay_adminhost){
+    exit;
+  }
+
+  if(not BrownCS::udb::Util::okay_kerberos){
+    exit;
+  }
+  
+  if(BrownCS::udb::Util::okay_root_silent){
+    print "ERROR: Do not run as root.\n";
+    exit;
+  }
+}
+
+my $rs;
+eval {
+  $rs = $udb->txn_do(sub {
+    my $build_start = time2str("%Y-%L-%d %T", time);
+    my %build_counts;
+    my $login = getlogin;
+  
+    $ub->build_lock;
+
+    my $krbadmin = "udbuser/admin";
+    my $keytab = tmpnam();
+    $ub->get_keytab($krbadmin, $keytab);
+
+    log("Build started by $login");
+
+    # delete anything marked for deletion since last successful build
+    $ub->staged_deletions($krbadmin, $keytab, \%build_counts);
+  
+    # add anything staged for addition since last successful build
+    $ub->staged_additions($krbadmin, $keytab, \%build_counts);
+
+    # add anything staged for modification since last successful build
+    $ub->staged_modifications($krbadmin, $keytab, \%build_counts);
+
+    # build service and data files
+    if ($build{'dns'} || $build{'all'}) {
+      $ub->build_dns;
+    }
+
+    if ($build{'netgroup'} || $build{'all'}) {
+      $ub->build_netgroup;
+    }
+
+    if ($build{'nagios'} || $build{'all'}) {
+      $ub->build_nagios;
+    }
+
+    if ($build{'wpkg'} || $build{'all'}) {
+      $ub->build_wpkg_hosts;
+    }
+
+    if ($build{'known_hosts_cache'} || $build{'all'}) {
+      $ub->build_known_hosts_cache;
+    }
+
+    if ($build{'finger'} || $build{'all'}) {
+      $ub->build_finger_data;
+    }
+
+    if ($build{'dhcp'} || $build{'all'}) {
+      $ub->build_dhcp;
+    }
+
+    if($build{'tftp'}) {
+      $ub->build_tftpboot;
+    }
+
+    my $count = unlink $keytab;
+    if ($count != 1) {
+      print "WARNING: unable to unlink keytab file \"$keytab\", please delete by hand\n";
+    }
+
+    $ub->update_build_times($build_start, \%build_counts);
+
+    $ub->build_unlock;
+
+    if (not $dryrun) {
+      rmtree($ub->{TMPDIR});
+    }
+  });
+};
+if ($@) {
+  $ub->build_unlock;
+  die <<EOF;
+Operation failed.  Details:
+  $@
+EOF
+}
+
+__END__
+
+=head1 NAME
+
+build - build system databases/config files from udb
+
+=head1 SYNOPSIS
+
+build [-hnv] [service[,...]]
+
+=head1 DESCRIPTION
+
+Propogate database changes to servers and file systems.  When necessary,
+restart services so new configuration changes used.
+
+=head1 OPTIONS
+
+=over
+
+=item B<services>
+
+One or more optional services you would like to build.  The available
+services include:
+
+=over
+
+B<tftp> - Build tftp boot data
+
+B<netgroup> - Build netgroup data
+
+B<dhcp> - Build and distribute dhcp configurations
+
+B<nagios> - Build nagios monitoring configurations
+
+B<wpkg> - Build wpkg configurations
+
+B<dns> - Build and distribute DNS data
+
+B<known_hosts_cache> - Build known hosts cache
+
+B<finger> - Build finger data
+
+=back
+
+=item B<-h>, B<--help>
+
+Print a help message and exit.
+
+=item B<-n>, B<--dryrun>
+
+Don't make any changes; just print what would be done. Files which would
+normally be copied to servers are instead left in /tmp. 
+
+=item B<-v>, B<--verbose>
+
+Print lots of text about what is going on.
+
+=back
+
+=head1 AUTHORS
+
+Aleks Bromfield
+Mark Dieterich
+
+=head1 SEE ALSO
+
+B<udb>
+
+=cut
+

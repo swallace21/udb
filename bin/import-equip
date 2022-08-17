@@ -1,0 +1,711 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+use Pod::Usage;
+use Data::Dumper;
+
+use File::Temp qw(:mktemp);
+
+use FindBin qw($RealBin);
+use lib "$RealBin/../lib";
+use BrownCS::udb::Schema;
+use BrownCS::udb::Util qw(:all);
+
+# Print a simple help message.
+sub usage {
+  my ($exit_status) = @_;
+  pod2usage({ -exitval => $exit_status, -verbose => 1});
+}
+
+my $help = 0;
+my $udb = BrownCS::udb::Schema->connect;
+
+sub dns_insert {
+  my ($a, $b, $c, $d) = @_;
+  $udb->resultset('NetDnsEntries')->find_or_create({
+      dns_name => $a,
+      domain => $b,
+      net_address => $c,
+      authoritative => $d,
+      dns_region => "internal",
+    });
+  $udb->resultset('NetDnsEntries')->find_or_create({
+      dns_name => $a,
+      domain => $b,
+      net_address => $c,
+      authoritative => $d,
+      dns_region => "external",
+    });
+}
+
+sub domain_insert {
+  my ($table, $key, $desc) = @_;
+  $udb->resultset($table)->find_or_create({$key => $desc});
+}
+
+sub os_insert {
+  my ($desc, $pxe) = @_;
+  $udb->resultset('OsTypes')->find_or_create({
+      os_type => $desc,
+      pxe_boot => $pxe,
+    });
+}
+
+sub add_address {
+  my ($data) = @_;
+
+  my $ipaddr = $data->{'ip_addr'};
+  my $vlan;
+  if ((!$ipaddr) or ($ipaddr eq "")) {
+    $ipaddr = undef;
+    $vlan = $udb->resultset('NetVlans')->find(36);
+  } else {
+    $vlan = $udb->resultset('NetVlans')->search({
+        network => {'>>', $ipaddr},
+      })->single;
+  }
+
+  my $hostname = $data->{'hostname'};
+
+  $data->{'aliases'} =~ s/\s//g;
+  my @aliases = split(/,/, $data->{'aliases'});
+
+  $data->{'classes'} =~ s/\s//g;
+  my @classes = split(/,/, $data->{'classes'});
+
+  my $monitored = 0;
+  if ($data->{'status'} eq "monitored") {
+    $monitored = 1;
+  }
+
+  my $domain = 'cs.brown.edu';
+  if ($data->{prim_grp} eq 'ilab') {
+    $domain = 'ilab.cs.brown.edu';
+  }
+
+  my $ip = $udb->resultset('NetAddresses')->create({
+      vlan => $vlan,
+      ipaddr => $ipaddr,
+      monitored => $monitored,
+    });
+
+  dns_insert($hostname, $domain, $ip, 1);
+
+  if ( $#aliases != -1 ) {
+    foreach my $alias (@aliases) {
+      dns_insert($alias, $domain, $ip, 0);
+    }
+  }
+
+  if ( $#classes != -1 ) {
+    foreach (@classes) {
+      if (/^service\./) {
+        s/^service\.//;
+        my $svc = $udb->resultset('NetServices')->find_or_create({
+            net_service => $_,
+          });
+        $ip->add_to_net_services($svc);
+      }
+    }
+  }
+
+  return $ip;
+}
+
+sub zone_insert {
+  my ($zone_manager_str, $equip_manager_str, $routing_type_str, $name, $dynamic_dhcp) = @_;
+  $udb->resultset("NetZones")->find_or_create({
+      zone_manager => $zone_manager_str,
+      equip_manager => $equip_manager_str,
+      routing_type => $routing_type_str,
+      zone_name => $name,
+      dynamic_dhcp => $dynamic_dhcp,
+    });
+}
+
+sub vlan_insert {
+  my ($zone_str, $vlan_num, $c, $d, $e) = @_;
+  $udb->resultset("NetVlans")->find_or_create({
+      zone_name => $zone_str,
+      vlan_num => $vlan_num,
+      network => $c,
+      dhcp => $d,
+      gateway => $e,
+    });
+}
+
+sub vlan_dhcp_insert {
+  my ($zone_str, $b, $c, $d, $e, $f, $g) = @_;
+  $udb->resultset("NetVlans")->find_or_create({
+      zone_name => $zone_str,
+      vlan_num => $b,
+      network => $c,
+      dhcp => $d,
+      dynamic_dhcp_start => $e,
+      dynamic_dhcp_end => $f,
+      gateway => $g,
+    });
+}
+
+GetOptions (
+  'help|h|?' => \$help,
+) or usage(2);
+usage(1) if $help;
+
+eval('require "/tstaff/share/cdb/db.pl";');
+our $cdb_by_hostname;
+
+eval('require "/u/system/lib/switch_cfg.pl";');
+our ($sp_switches, $sp_hosts);
+
+print "deleting old data... ";
+
+$udb->resultset('SurplusDevices')->delete;
+$udb->resultset('CompClasses')->delete;
+$udb->resultset('Computers')->delete;
+$udb->resultset('CompSysinfo')->delete;
+$udb->resultset('NetAddresses')->delete;
+$udb->resultset('NetDnsEntries')->delete;
+$udb->resultset('NetInterfaces')->delete;
+$udb->resultset('NetPorts')->delete;
+$udb->resultset('NetSwitches')->delete;
+$udb->resultset('NetVlans')->delete;
+$udb->resultset('NetZones')->delete;
+$udb->resultset('Devices')->delete;
+$udb->resultset('Places')->delete;
+$udb->resultset('OsTypes')->delete;
+$udb->resultset('RoutingTypes')->delete;
+$udb->resultset('DnsRegions')->delete;
+$udb->resultset('EquipStatusTypes')->delete;
+$udb->resultset('ManagementTypes')->delete;
+
+print "done.\n";
+
+print "adjusting sequences... ";
+
+$udb->do("alter sequence dns_serial_num_seq restart with 6680;");
+
+print "done.\n";
+
+print "populating static tables... ";
+
+domain_insert("EquipStatusTypes", "equip_status_type", "deployed"),
+domain_insert("EquipStatusTypes", "equip_status_type", "spare"),
+domain_insert("EquipStatusTypes", "equip_status_type", "virtual"),
+
+domain_insert("ManagementTypes", "management_type", "tstaff"),
+domain_insert("ManagementTypes", "management_type", "cis"),
+domain_insert("ManagementTypes", "management_type", "user"),
+
+domain_insert("RoutingTypes", "routing_type", "standard");
+domain_insert("RoutingTypes", "routing_type", "private");
+domain_insert("RoutingTypes", "routing_type", "DMZ");
+domain_insert("RoutingTypes", "routing_type", "special");
+
+domain_insert("EquipUsageTypes", "equip_usage_type", "tstaff"),
+domain_insert("EquipUsageTypes", "equip_usage_type", "grad"),
+domain_insert("EquipUsageTypes", "equip_usage_type", "ugrad"),
+domain_insert("EquipUsageTypes", "equip_usage_type", "fac"),
+domain_insert("EquipUsageTypes", "equip_usage_type", "astaff"),
+
+domain_insert("DnsRegions", "dns_region", "internal");
+domain_insert("DnsRegions", "dns_region", "external");
+
+os_insert("debian", 1);
+os_insert("debian64", 1);
+os_insert("redhat", 1);
+os_insert("redhat64", 1);
+
+os_insert("dualboot", 0);
+os_insert("linksys", 0);
+os_insert("osx", 0);
+os_insert("solaris", 0);
+os_insert("vista", 0);
+os_insert("vista64", 0);
+os_insert("winxp", 0);
+os_insert("winxp64", 0);
+
+zone_insert("tstaff", "tstaff", "DMZ", "tstaff-dmz", 0);
+zone_insert("tstaff", "tstaff", "private", "tstaff-private", 0);
+zone_insert("tstaff", "tstaff", "standard", "tstaff-standard", 0);
+zone_insert("tstaff", "user", "DMZ", "user-dmz", 0);
+zone_insert("tstaff", "user", "private", "cs166", 0);
+zone_insert("tstaff", "user", "special", "outside", 0);
+zone_insert("tstaff", "user", "special", "ipsec", 0);
+zone_insert("tstaff", "user", "standard", "user-standard", 1);
+zone_insert("cis", "user", "special", "jj-oshean", 0);
+zone_insert("cis", "user", "special", "techhouse", 0);
+zone_insert("cis", "cis", "special", "cis-switches", 0);
+
+vlan_insert("tstaff-dmz", 32, "128.148.32.0/25", 1, "128.148.32.1");
+vlan_insert("tstaff-private", 192, "192.168.1.0/24", 0, "192.168.1.1");
+vlan_insert("tstaff-private", 898, "10.116.0.0/16", 1, "10.116.1.1");
+vlan_insert("tstaff-private", 897, "192.168.10.0/24", 1, "192.168.10.1");
+vlan_insert("tstaff-standard", 33, "128.148.33.0/24", 1, "128.148.33.1");
+vlan_insert("tstaff-standard", 37, "128.148.37.0/24", 1, "128.148.37.1");
+vlan_insert("tstaff-standard", 38, "128.148.38.0/24", 1, "128.148.38.1");
+vlan_insert("user-dmz", 892, "128.148.32.128/25", 1, "128.148.32.129");
+vlan_insert("cs166", 893, "192.168.100.0/24", 0, "192.168.100.1");
+vlan_insert("outside", 34, "128.148.34.0/24", 0, "128.148.34.1");
+vlan_insert("jj-oshean", 698, "198.7.242.32/28", 1, "198.7.242.34");
+vlan_insert("techhouse", 360, "138.16.60.0/24", 1, "138.16.60.1");
+vlan_insert("ipsec", 885, "10.117.0.0/16", 0, "10.117.1.1");
+vlan_insert("cis-switches", 720, "10.115.1.0/24", 1, "10.115.1.1");
+
+vlan_dhcp_insert("user-standard", 36, "128.148.36.0/24", 1, "128.148.36.100", "128.148.36.254", "128.148.36.1");
+
+print "done.\n";
+
+print "importing devices from cdb... ";
+
+while ( my ($key, $data) = each(%$cdb_by_hostname) ) {
+  if ($data->{'status'} ne 'disabled') {
+    if ($data->{'ethernet'} ne '' ) {
+      print "adding host " . $data->{hostname} . "\n";
+
+      $data->{'classes'} =~ s/\s//g;
+      my @classes = split(/,/, $data->{'classes'});
+
+      my $ethernet = $data->{'ethernet'};
+      if ((defined $ethernet) and ($ethernet eq "")) {
+        $ethernet = undef;
+      }
+      if ((defined $ethernet) and ($ethernet eq "0:0:0:0:0:0")) {
+        $ethernet = undef;
+      }
+
+      my $status = $data->{'status'};
+
+      my $monitored = 0;
+      if ($status eq "monitored") {
+        $monitored = 1;
+      }
+
+      my $os = $data->{'os_type'};
+      if (($os eq "other") or ($os eq "") or ($os eq "windows")) {
+        $os = undef;
+      }
+
+      my $equip_status_str = "deployed";
+      if (defined $os and (($os eq "linux-xen") or ($os eq "linux64-xen"))) {
+        $equip_status_str = "virtual";
+      }
+      my $equip_status = $udb->resultset('EquipStatusTypes')->find($equip_status_str);
+      my $equip_usage = $udb->resultset('EquipUsageTypes')->find('tstaff');
+      my $managed_by = $udb->resultset('ManagementTypes')->find($data->{'managed_by'});
+
+      my $pxelink = $data->{'pxelink'};
+      if ((defined $pxelink) and ($pxelink eq "")) {
+        $pxelink = undef;
+      }
+
+      my $ip = add_address($data);
+
+      my $device = $udb->resultset('Devices')->find_or_create({
+          comments => ($data->{'comment'} or undef),
+          contact => $data->{'contact'},
+          device_name => $data->{'hostname'},
+          manager => $managed_by,
+          status => $equip_status,
+          usage => $equip_usage,
+        });
+
+      my $comp = $udb->resultset('Computers')->find_or_create({
+          device => $device,
+          os_type => $os,
+          pxelink => $pxelink,
+        });
+      $device->computer($comp);
+
+      my $sysinfo = $udb->resultset('CompSysinfo')->find_or_create({
+          device => $device,
+        });
+      $device->comp_sysinfo($sysinfo);
+
+      my $iface = $device->add_to_net_interfaces({
+          device => $device,
+          ethernet => $ethernet,
+          primary_address => $ip,
+        });
+
+      $ip->add_to_net_interfaces($iface);
+
+      if (defined $os and (($os eq "linux-server") or ($os eq "linux64-server"))) {
+        $device->protected(1);
+      }
+
+      if ( $#classes != -1 ) {
+        foreach (@classes) {
+          if (/^service\./) {
+            $device->protected(1);
+          } else {
+            my $class = $udb->resultset('CompClasses')->find_or_create({
+                name => $_,
+                os_type => $os,
+              });
+            $device->computer->add_to_comp_classes($class);
+          }
+        }
+      }
+
+      $device->update;
+
+    } elsif ($data->{'prim_grp'} eq 'switch') {
+      # skip
+    } elsif ($data->{'prim_grp'} eq 'dhcp-placeholder') {
+      # skip
+    } else {
+      print "adding virtual IP " . $data->{hostname} . "\n";
+      add_address($data);
+    }
+  }
+}
+
+print "done.\n";
+ 
+print "importing devices from switchport... ";
+ 
+while ( my ($key, $data) = each(%$sp_switches) ) {
+  my $fqdn = $data->{'fqdn'};
+  my @split_fqdn = split(/\./, $fqdn);
+  my $name = $split_fqdn[0];
+
+  my $loc = $udb->resultset('Places')->find_or_create({
+      city => 'Providence',
+      building => 'CIT',
+      room => $data->{'location'},
+    });
+
+  my $device = $udb->resultset('Devices')->find_or_create({
+      device_name => $name,
+      status => "deployed",
+      usage => 'tstaff',
+      manager => "cis",
+      contact => 'help@brown.edu',
+      place => $loc,
+    });
+
+  my $switch = $udb->resultset('NetSwitches')->find_or_create({
+      device => $device,
+      fqdn => $fqdn,
+      num_ports => $data->{'numports'},
+      num_blades => $data->{'numblades'},
+      switch_type => $data->{'type'},
+      port_prefix => $data->{'prefix'},
+      connection_type => $data->{'mode'},
+      username => $data->{'user'},
+      pass => $data->{'login'},
+    });
+  $device->net_switch($switch);
+}
+
+print "done.\n";
+
+print "importing ports from switchport... ";
+ 
+while ( my ($hostname, $data) = each(%$sp_hosts) ) {
+  print "adding port for host $hostname\n";
+
+  my $switch_name = $data->{"switch"};
+  my $wall_plate = $data->{"jack"};
+
+  my ($port_num, $blade_num);
+  if ($data->{"port"} =~ /(\d+)\/0\/(\d+)/) {
+    $blade_num = $1;
+    $port_num = $2;
+  } elsif ($data->{"port"} =~ /(\d+)\/(\d+)/) {
+    $blade_num = $1;
+    $port_num = $2;
+  } elsif ($data->{"port"} =~ /(\d+)/) {
+    $port_num = $1;
+  } else {
+    die "bad format";
+  }
+
+  my $room_num;
+  if ($wall_plate =~ /^(\d+)/) {
+    $room_num = $1;
+  }
+
+  my $switch = $udb->resultset('NetSwitches')->find($switch_name);
+
+  # create port
+
+  my $port = $udb->resultset('NetPorts')->find_or_create({
+      net_switch => $switch,
+      port_num => $port_num,
+      blade_num => $blade_num,
+      wall_plate => $wall_plate,
+    });
+
+  # bind port to vlans
+
+  # foreach vlan in comma separated list, look it up then add a join
+  # table entry
+
+  my @vlans = split(/,/,$data->{"vlan"});
+  my $native = 1;
+
+  foreach my $vlan_num (@vlans) {
+    print "bind port $wall_plate to vlan $vlan_num\n";
+    my $vlan = $udb->resultset('NetVlans')->find($vlan_num);
+    my $port = $udb->resultset('NetPortsNetVlans')->find_or_create({
+        net_port => $port,
+        net_vlan => $vlan,
+        native => $native,
+      });
+    $native = 0;
+  }
+
+  my $ifaces = $udb->resultset('NetInterfaces')->search({'device_name' => $hostname});
+  while (my $iface = $ifaces->next) {
+    print "bind interface $hostname to port $wall_plate\n";
+    $iface->net_port($port);
+    $iface->update;
+  }
+}
+
+print "done.\n";
+
+# pc index db
+
+print "importing index pc... ";
+
+# o Hostname
+# o Description
+# o Brown inv. #
+# o Serial #
+# o Purchase Order#
+# o Purchase date
+# o Installation Date
+# o Location
+# o User(s)	
+# o Comments
+
+my $filename = mktemp("/tmp/udbXXXXX");
+system("index -f cat pc '' > $filename");
+open(FH, $filename);
+
+my $first_line = <FH>;
+
+while ( <FH> ) {
+  my ($name, $desc, $brown_inv, $serial, $po_num, $purchase_date,
+    $install_date, $location, $users, $comments) = split(/\t/);
+
+  print "updating $name\n";
+
+  my $device = $udb->resultset('Devices')->find_or_create({
+      status => 'spare',
+      usage => 'tstaff',
+      manager => 'tstaff',
+      device_name => $name,
+    });
+
+  if ($device->comments) {
+    chomp($comments);
+    if ($comments ne '') {
+      $comments .= ", ";
+    }
+    $comments .= $device->comments;
+  }
+
+  my $loc = $udb->resultset('Places')->find_or_create({
+      city => 'Providence',
+      building => 'CIT',
+      room => $location,
+    });
+
+  if (not $purchase_date) {
+    $purchase_date = undef;
+  }
+
+  if (not $install_date) {
+    $install_date = undef;
+  }
+
+  $device->brown_inv_num($brown_inv);
+  $device->serial_num($serial);
+  $device->po_num($po_num);
+  $device->purchased_on($purchase_date);
+  $device->installed_on($install_date);
+  $device->comments($comments);
+  $device->place($loc);
+  $device->contact($users),
+
+  $device->update;
+}
+
+close(FH);
+
+print "done.\n";
+
+# surplus index db
+
+print "importing index surplus... ";
+
+# o Hostname
+# o Description
+# o Brown inv. #
+# o Upgrade serial #
+# o Serial #
+# o Upgrade PO #
+# o Purchase Order#
+# o  remarks
+# o  remarks
+# o Purchase date
+# o   remarks
+# o   remarks
+# o Upgrade install date
+# o Installation Date
+# o   remarks
+# o   remarks
+# o Location
+# o Configuration
+# o   remarks
+# o   remarks
+# o Type
+# o User(s)
+# o Date of surplus
+# o Buyer
+
+$filename = mktemp("/tmp/udbXXXXX");
+system("index -f cat surplus '' > $filename");
+open(FH, $filename);
+
+$first_line = <FH>;
+
+while ( <FH> ) {
+  my ($name, $desc, $brown_inv, $upgrade_serial, $serial,
+    $upgrade_po, $po_num, $po_rem1, $po_rem2,
+    $purchase_date, $pd_rem1, $pd_rem2,
+    $upgrade_install_date, $install_date, $install_rem1, $install_rem2,
+    $location,
+    $configuration, $conf_rem1, $conf_rem2,
+    $type, $users, $surplus_date, $buyer) = split(/\t/);
+
+  next if (not $surplus_date);
+
+  print "[$surplus_date]\n";
+
+  my $comments = $desc;
+
+  if ($configuration) {
+    $comments .= ", $configuration";
+  }
+
+  if ($conf_rem1) {
+    $comments .= ", $conf_rem1";
+  }
+
+  if ($conf_rem2) {
+    $comments .= ", $conf_rem2";
+  }
+
+  if ($upgrade_serial) {
+    $comments .= ", upgrade serial $upgrade_serial";
+  }
+
+  if ($upgrade_po) {
+    $comments .= ", upgrade po $upgrade_po";
+  }
+
+  if ($po_rem1) {
+    $comments .= ", $po_rem1";
+  }
+
+  if ($po_rem2) {
+    $comments .= ", $po_rem2";
+  }
+
+  if ($pd_rem1) {
+    $comments .= ", $pd_rem1";
+  }
+
+  if ($pd_rem2) {
+    $comments .= ", $pd_rem2";
+  }
+
+  if ($upgrade_install_date) {
+    $comments .= ", upgraded on $upgrade_install_date";
+  }
+
+  if ($install_rem1) {
+    $comments .= ", $install_rem1";
+  }
+
+  if ($install_rem2) {
+    $comments .= ", $install_rem2";
+  }
+
+  if (not $purchase_date) {
+    $purchase_date = undef;
+  }
+
+  if (not $install_date) {
+    $install_date = undef;
+  }
+
+  print "adding surplus device $name\n";
+
+  my $device = $udb->resultset('SurplusDevices')->create({
+      surplus_date => $surplus_date,
+      purchased_on => $purchase_date,
+      installed_on => $install_date,
+      name => $name,
+      buyer => $buyer,
+      brown_inv_num => $brown_inv,
+      serial_num => $serial,
+      po_num => $po_num,
+      comments => $comments,
+    });
+}
+
+close(FH);
+
+print "done.\n";
+
+__END__
+
+=head1 NAME
+
+import-equip - import from cdb and index dbs
+
+=head1 SYNOPSIS
+
+import-equip
+
+=head1 DESCRIPTION
+
+imports from cdb and index dbs
+
+=head1 OPTIONS
+
+=over
+
+=item B<-h>, B<--help>
+
+Print a help message and exit.
+
+=item B<-n>, B<--dryrun>
+
+Don't make any changes; just print what would be done.
+
+=item B<-v>, B<--verbose>
+
+Print lots of text about what is going on.
+
+=back
+
+=head1 AUTHORS
+
+Aleks Bromfield.
+
+=head1 SEE ALSO
+
+B<udb>
+
+=cut
+

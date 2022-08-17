@@ -1,0 +1,92 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+use Pod::Usage;
+use Data::Dumper;
+
+use FindBin qw($RealBin);
+use lib "$RealBin/../lib";
+use BrownCS::udb::Schema;
+use BrownCS::udb::Util qw(:all);
+use BrownCS::udb::Console qw(:all);
+
+# Print a simple help message.
+sub usage {
+  my ($exit_status) = @_;
+  pod2usage({ -exitval => $exit_status, -verbose => 1});
+}
+
+my $help = 0;
+
+GetOptions (
+  'help|h|?' => \$help, 
+) or usage(1);
+usage(0) if $help;
+
+my $udb = BrownCS::udb::Schema->connect;
+my $uc = new BrownCS::udb::Console(udb => $udb);
+
+if (@ARGV != 1) {
+  usage(2);
+}
+
+my $room = shift @ARGV;
+
+my $location = $udb->resultset('Places')->search({room => $room})->single;
+if (not $location) {
+  die "No such location $room.\n";
+}
+my @devices = $location->devices;
+
+printf "%-18s%-10s%-18s%-40s\n\n", "MACHINE", "SERVICES", "CONTACT", "DESCRIPTION";
+
+foreach my $device (@devices) {
+  my $comments = ($device->comments or '');
+  my $contact = ($device->contact or '');
+  my @interfaces = $device->net_interfaces;
+  my @addresses = map { $_->net_addresses } @interfaces;
+  my @services = map { $_->net_services } @addresses;
+  my @service_names = map { $_->net_service } @services;
+  my $services = join(",",@service_names);
+  printf "%-18s%-10s%-18s%-40s\n", $device->device_name, $services, $contact, $comments;
+}
+
+__END__
+
+=head1 NAME
+
+udb-contact-list - Print out a contact list for all devices in a room
+
+=head1 SYNOPSIS
+
+udb-contact-list <room>
+
+=head1 DESCRIPTION
+
+udb-contact-list queries the UDB database for all devices in a room, and
+prints out a contact list which is designed to be posted in the machine
+rooms. It is designed to resemble the old I<contact-list> command.
+
+=head1 OPTIONS
+
+=over
+
+=item B<-h>, B<--help>
+
+Print a help message and exit.
+
+=back
+
+=head1 AUTHORS
+
+Aleks Bromfield.
+
+=head1 SEE ALSO
+
+B<udb>
+
+=cut
+

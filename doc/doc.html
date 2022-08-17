@@ -1,0 +1,361 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<!-- $Id$ -->
+<html>
+  <head>
+    <title>UDB Documentation</title>
+  </head>
+
+  <body>
+    <h1>UDB Documentation</h1>
+
+    <h2>Table of Contents</h2>
+
+    <h2>Introduction</h2>
+    <h2>User's Guide</h2>
+    <h3>Overview</h3>
+    Explain about nids, ids.  The difference between network records
+    and equpiment records.  An equipment record is the record of a
+    physical thing -- something that can be kicked.  A network record
+    can be associated with an equipment record, but it doesn't might
+    not be.  In the former case, a simple user workstation probably
+    has one equipment record and one network record.  A server with
+    multiple network cards will have one equipment record, but
+    multiple network records.  A dynamically assigned DHCP address has
+    no equipment associated with it, but will have a network record.
+    <p>
+      To work with network records, <tt>cdb</tt> is used.  To work
+      with equipment records, use <tt>edb</tt>.  You can think of
+      <tt>cdb</tt> as being the new, improved cdb, and <tt>edb</tt> as
+      being the new, (improved?) <tt>index</tt>.
+
+    <h3>cdb</h3>
+    <tt>cdb</tt> is used to manipulate network records.  There are
+    serveral command you can give to cdb:
+    <kbd><blockquote>
+      cdb &lt;command&gt; [argument...]
+      <ul>
+	<li>profile
+	<li>insert
+	<li>delete
+	<li>modify
+	<li>query
+      </ul>
+    </blockquote></kbd>
+    <h4>cdb profile</h4>
+    <h4>cdb insert</h4>
+    <h4>cdb delete</h4>
+    NOTE: Unlike the old version of cdb, this version will confirm
+    that you want to delete the record.
+    <h4>cdb modify</h4>
+    <h4>cdb query</h4>
+
+    <h3>edb</h3>
+    <h4>Location Ids</h4>
+    Every peice of equipment has to be <em>somewhere</em>.  The
+    location is tracked by the <tt>lid</tt>, the location idetifier.
+    The <tt>lid</tt> for rooms in the CIT are simply the room number,
+    and machines at a user's home will just be their username.  To get
+    a list of available lids, you can enter a '?' at the prompt in
+    edb.
+    <p>
+    If you don't know where an item is located, you can use the lid
+    'unknown'.  However this is not recommended, as it will cause
+    inventory problems. 
+
+    <h4>edb profile</h4>
+    <tt>profile</tt> displays the record for a single item.  It
+    requires a single argument that can be an id, a hostname, or a
+    search that returns a single item.  It simple prints the
+    informatino about a peice of equipment.
+
+    Example:
+    <blockquote><pre>
+	% edb profile 738
+	id = 738
+	hostnames = mandolin
+	descr = Maxbuilt
+	lid = 523
+	serial number = 
+	inventory number = CS-722
+	type = Research
+	comment = index host: mandolin
+	po number = 952415
+	po date = 5/1/2002
+	po price = 
+	po comment = 
+	install date = 
+	install comment = 
+	users = Stan Zdonik
+	cpu = 1.5GHz
+	disk = 40GB
+	memory = 500MB
+	graphics = GF3
+	conf_comment = 
+    </pre></blockquote>
+    The same record could be retrieved using the hostname:
+    <blockquote><pre>% edb profile mandolin</pre></blockquote>
+    or via a search: <blockquote><pre>edb profile inv=CS-722</pre></blockquote>
+    For more information about searches, see edb query.
+
+    <h4>edb insert</h4>
+    <tt>insert</tt> creates a new equipment record.  <tt>insert</tt>
+    accepts no argument, and will prompt you to fill in the data for
+    an equipment record.  Note that the description field is required
+    to be none empty.
+
+    <h4>edb delete</h4>
+    <tt>delete</tt> removes all traces of an equpiment record from the
+    database.  It it final, and unrecoverable.  All the information
+    in the record is lost after the deletion.  Use <tt>surplus</tt> to
+    mark an item as surplused but continue to track it.
+    <p>
+      <tt>delete</tt> requires a single argument which can be an id, a
+      hostname or a search that returns a single item.  You will be
+      shown the profile information, and then asked to confirm the
+      deletion.
+    <p>
+      You may receive the message "Orphaning network record
+      &lt;hostname/nid&gt;" when you delete a record.  This message
+      indicates that there are still network records still associated
+      with the item you're deleting.  Since it's highly unlikely that
+      an item that doesn't exist is still going to be on the network,
+      this message is a strong indication that you shouldn't be
+      deleteing the record.
+
+    <h4>edb modify</h4>
+    <tt>modify</tt> allows you to modify an existing record.  It takes
+    a single argument, which can be a hostname, an id, or a search
+    string that returns a single record.
+
+    <h4>edb query</h4>
+    <pre>
+    edb query &lt;search&gt; [field...]
+	field=regexp
+	&& || ( )
+    Fields:
+	hostname
+	descr
+        desc
+	serial_num
+        serial
+	inventory_num
+        inv
+        inv_num
+	comment
+	lid
+	id
+	type
+	po_num
+        ponum
+	po_date
+        podate
+	po_price
+        price
+        poprice
+	po_comment
+        pocomment
+	users
+	inst_date
+        install_date
+        instdate
+	inst_comment
+        instcomment
+	cpu
+	memory
+        mem
+	disk
+	graphics
+        gfx
+	conf_comment
+        config_comment
+	floor
+	building
+	active
+	surplus
+    </pre>
+    By default, the hostname is returned, or, if there is no hostname,
+    the id is returned.  The special field 'all' can be used to print
+    the 'profile' information 
+
+    <h5>Date Searches</h5>
+    Although edb/cdb presents dates in the "normal" format of
+    mm/dd/yyyy, dates are stored in the data base as yyyy-mm-dd.  You
+    need to keep this in mind when searching on date fields.
+
+    <h5>Examples</h5>
+
+    <pre>
+    To find all suns located in the machine room:
+
+       % ./edb query 'arch=sun&&building=cit&&room=531'
+       bruford
+       in
+       mothra
+       poplar
+       trogon
+
+    To find all items installed in December 2000, and print everything
+    about them:
+
+       % edb query 'inst_date=2000-12' all
+       ========================================
+       id = 676
+       hostnames = crittendon
+       descr = Maxbuilt
+       lid = 472
+       ...
+       ========================================
+       id = 344
+       hostnames = discordia
+       descr = Maxbuilt
+       lid = 569
+       ...
+    
+    To find all items in room 569 or room 570 of the CIT that have
+    been surplused:
+
+       % edb query 'building=cit&&(room=569||room=570)&&surplus=t' descr comment surplus
+       Inspiron D300LT laptop  index host: ainge       Surplus
+       Sparcstation 5  index host: bob Surplus
+       Sparcstation10/41GX     index host: hobbes      Surplus
+       Sparcstation10/41GX     index host: locke       Surplus
+       Sparcstation10/41GX     index host: susie       Surplus
+
+    </pre>
+
+    <h4>edb surplus</h4>
+    <tt>suplus</tt> is used to surplus an item.  It requires a single
+    argument that can be an id, a hostname, or a search that returns a
+    single item.  You will be shown the profile information on the
+    item and asked if you wish to proceed.  If you do proceed, you
+    will be prompted for some additional information regarding the
+    surplusing.  (Note: if you later <tt>unsurplus</tt> this item,
+    the information in these additional fields will be lost).
+
+    <h4>edb unsurplus</h4>
+    <tt>unsurplus</tt> is used to fix an accidently suplused item.  It
+    takes a single argument, the equipment id of the item to be
+    unsurplused.  You should note that the surplus information
+    (surplus date, price, comment, buyer), if any, will be lost.
+
+    <h3>pgaccess</h3>
+
+    <h3>cdb_make</h3>
+
+    <h3>SQL</h3>
+    Hopefully, almost all of the day-to-day use of the database can be
+    done with cdb/edb/pgaccess.  However, if the need arises, it's
+    possible to directly access the database using pgsl, like this:
+    <blockquote>
+    <kbd>psql -h db.cs.brown.edu udb</kbd>
+    </blockquote>
+
+    <h4>Transactions</h4>
+    Whenever you use psql to change the database, it's a good
+    idea to do it within a "transaction".  To start a transaction,
+    execute:
+    <blockquote>
+      <kbd>begin;</kbd>
+    </blockquote>
+    at the psql prompt.  Now make whatever changes you need to, and
+    <em>verify</em> that you've changed what you think you have.  If
+    you're happy with the results, make your changes permanent by
+    running:
+    <blockquote>
+      <kbd>commit;</kbd>
+    </blockquote>
+    at the psql prompt.  If you goofed, and the changes you made had
+    unintened consiquences, you can cancel the transaction like this:
+    <blockquote>
+      <kbd>rollback;</kbd>
+    </blockquote>
+    If you are working within a transaction, be sure to
+    <kbd>commit</kbd> before you exit psql, or you changes will be lost
+
+    <h2>Developer's Guide</h2>
+
+    <h3>CVS Repository</h3>
+    All of the scripts and other files associated with "udb" are in a
+    CVS repository.  The CVSROOT is /tstaff/projects/.CVS, so to
+    checkout a copy of the latest stuff, run:
+    <kbd><blockquote>
+      cvs -d /tstaff/projects/.CVS co udb
+    </blockquote></kbd>
+    The <tt>README</tt> file that gets checked out should explain the
+    directory hierarchy.
+
+    <h3>The Database</h3>
+    <h4>The Schema</h4>
+    <img src="schema.gif">
+    <h4>Buiding the Database</h4>
+
+    <h3>cdb/edb</h3>
+
+    <h3>cdb_make</h3>
+    I tried to get to clever in my class inheritance, and created a
+    mess.  It works, but it takes forever to find where to make
+    changes.  This should really be fixed.
+
+    <h3>Weaknesses</h3>
+    A major drawback to using a real data base is that in order to
+    build the network files (i.e., run cdb_make), the systems must be
+    up and running.  For example, since cdb_make depends on DNS
+    function properly, if the DNS files get corrupt, they can't be
+    rebuilt using cdb_make, as cdb_make needs to use DNS.  To get
+    around this problem, it might be wise to keep copies of the
+    network files in the build directory.
+
+    <h3>Why Python?</h3>
+    Okay, I know you're thinking to yourself, "Why the hell didn't he
+    just user Perl?", so this is my answer.
+    <p>
+      I started off using Perl.  However, as the program grew, I tried
+      to get more "object orienty", and that lead to an "impedance
+      mismatch" with the database (I didn't make up that term.  It's
+      apparently a well known problem, which I stumbled across as I
+      re-invented the wheel).  I searched high and low for a Perl
+      module that would automate the datbase to object mapping, and
+      came up empty
+    <p>
+      However, in my searches I ran across "PyDO", which was exactly
+      what I was looking for, but for the wrong language.  Not just
+      the wrong language, but that screwed up one where whitespace
+      matters.
+    <p>
+      After several false starts writing my own, I finally decided to
+      try python and PyDO.  Once I got used to Python, I
+      <em>loved</em> it, and PyDO did the job very nicely.
+
+    <h4>Perl versus Python</h4>
+    Don't worry -- I haven't completely gone off the Python deep end.
+    I still use Perl.  In fact, the scripts that build the inital udb
+    database are written in Perl.  For a task that requires lot's of
+    slinging of strings and regular expressions, Perl is definately
+    the right tool for the job.  On the other hand, Python's object
+    oriented syntax is nicer, and for a program with anything but the
+    most simple data structures, I'll use Python.
+
+    <h2>To Do</h2>
+    <h3>Features to Add</h3>
+    <ul>
+      <li>Documentation
+      <li>More testing of cdb_make
+      <li>GUI
+      <li>Test on Windows
+      <li>Add <tt>-f</tt> flag to not confirm update/insert/delete
+      <li>Add <tt>not equal</tt> to searches
+    </ul>
+    <h3>Bugs to Fix</h3>
+    <ul>
+      <li><tt>id</tt> is too general.  It should be called
+	<tt>eqid</tt> or something, at least, when presented to the
+	user.
+      <li>Refactor <tt>cdb_make</tt>
+    </ul>
+    <hr>
+<!-- Created: Thu Oct 30 14:57:04 EST 2003 -->
+<!-- hhmts start -->
+Last modified: Fri Dec  5 14:27:41 EST 2003
+<!-- hhmts end -->
+  </body>
+</html>

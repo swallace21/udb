@@ -1,0 +1,130 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+use Pod::Usage;
+
+use FindBin qw($RealBin);
+use lib "$RealBin/../lib";
+use BrownCS::udb::Schema;
+use BrownCS::udb::Util qw(:all);
+use BrownCS::udb::Console qw(:all);
+use BrownCS::udb::Net qw(:all);
+
+# Print a simple help message.
+sub usage {
+  my ($exit_status) = @_;
+  pod2usage({ -exitval => $exit_status, -verbose => 1});
+}
+
+my $help = 0;
+my $verbose = 0;
+my $dryrun = 0;
+
+GetOptions (
+  'help|h|?' => \$help, 
+  'v|verbose' => \$verbose,
+  'n|dryrun' => \$dryrun,
+) or usage(1);
+usage(0) if $help;
+
+my $udb = BrownCS::udb::Schema->connect;
+my $uc = new BrownCS::udb::Console(udb => $udb);
+
+if (not $dryrun) {
+  if (not BrownCS::udb::Util::okay_tstaff){
+    print "Insufficient privileges - check your warnings.\n";
+    exit;
+  }
+}
+
+if ((@ARGV < 1) or (@ARGV > 2)) {
+  usage(2);
+}
+
+my $name = shift @ARGV;
+my $new_mac = shift @ARGV;
+
+my $device = $udb->resultset('Devices')->find($name);
+die "No record for device $name.\n" if not $device;
+
+my $ifaces_rs = $device->net_interfaces;
+
+my $chosen_iface;
+
+if ($ifaces_rs->count == 0) {
+  print "The device %s does not have any network interfaces.\n";
+  exit(0);
+} elsif ($ifaces_rs->count == 1) {
+  $chosen_iface = $ifaces_rs->single;
+} else {
+  my $iface_ix = 1;
+  my @choices = ();
+  while (my $iface = $ifaces_rs->next) {
+    push @choices, {
+      key => $iface_ix++,
+      name => $iface,
+      desc => $iface->ethernet,
+    };
+  }
+  $chosen_iface = $uc->choose_from_menu("Select an interface", \@choices);
+}
+
+if ($new_mac) {
+  die if not BrownCS::udb::Net::verify_mac($udb)->($new_mac);
+} else {
+  $new_mac = $uc->demand("Enter the new MAC address:", verify_mac($udb));
+}
+
+if ($dryrun) {
+  print "Dry run finished...\n";
+  exit;
+}
+
+$chosen_iface->ethernet($new_mac);
+$chosen_iface->update;
+
+__END__
+
+=head1 NAME
+
+udb-change-mac - Change the MAC address of a device
+
+=head1 SYNOPSIS
+
+udb-change-mac <device>
+
+=head1 DESCRIPTION
+
+Perform maintenance on an existing device record in UDB.
+
+=head1 OPTIONS
+
+=over
+
+=item B<-h>, B<--help>
+
+Print a help message and exit.
+
+=item B<-n>, B<--dryrun>
+
+Don't make any changes; just print what would be done.
+
+=item B<-v>, B<--verbose>
+
+Print lots of text about what is going on.
+
+=back
+
+=head1 AUTHORS
+
+Aleks Bromfield.
+
+=head1 SEE ALSO
+
+B<udb>
+
+=cut
+

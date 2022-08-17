@@ -1,0 +1,132 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use Getopt::Long;
+use Pod::Usage;
+use NetAddr::IP;
+
+use FindBin qw($RealBin);
+use lib "$RealBin/../lib";
+use BrownCS::udb::Schema;
+use BrownCS::udb::Util qw(:all);
+use BrownCS::udb::Console qw(:all);
+use BrownCS::udb::Net qw(:all);
+
+# Print a simple help message.
+sub usage {
+  my ($exit_status) = @_;
+  pod2usage({ -exitval => $exit_status, -verbose => 1});
+}
+
+my $help = 0;
+my $verbose = 0;
+my $dryrun = 0;
+
+GetOptions (
+  'help|h|?' => \$help, 
+  'v|verbose' => \$verbose,
+  'n|dryrun' => \$dryrun,
+) or usage(1);
+usage(0) if $help;
+
+my $udb = BrownCS::udb::Schema->connect;
+my $uc = new BrownCS::udb::Console(udb => $udb);
+
+if (not $dryrun) {
+  if (!BrownCS::udb::Util::okay_tstaff) {
+    print "Insufficient privileges - check your warnings.\n";
+    exit;
+  }
+}
+
+if (@ARGV != 1) {
+  usage(2);
+}
+
+my $name = shift @ARGV;
+
+my $device = $udb->resultset('Devices')->find($name);
+die "No record for device $name.\n" if not $device;
+
+my $rs;
+eval {
+  $rs = $udb->txn_do(sub {
+
+    if ($device->status && $device->status->equip_status_type eq "deleted") {
+      die "Device is marked for deletion, please run udb build and retry addition\n";
+    }
+
+    if (! $device->usage->tracked) {
+      print "Device \"" . $device->device_name . "\" does not appear to be tracked, should it be?\n";
+      if (! $uc->confirm("Are you sure (Y/n)?", "yes")) {
+        exit(1);
+      } else {
+        $device->usage($uc->get_equip_usage_type($device->usage));
+      }
+      $device->update;
+    }
+
+    # if this a device tstaff tracks, then gather pertinent information
+    if ($device->usage->tracked) {
+      $device->serial_num($uc->get_serial_num($device->serial_num));
+      $device->brown_inv_num($uc->get_brown_inv_num($device->brown_inv_num));
+      $device->po_num($uc->get_po_num($device->po_num));
+    }
+
+    $device->update;
+
+    });
+};
+if ($@) {
+  die <<EOF;
+Failed to update tracking information on $name. Try again.
+
+Details:
+  $@
+EOF
+}
+
+__END__
+
+=head1 NAME
+
+udb-tracking-info - Update device tracking information
+
+=head1 SYNOPSIS
+
+udb-tracking-info <device>
+
+=head1 DESCRIPTION
+
+Manage the device tracking information
+
+=head1 OPTIONS
+
+=over
+
+=item B<-h>, B<--help>
+
+Print a help message and exit.
+
+=item B<-v>, B<--verbose>
+
+Print lots of text about what is going on.
+
+=item B<-n>, B<--dryrun>
+
+Don't make changes.
+
+=back
+
+=head1 AUTHORS
+
+Mark Dieterich.
+
+=head1 SEE ALSO
+
+B<udb>
+
+=cut
+
